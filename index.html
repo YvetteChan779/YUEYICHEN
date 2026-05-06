@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="悦怡宸 Yvette Chan - 个人主页 | Personal Portfolio" />
+    <meta name="author" content="Yvette Chan" />
+    <title>Yvette Chan · 悦怡宸 | 个人主页</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Noto+Serif+SC:wght@400;700;900&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="styles.css" />
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E🌸%3C/text%3E%3C/svg%3E" />
+</head>
+<body>
+    <!-- 背景装饰 -->
+    <div class="bg-decoration">
+        <div class="blob blob-1"></div>
+        <div class="blob blob-2"></div>
+        <div class="blob blob-3"></div>
+        <div class="grid-overlay"></div>
+    </div>
+
+    <!-- 顶部导航 -->
+    <nav class="navbar" id="navbar">
+        <div class="nav-container">
+            <a href="#home" class="nav-logo">
+                <span class="logo-mark">Y</span>
+                <span class="logo-text">Yvette</span>
+            </a>
+            <ul class="nav-links">
+                <li><a href="#home" class="nav-link active">首页</a></li>
+                <li><a href="#about" class="nav-link">关于</a></li>
+                <li><a href="#skills" class="nav-link">技能</a></li>
+                <li><a href="#projects" class="nav-link">作品</a></li>
+                <li><a href="#contact" class="nav-link">联系</a></li>
+            </ul>
+            <div class="nav-actions">
+                <button class="theme-toggle" id="themeToggle" aria-label="切换主题">
+                    <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="5"/>
+                        <line x1="12" y1="1" x2="12" y2="3"/>
+                        <line x1="12" y1="21" x2="12" y2="23"/>
+                        <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/>
+                        <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+                        <line x1="1" y1="12" x2="3" y2="12"/>
+                        <line x1="21" y1="12" x2="23" y2="12"/>
+                        <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/>
+                        <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+                    </svg>
+                    <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+                    </svg>
+                </button>
+                <button class="menu-toggle" id="menuToggle" aria-label="菜单">
+                    <span></span><span></span><span></span>
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- 首屏 Hero -->
+    <section id="home" class="hero">
+        <div class="container hero-container">
+            <div class="hero-content">
+                <div class="hero-badge fade-in-up">
+                    <span class="pulse-dot"></span>
+                    <span>欢迎来到我的小宇宙</span>
+                </div>
+                <h1 class="hero-title fade-in-up" style="animation-delay: 0.1s">
+                    你好，我是
+                    <span class="gradient-text">悦怡宸</span>
+                </h1>
+                <p class="hero-subtitle fade-in-up" style="animation-delay: 0.2s">
+                    <span id="typewriter"></span><span class="cursor-blink">|</span>
+                </p>
+                <p class="hero-description fade-in-up" style="animation-delay: 0.3s">
+                    一个热爱代码、设计与生活的创作者。<br />
+                    在键盘的敲击声中，把想法变成可触摸的产品。
+                </p>
+                <div class="hero-actions fade-in-up" style="animation-delay: 0.4s">
+                    <a href="#projects" class="btn btn-primary">
+                        查看我的作品
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="5" y1="12" x2="19" y2="12"/>
+                            <polyline points="12 5 19 12 12 19"/>
+                        </svg>
+                    </a>
+                    <a href="#contact" class="btn btn-ghost">联系我</a>
+                </div>
+                <div class="hero-stats fade-in-up" style="animation-delay: 0.5s">
+                    <div class="stat">
+                        <div class="stat-num" data-target="3">0</div>
+                        <div class="stat-label">年代码经验</div>
+                    </div>
+                    <div class="stat-divider"></div>
+                    <div class="stat">
+                        <div class="stat-num" data-target="20">0</div>
+                        <div class="stat-label">完成项目</div>
+                    </div>
+                    <div class="stat-divider"></div>
+                    <div class="stat">
+                        <div class="stat-num" data-target="100" suffix="%">0</div>
+                        <div class="stat-label">热爱程度</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="hero-visual fade-in-up" style="animation-delay: 0.3s">
+                <div class="avatar-card">
+                    <div class="avatar-glow"></div>
+                    <div class="avatar-frame">
+                        <div class="avatar-emoji">🌸</div>
+                    </div>
+                    <div class="floating-tag tag-1">💻 Code</div>
+                    <div class="floating-tag tag-2">🎨 Design</div>
+                    <div class="floating-tag tag-3">✨ Create</div>
+                    <div class="floating-tag tag-4">📚 Learn</div>
+                </div>
+            </div>
+        </div>
+
+        <a href="#about" class="scroll-indicator" aria-label="向下滚动">
+            <span></span>
+        </a>
+    </section>
+
+    <!-- 关于 -->
+    <section id="about" class="section">
+        <div class="container">
+            <div class="section-header reveal">
+                <span class="section-label">01 / About</span>
+                <h2 class="section-title">关于<span class="gradient-text">我</span></h2>
+                <p class="section-desc">了解一个有趣的灵魂</p>
+            </div>
+
+            <div class="about-grid">
+                <div class="about-card glass reveal">
+                    <div class="card-icon">👋</div>
+                    <h3>个人简介</h3>
+                    <p>我是 Yvette，一个喜欢用代码和设计表达自己的女生。相信好的产品来自于细腻的观察与无数次的打磨。</p>
+                </div>
+                <div class="about-card glass reveal" style="transition-delay: 0.1s">
+                    <div class="card-icon">🎯</div>
+                    <h3>正在做的事</h3>
+                    <p>专注于前端开发与用户体验设计，沉迷于像素级的精致与流畅的交互动画，时常为一段优雅的代码会心一笑。</p>
+                </div>
+                <div class="about-card glass reveal" style="transition-delay: 0.2s">
+                    <div class="card-icon">🌱</div>
+                    <h3>正在学习</h3>
+                    <p>正在探索 AI 与创意编程的交集，希望能用技术做些温柔且有趣的小东西，让世界多一点点光。</p>
+                </div>
+                <div class="about-card glass reveal" style="transition-delay: 0.3s">
+                    <div class="card-icon">☕</div>
+                    <h3>生活喜好</h3>
+                    <p>咖啡、电影、摄影、随笔。喜欢在阳光下读书，在深夜里写代码，在旅途中收集星星与故事。</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 技能 -->
+    <section id="skills" class="section">
+        <div class="container">
+            <div class="section-header reveal">
+                <span class="section-label">02 / Skills</span>
+                <h2 class="section-title">技能<span class="gradient-text">栈</span></h2>
+                <p class="section-desc">这些是我的工具箱</p>
+            </div>
+
+            <div class="skills-wrapper">
+                <div class="skills-bars reveal">
+                    <div class="skill-item">
+                        <div class="skill-info">
+                            <span class="skill-name">HTML / CSS</span>
+                            <span class="skill-percent">95%</span>
+                        </div>
+                        <div class="skill-bar"><div class="skill-fill" data-width="95"></div></div>
+                    </div>
+                    <div class="skill-item">
+                        <div class="skill-info">
+                            <span class="skill-name">JavaScript / TypeScript</span>
+                            <span class="skill-percent">88%</span>
+                        </div>
+                        <div class="skill-bar"><div class="skill-fill" data-width="88"></div></div>
+                    </div>
+                    <div class="skill-item">
+                        <div class="skill-info">
+                            <span class="skill-name">React / Vue</span>
+                            <span class="skill-percent">85%</span>
+                        </div>
+                        <div class="skill-bar"><div class="skill-fill" data-width="85"></div></div>
+                    </div>
+                    <div class="skill-item">
+                        <div class="skill-info">
+                            <span class="skill-name">UI / UX Design</span>
+                            <span class="skill-percent">80%</span>
+                        </div>
+                        <div class="skill-bar"><div class="skill-fill" data-width="80"></div></div>
+                    </div>
+                    <div class="skill-item">
+                        <div class="skill-info">
+                            <span class="skill-name">Node.js</span>
+                            <span class="skill-percent">75%</span>
+                        </div>
+                        <div class="skill-bar"><div class="skill-fill" data-width="75"></div></div>
+                    </div>
+                </div>
+
+                <div class="skills-tags reveal">
+                    <div class="tag-cloud-title">常用工具</div>
+                    <div class="tag-cloud">
+                        <span class="tech-tag">⚛️ React</span>
+                        <span class="tech-tag">💚 Vue</span>
+                        <span class="tech-tag">🅣 TypeScript</span>
+                        <span class="tech-tag">🎨 Figma</span>
+                        <span class="tech-tag">🟢 Node.js</span>
+                        <span class="tech-tag">🐍 Python</span>
+                        <span class="tech-tag">📦 Vite</span>
+                        <span class="tech-tag">🎭 Framer</span>
+                        <span class="tech-tag">🐙 Git</span>
+                        <span class="tech-tag">🌊 TailwindCSS</span>
+                        <span class="tech-tag">✏️ Photoshop</span>
+                        <span class="tech-tag">🤖 AI / GPT</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 作品 -->
+    <section id="projects" class="section">
+        <div class="container">
+            <div class="section-header reveal">
+                <span class="section-label">03 / Projects</span>
+                <h2 class="section-title">精选<span class="gradient-text">作品</span></h2>
+                <p class="section-desc">每一个都倾注过用心</p>
+            </div>
+
+            <div class="projects-grid">
+                <article class="project-card reveal">
+                    <div class="project-cover" style="background: linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%);">
+                        <span class="project-emoji">🌷</span>
+                    </div>
+                    <div class="project-body">
+                        <div class="project-tags">
+                            <span>React</span><span>Animation</span>
+                        </div>
+                        <h3 class="project-title">花艺工作室</h3>
+                        <p class="project-desc">一个充满诗意的花店品牌官网，主打柔和的视觉与流畅的页面切换。</p>
+                        <a href="#" class="project-link">
+                            查看详情
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <line x1="7" y1="17" x2="17" y2="7"/>
+                                <polyline points="7 7 17 7 17 17"/>
+                            </svg>
+                        </a>
+                    </div>
+                </article>
+
+                <article class="project-card reveal" style="transition-delay: 0.1s">
+                    <div class="project-cover" style="background: linear-gradient(135deg, #a18cd1 0%, #fbc2eb 100%);">
+                        <span class="project-emoji">📚</span>
+                    </div>
+                    <div class="project-body">
+                        <div class="project-tags">
+                            <span>Vue</span><span>Markdown</span>
+                        </div>
+                        <h3 class="project-title">读书笔记 App</h3>
+                        <p class="project-desc">一个轻量的电子读书笔记应用，支持高亮、批注与卡片导出。</p>
+                        <a href="#" class="project-link">
+                            查看详情
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <line x1="7" y1="17" x2="17" y2="7"/>
+                                <polyline points="7 7 17 7 17 17"/>
+                            </svg>
+                        </a>
+                    </div>
+                </article>
+
+                <article class="project-card reveal" style="transition-delay: 0.2s">
+                    <div class="project-cover" style="background: linear-gradient(135deg, #84fab0 0%, #8fd3f4 100%);">
+                        <span class="project-emoji">🎵</span>
+                    </div>
+                    <div class="project-body">
+                        <div class="project-tags">
+                            <span>WebAudio</span><span>Canvas</span>
+                        </div>
+                        <h3 class="project-title">音乐可视化器</h3>
+                        <p class="project-desc">把你的音乐变成一场视觉烟火，用浏览器演绎跳动的旋律。</p>
+                        <a href="#" class="project-link">
+                            查看详情
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <line x1="7" y1="17" x2="17" y2="7"/>
+                                <polyline points="7 7 17 7 17 17"/>
+                            </svg>
+                        </a>
+                    </div>
+                </article>
+
+                <article class="project-card reveal" style="transition-delay: 0.3s">
+                    <div class="project-cover" style="background: linear-gradient(135deg, #fccb90 0%, #d57eeb 100%);">
+                        <span class="project-emoji">🌙</span>
+                    </div>
+                    <div class="project-body">
+                        <div class="project-tags">
+                            <span>Next.js</span><span>AI</span>
+                        </div>
+                        <h3 class="project-title">睡前故事生成器</h3>
+                        <p class="project-desc">基于 AI 的睡前故事生成应用，给每个夜晚一个温柔的开始。</p>
+                        <a href="#" class="project-link">
+                            查看详情
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <line x1="7" y1="17" x2="17" y2="7"/>
+                                <polyline points="7 7 17 7 17 17"/>
+                            </svg>
+                        </a>
+                    </div>
+                </article>
+            </div>
+        </div>
+    </section>
+
+    <!-- 联系 -->
+    <section id="contact" class="section">
+        <div class="container">
+            <div class="section-header reveal">
+                <span class="section-label">04 / Contact</span>
+                <h2 class="section-title">和我<span class="gradient-text">聊聊</span></h2>
+                <p class="section-desc">咖啡、合作、想法 —— 都欢迎</p>
+            </div>
+
+            <div class="contact-card glass reveal">
+                <div class="contact-left">
+                    <h3 class="contact-headline">让我们一起<br /><span class="gradient-text">创造</span>有趣的事吧 ✨</h3>
+                    <p class="contact-text">无论是合作、问题，还是只想打个招呼，都可以通过下面的方式找到我。我会在 24 小时内回复～</p>
+                    <div class="contact-list">
+                        <a class="contact-item" href="mailto:hello@yvette.dev">
+                            <span class="contact-icon">📧</span>
+                            <div>
+                                <div class="contact-label">Email</div>
+                                <div class="contact-value">hello@yvette.dev</div>
+                            </div>
+                        </a>
+                        <a class="contact-item" href="https://github.com/YvetteChan779" target="_blank" rel="noopener">
+                            <span class="contact-icon">🐙</span>
+                            <div>
+                                <div class="contact-label">GitHub</div>
+                                <div class="contact-value">@YvetteChan779</div>
+                            </div>
+                        </a>
+                        <a class="contact-item" href="#">
+                            <span class="contact-icon">💬</span>
+                            <div>
+                                <div class="contact-label">微信</div>
+                                <div class="contact-value">添加请备注来意</div>
+                            </div>
+                        </a>
+                    </div>
+                </div>
+                <div class="contact-right">
+                    <form class="contact-form" id="contactForm">
+                        <div class="form-group">
+                            <label>你的名字</label>
+                            <input type="text" required placeholder="怎么称呼你呢？" />
+                        </div>
+                        <div class="form-group">
+                            <label>邮箱</label>
+                            <input type="email" required placeholder="your@email.com" />
+                        </div>
+                        <div class="form-group">
+                            <label>想说点什么</label>
+                            <textarea rows="4" required placeholder="说说你的想法吧～"></textarea>
+                        </div>
+                        <button type="submit" class="btn btn-primary btn-block">
+                            发送消息
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <line x1="22" y1="2" x2="11" y2="13"/>
+                                <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+                            </svg>
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 页脚 -->
+    <footer class="footer">
+        <div class="container footer-container">
+            <p class="footer-text">© <span id="year">2026</span> Yvette Chan · 悦怡宸 · Made with <span class="heart">❤</span> & ☕</p>
+            <div class="footer-links">
+                <a href="https://github.com/YvetteChan779" target="_blank" rel="noopener">GitHub</a>
+                <a href="#home">回到顶部 ↑</a>
+            </div>
+        </div>
+    </footer>
+
+    <script src="script.js"></script>
+</body>
+</html>
