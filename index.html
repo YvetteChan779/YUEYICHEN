@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="en">
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -20,9 +20,10 @@
             <a href="#" class="nav-brand">Yueyi Chen</a>
             <div class="nav-right">
                 <ul class="nav-links">
-                    <li><a href="#about" class="nav-link active">about</a></li>
-                    <li><a href="#publications" class="nav-link">publications</a></li>
+                    <li><a href="#about" class="nav-link active" data-i18n="nav.about">about</a></li>
+                    <li><a href="#publications" class="nav-link" data-i18n="nav.pubs">publications</a></li>
                 </ul>
+                <button class="lang-toggle" id="langToggle" aria-label="Toggle language">中</button>
                 <button class="theme-toggle" id="themeToggle" aria-label="Toggle theme">
                     <i class="fa-solid fa-sun icon-light"></i>
                     <i class="fa-solid fa-moon icon-dark"></i>
@@ -42,8 +43,8 @@
                         <img src="Pic/self.jpg" alt="Yueyi Chen" />
                     </div>
                     <h1 class="profile-name">Yueyi Chen (陈悦怡)</h1>
-                    <p class="profile-title">M.Sc. Student</p>
-                    <p class="profile-affiliation">The Chinese University of Hong Kong</p>
+                    <p class="profile-title" data-i18n="profile.title">M.Sc. Student</p>
+                    <p class="profile-affiliation" data-i18n="profile.affiliation">The Chinese University of Hong Kong</p>
 
                     <div class="profile-links">
                         <a href="mailto:yvettechan779@gmail.com" title="Email">
@@ -63,36 +64,36 @@
 
                     <!-- Biography -->
                     <section class="bio-section">
-                        <p>I am a M.Sc. student at <a href="https://www.cuhk.edu.hk/" target="_blank" rel="noopener">The Chinese University of Hong Kong (CUHK)</a>. My research interests lie in <strong>embodied AI</strong>, <strong>multimodal perception</strong>, and <strong>robot learning</strong>, with a focus on vision-language-action models and end-to-end robot manipulation systems.</p>
-                        <p>I have hands-on experience building full-stack robot perception pipelines (ASR/NLU/VLM/SAM) and fine-tuning large-scale VLA models (pi0.5) for robotic control. I am also experienced in designing multimodal interaction systems for humanoid robots.</p>
+                        <p data-i18n-html="bio.p1">I am a M.Sc. student at <a href="https://www.cuhk.edu.hk/" target="_blank" rel="noopener">The Chinese University of Hong Kong (CUHK)</a>. My research interests lie in <strong>embodied AI</strong>, <strong>multimodal perception</strong>, and <strong>robot learning</strong>, with a focus on vision-language-action models and end-to-end robot manipulation systems.</p>
+                        <p data-i18n-html="bio.p2">I have hands-on experience building full-stack robot perception pipelines (ASR/NLU/VLM/SAM) and fine-tuning large-scale VLA models (pi0.5) for robotic control. I am also experienced in designing multimodal interaction systems for humanoid robots.</p>
                     </section>
 
                     <!-- Highlight Box -->
                     <div class="highlight-box">
-                        <p><i class="fa-solid fa-bullhorn"></i> I am actively looking for research / industry opportunities in embodied AI and robot learning. Feel free to reach out!</p>
+                        <p data-i18n-html="highlight"><i class="fa-solid fa-bullhorn"></i> I am actively looking for research / industry opportunities in embodied AI and robot learning. Feel free to reach out!</p>
                     </div>
 
                     <!-- News -->
                     <section class="news-section">
-                        <h2><i class="fa-solid fa-newspaper"></i> News</h2>
+                        <h2 data-i18n-html="news.title"><i class="fa-solid fa-newspaper"></i> News</h2>
                         <div class="news-list">
                             <table>
                                 <tbody>
                                     <tr>
                                         <td class="news-date">Jun 2026</td>
-                                        <td>Personal academic homepage is online!</td>
+                                        <td data-i18n="news.1">Personal academic homepage is online!</td>
                                     </tr>
                                     <tr>
                                         <td class="news-date">May 2026</td>
-                                        <td>Completed the full-chain multimodal perception stack (ASR + VAD + TTS + NLU + VLM) and presented at the internship defense.</td>
+                                        <td data-i18n-html="news.2">Completed the full-chain multimodal perception stack (ASR + VAD + TTS + NLU + VLM) and presented at the internship defense.</td>
                                     </tr>
                                     <tr>
                                         <td class="news-date">May 2026</td>
-                                        <td>Achieved <strong>94.2%</strong> mean success rate on LIBERO benchmark with pi0.5 LoRA fine-tuning (+2.0 pp over official baseline).</td>
+                                        <td data-i18n-html="news.3">Achieved <strong>94.2%</strong> mean success rate on LIBERO benchmark with pi0.5 LoRA fine-tuning (+2.0 pp over official baseline).</td>
                                     </tr>
                                     <tr>
                                         <td class="news-date">Apr 2026</td>
-                                        <td>Built PLAN-A end-to-end multimodal robot interaction system: voice + vision + 10-DOF manipulation, achieving 2.5-5.5s closed-loop latency.</td>
+                                        <td data-i18n="news.4">Built PLAN-A end-to-end multimodal robot interaction system: voice + vision + 10-DOF manipulation, achieving 2.5-5.5s closed-loop latency.</td>
                                     </tr>
                                 </tbody>
                             </table>
@@ -101,17 +102,17 @@
 
                     <!-- Selected Projects -->
                     <section class="publications-section" id="publications">
-                        <h2><i class="fa-solid fa-book"></i> Selected Projects</h2>
+                        <h2 data-i18n-html="projects.title"><i class="fa-solid fa-book"></i> Selected Projects</h2>
 
                         <div class="pub-entry">
                             <div class="pub-thumbnail">
                                 <img src="Pic/plan_a_system.png" alt="PLAN-A system" />
                             </div>
                             <div class="pub-info">
-                                <h3 class="pub-title">PLAN-A: End-to-End Multimodal Robot Interaction System</h3>
+                                <h3 class="pub-title" data-i18n="proj.plana.title">PLAN-A: End-to-End Multimodal Robot Interaction System</h3>
                                 <p class="pub-authors"><strong>Yueyi Chen</strong></p>
-                                <p class="pub-venue"><em>Algorithm Intern Project</em>, 2026</p>
-                                <p class="pub-desc">Designed and implemented an end-to-end multimodal human&ndash;robot interaction system for a 10-DOF social robot, spanning perception, representation, policy, and execution. <strong>Perception layer</strong>: cascaded Qwen2.5-VL-7B + OpenCV Haar face detection with emotion recognition (7 classes &rarr; 6 robot states), plus VDMocap quaternion input. <strong>Retargeting</strong>: T-pose calibration pipeline using forward kinematics + <code>scipy.optimize.least_squares</code> numerical IK, mapping global quaternions to encoder values [0, 4095] with zero-position accuracy of 2048 &pm; 3. <strong>Dual policy routes</strong>: (1) Text-to-Action CVAE &mdash; BERT-base-chinese encoding + Transformer Decoder (2L-4H, latent 64d), parallel/autoregressive dual decoding with dynamic stopping, &sim;0.5s inference; (2) Image-Conditioned Diffusion Policy &mdash; DINOv2/Qwen-VL condition encoding + 6-layer Cross-Attention + DDIM 1000-step with v-prediction, self-conditioning (p=0.9), and min-SNR (&gamma;=5) weighting. Introduced offline Qwen-VL embedding precomputation achieving <strong>&sim;9&times; training speedup</strong> (3h &rarr; 20min/epoch). <strong>Execution</strong>: WebSocket + Dynamixel real-time control at 10 FPS with mutex-based concurrent isolation. Closed-loop validated on 194 episodes across 3 action categories, achieving <strong>2.5&ndash;5.5s</strong> end-to-end latency. Also developed a data quality diagnosis methodology that identified and resolved biased training samples.</p>
+                                <p class="pub-venue" data-i18n-html="proj.plana.venue"><em>Algorithm Intern Project</em>, 2026</p>
+                                <p class="pub-desc" data-i18n-html="proj.plana.desc">Designed and implemented an end-to-end multimodal human&ndash;robot interaction system for a 10-DOF social robot, spanning perception, representation, policy, and execution. <strong>Perception layer</strong>: cascaded Qwen2.5-VL-7B + OpenCV Haar face detection with emotion recognition (7 classes &rarr; 6 robot states), plus VDMocap quaternion input. <strong>Retargeting</strong>: T-pose calibration pipeline using forward kinematics + <code>scipy.optimize.least_squares</code> numerical IK, mapping global quaternions to encoder values [0, 4095] with zero-position accuracy of 2048 &pm; 3. <strong>Dual policy routes</strong>: (1) Text-to-Action CVAE &mdash; BERT-base-chinese encoding + Transformer Decoder (2L-4H, latent 64d), parallel/autoregressive dual decoding with dynamic stopping, &sim;0.5s inference; (2) Image-Conditioned Diffusion Policy &mdash; DINOv2/Qwen-VL condition encoding + 6-layer Cross-Attention + DDIM 1000-step with v-prediction, self-conditioning (p=0.9), and min-SNR (&gamma;=5) weighting. Introduced offline Qwen-VL embedding precomputation achieving <strong>&sim;9&times; training speedup</strong> (3h &rarr; 20min/epoch). <strong>Execution</strong>: WebSocket + Dynamixel real-time control at 10 FPS with mutex-based concurrent isolation. Closed-loop validated on 194 episodes across 3 action categories, achieving <strong>2.5&ndash;5.5s</strong> end-to-end latency. Also developed a data quality diagnosis methodology that identified and resolved biased training samples.</p>
                                 <div class="pub-links">
                                     <a href="#" class="pub-link">Report</a>
                                 </div>
@@ -123,10 +124,10 @@
                                 <img src="https://via.placeholder.com/160x120?text=%CF%80+0.5" alt="pi0.5 fine-tuning" />
                             </div>
                             <div class="pub-info">
-                                <h3 class="pub-title">&pi;0.5 VLA Fine-Tuning on LIBERO Benchmark</h3>
+                                <h3 class="pub-title" data-i18n="proj.pi05.title">&pi;0.5 VLA Fine-Tuning on LIBERO Benchmark</h3>
                                 <p class="pub-authors"><strong>Yueyi Chen</strong></p>
-                                <p class="pub-venue"><em>Algorithm Intern Project</em>, 2026</p>
-                                <p class="pub-desc">Fine-tuned Physical Intelligence's &pi;0.5 Vision-Language-Action model on the LIBERO benchmark using LoRA on a single RTX 4090. Designed 3 freeze-filter strategies spanning 2.6M&ndash;305M trainable parameters. Achieved <strong>94.2%</strong> mean success rate across 2000 episodes (+2.0 pp over official, +18.2 pp over OpenVLA-7B).</p>
+                                <p class="pub-venue" data-i18n-html="proj.pi05.venue"><em>Algorithm Intern Project</em>, 2026</p>
+                                <p class="pub-desc" data-i18n-html="proj.pi05.desc">Fine-tuned Physical Intelligence's &pi;0.5 Vision-Language-Action model on the LIBERO benchmark using LoRA on a single RTX 4090. Designed 3 freeze-filter strategies spanning 2.6M&ndash;305M trainable parameters. Achieved <strong>94.2%</strong> mean success rate across 2000 episodes (+2.0 pp over official, +18.2 pp over OpenVLA-7B).</p>
                                 <div class="pub-links">
                                     <a href="#" class="pub-link">Report</a>
                                     <a href="#" class="pub-link">Code</a>
@@ -139,10 +140,10 @@
                                 <img src="https://via.placeholder.com/160x120?text=Perception" alt="Multimodal perception stack" />
                             </div>
                             <div class="pub-info">
-                                <h3 class="pub-title">Full-Chain Multimodal Robot Perception Stack</h3>
+                                <h3 class="pub-title" data-i18n="proj.perception.title">Full-Chain Multimodal Robot Perception Stack</h3>
                                 <p class="pub-authors"><strong>Yueyi Chen</strong></p>
-                                <p class="pub-venue"><em>Algorithm Intern Project</em>, 2026</p>
-                                <p class="pub-desc">Designed and implemented a production-grade perception pipeline for service robots: 3-tier cascaded VAD (Adaptive Energy + Software AGC + Silero v4) achieving 92% far-field wake rate; streaming ASR with 150&ndash;300ms partial latency; dual-path NLU (regex fast-path + Qwen structured parsing); VLM-guided SAM3 segmentation boosting mask success from 9% to &ge;90%. Integrated barge-in control and 5-layer data consistency safeguards.</p>
+                                <p class="pub-venue" data-i18n-html="proj.perception.venue"><em>Algorithm Intern Project</em>, 2026</p>
+                                <p class="pub-desc" data-i18n-html="proj.perception.desc">Designed and implemented a production-grade perception pipeline for service robots: 3-tier cascaded VAD (Adaptive Energy + Software AGC + Silero v4) achieving 92% far-field wake rate; streaming ASR with 150&ndash;300ms partial latency; dual-path NLU (regex fast-path + Qwen structured parsing); VLM-guided SAM3 segmentation boosting mask success from 9% to &ge;90%. Integrated barge-in control and 5-layer data consistency safeguards.</p>
                                 <div class="pub-links">
                                     <a href="#" class="pub-link">Report</a>
                                 </div>
@@ -154,10 +155,10 @@
                                 <img src="https://via.placeholder.com/160x120?text=T-RO" alt="T-RO project" />
                             </div>
                             <div class="pub-info">
-                                <h3 class="pub-title">TRO-1B: Large-Scale Robot Manipulation Model</h3>
+                                <h3 class="pub-title" data-i18n="proj.tro.title">TRO-1B: Large-Scale Robot Manipulation Model</h3>
                                 <p class="pub-authors"><strong>Yueyi Chen</strong>, et al.</p>
-                                <p class="pub-venue"><em>Research Project</em>, 2026</p>
-                                <p class="pub-desc">Contributed to a 1B-parameter robot manipulation model with multi-level evaluation. Implemented IK retargeting via Pyroki, multi-machine distributed training, and simulation-based validation pipeline using Isaac Gym.</p>
+                                <p class="pub-venue" data-i18n-html="proj.tro.venue"><em>Research Project</em>, 2026</p>
+                                <p class="pub-desc" data-i18n-html="proj.tro.desc">Contributed to a 1B-parameter robot manipulation model with multi-level evaluation. Implemented IK retargeting via Pyroki, multi-machine distributed training, and simulation-based validation pipeline using Isaac Gym.</p>
                                 <div class="pub-links">
                                     <a href="#" class="pub-link">Code</a>
                                 </div>
@@ -174,7 +175,7 @@
     <!-- Footer -->
     <footer class="footer">
         <div class="container">
-            <p>&copy; <span id="year">2026</span> Yueyi Chen. Powered by <a href="https://pages.github.com/" target="_blank" rel="noopener">GitHub Pages</a>.</p>
+            <p data-i18n-html="footer">&copy; <span id="year">2026</span> Yueyi Chen. Powered by <a href="https://pages.github.com/" target="_blank" rel="noopener">GitHub Pages</a>.</p>
         </div>
     </footer>
 

@@ -147,6 +147,7 @@ img {
     font-weight: 600;
 }
 
+.lang-toggle,
 .theme-toggle {
     background: none;
     border: 1px solid var(--border);
@@ -158,9 +159,12 @@ img {
     cursor: pointer;
     color: var(--text-secondary);
     font-size: 14px;
+    font-family: var(--font-sans);
+    font-weight: 600;
     transition: all 0.2s;
 }
 
+.lang-toggle:hover,
 .theme-toggle:hover {
     color: var(--text);
     border-color: var(--text-secondary);
