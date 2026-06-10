@@ -9,8 +9,7 @@
     const toggle = document.getElementById('themeToggle');
     const root = document.documentElement;
 
-    const saved = localStorage.getItem('theme') ||
-        (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+    const saved = localStorage.getItem('theme') || 'dark';
     root.setAttribute('data-theme', saved);
 
     toggle?.addEventListener('click', () => {
