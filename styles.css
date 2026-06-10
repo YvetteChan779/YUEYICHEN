@@ -392,6 +392,13 @@ img {
     margin-bottom: 10px;
 }
 
+.pub-desc {
+    font-size: 14px;
+    color: var(--text-secondary);
+    margin-bottom: 10px;
+    line-height: 1.6;
+}
+
 .pub-links {
     display: flex;
     flex-wrap: wrap;

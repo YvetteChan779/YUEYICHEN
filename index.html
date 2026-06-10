@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="description" content="Yueyichen (Yvette Chan) - Academic Homepage" />
     <meta name="author" content="Yueyichen" />
-    <title>Yueyichen</title>
+    <title>Yueyi Chen | Embodied AI</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Lora:wght@400;500;600;700&family=JetBrains+Mono:wght@400&display=swap" rel="stylesheet" />
@@ -17,7 +17,7 @@
     <!-- Navigation -->
     <nav class="navbar">
         <div class="nav-container">
-            <a href="#" class="nav-brand">Yueyichen</a>
+            <a href="#" class="nav-brand">Yueyi Chen</a>
             <div class="nav-right">
                 <ul class="nav-links">
                     <li><a href="#about" class="nav-link active">about</a></li>
@@ -40,14 +40,14 @@
                 <aside class="profile-sidebar">
                     <div class="profile-photo">
                         <!-- Replace src with your photo -->
-                        <img src="https://via.placeholder.com/280x280?text=Photo" alt="Yueyichen" />
+                        <img src="https://via.placeholder.com/280x280?text=Photo" alt="Yueyi Chen" />
                     </div>
-                    <h1 class="profile-name">Yueyichen (Yvette)</h1>
-                    <p class="profile-title"><!-- e.g., Ph.D. Student -->[Your Title]</p>
-                    <p class="profile-affiliation"><!-- e.g., XX University -->[Your University]</p>
+                    <h1 class="profile-name">Yueyi Chen (陈悦怡)</h1>
+                    <p class="profile-title">M.Sc. Student</p>
+                    <p class="profile-affiliation">The Chinese University of Hong Kong</p>
 
                     <div class="profile-links">
-                        <a href="mailto:your@email.com" title="Email">
+                        <a href="mailto:yvettechan779@gmail.com" title="Email">
                             <i class="fa-solid fa-envelope"></i>
                         </a>
                         <a href="https://github.com/YvetteChan779" target="_blank" rel="noopener" title="GitHub">
@@ -64,13 +64,13 @@
 
                     <!-- Biography -->
                     <section class="bio-section">
-                        <p>I am a [your title] at <a href="#">[Your University]</a>, advised by <a href="#">Prof. [Advisor Name]</a>. My research interests include [research area 1], [research area 2], and [research area 3].</p>
-                        <p>I received my B.Sc. degree in [Major] from <a href="#">[University]</a> in [Year].</p>
+                        <p>I am a M.Sc. student at <a href="https://www.cuhk.edu.hk/" target="_blank" rel="noopener">The Chinese University of Hong Kong (CUHK)</a>. My research interests lie in <strong>embodied AI</strong>, <strong>multimodal perception</strong>, and <strong>robot learning</strong>, with a focus on vision-language-action models and end-to-end robot manipulation systems.</p>
+                        <p>I have hands-on experience building full-stack robot perception pipelines (ASR/NLU/VLM/SAM) and fine-tuning large-scale VLA models (pi0.5) for robotic control. I am also experienced in designing multimodal interaction systems for humanoid robots.</p>
                     </section>
 
                     <!-- Highlight Box -->
                     <div class="highlight-box">
-                        <p><i class="fa-solid fa-bullhorn"></i> I am looking for [opportunities/collaborations]. Feel free to reach out!</p>
+                        <p><i class="fa-solid fa-bullhorn"></i> I am actively looking for research / industry opportunities in embodied AI and robot learning. Feel free to reach out!</p>
                     </div>
 
                     <!-- News -->
@@ -85,53 +85,81 @@
                                     </tr>
                                     <tr>
                                         <td class="news-date">May 2026</td>
-                                        <td>[Your news item here, e.g., Paper accepted at XX Conference]</td>
+                                        <td>Completed the full-chain multimodal perception stack (ASR + VAD + TTS + NLU + VLM) and presented at the internship defense.</td>
                                     </tr>
                                     <tr>
-                                        <td class="news-date">Mar 2026</td>
-                                        <td>[Your news item here, e.g., Started research internship at XX Lab]</td>
+                                        <td class="news-date">May 2026</td>
+                                        <td>Achieved <strong>94.2%</strong> mean success rate on LIBERO benchmark with pi0.5 LoRA fine-tuning (+2.0 pp over official baseline).</td>
                                     </tr>
                                     <tr>
-                                        <td class="news-date">Jan 2026</td>
-                                        <td>[Your news item here, e.g., Received XX Scholarship]</td>
+                                        <td class="news-date">Apr 2026</td>
+                                        <td>Built PLAN-A end-to-end multimodal robot interaction system: voice + vision + 10-DOF manipulation, achieving 2.5-5.5s closed-loop latency.</td>
                                     </tr>
                                 </tbody>
                             </table>
                         </div>
                     </section>
 
-                    <!-- Selected Publications -->
+                    <!-- Selected Projects -->
                     <section class="publications-section" id="publications">
-                        <h2><i class="fa-solid fa-book"></i> Selected Publications</h2>
+                        <h2><i class="fa-solid fa-book"></i> Selected Projects</h2>
 
                         <div class="pub-entry">
                             <div class="pub-thumbnail">
-                                <img src="https://via.placeholder.com/160x120?text=Fig" alt="Paper thumbnail" />
+                                <img src="https://via.placeholder.com/160x120?text=PLAN-A" alt="PLAN-A system" />
                             </div>
                             <div class="pub-info">
-                                <h3 class="pub-title">[Paper Title 1]</h3>
-                                <p class="pub-authors"><strong>Yueyichen</strong>, Author B, Author C</p>
-                                <p class="pub-venue"><em>[Conference/Journal Name]</em>, 2026</p>
+                                <h3 class="pub-title">PLAN-A: End-to-End Multimodal Robot Interaction System</h3>
+                                <p class="pub-authors"><strong>Yueyi Chen</strong></p>
+                                <p class="pub-venue"><em>Algorithm Intern Project</em>, 2026</p>
+                                <p class="pub-desc">Built a complete perception-to-action pipeline for a 10-DOF humanoid robot: camera/mocap input &rarr; Qwen2.5-VL semantic understanding + emotion recognition &rarr; Text-to-Action CVAE and Image-Conditioned Diffusion Policy &rarr; real-time Dynamixel control. Achieved 2.5&ndash;5.5s end-to-end closed-loop latency across 194 episodes (3 action categories).</p>
                                 <div class="pub-links">
-                                    <a href="#" class="pub-link">Paper</a>
-                                    <a href="#" class="pub-link">arXiv</a>
-                                    <a href="#" class="pub-link">Code</a>
-                                    <a href="#" class="pub-link">Video</a>
+                                    <a href="#" class="pub-link">Report</a>
                                 </div>
                             </div>
                         </div>
 
                         <div class="pub-entry">
                             <div class="pub-thumbnail">
-                                <img src="https://via.placeholder.com/160x120?text=Fig" alt="Paper thumbnail" />
+                                <img src="https://via.placeholder.com/160x120?text=%CF%80+0.5" alt="pi0.5 fine-tuning" />
                             </div>
                             <div class="pub-info">
-                                <h3 class="pub-title">[Paper Title 2]</h3>
-                                <p class="pub-authors">Author A, <strong>Yueyichen</strong>, Author C</p>
-                                <p class="pub-venue"><em>[Conference/Journal Name]</em>, 2025</p>
+                                <h3 class="pub-title">&pi;0.5 VLA Fine-Tuning on LIBERO Benchmark</h3>
+                                <p class="pub-authors"><strong>Yueyi Chen</strong></p>
+                                <p class="pub-venue"><em>Algorithm Intern Project</em>, 2026</p>
+                                <p class="pub-desc">Fine-tuned Physical Intelligence's &pi;0.5 Vision-Language-Action model on the LIBERO benchmark using LoRA on a single RTX 4090. Designed 3 freeze-filter strategies spanning 2.6M&ndash;305M trainable parameters. Achieved <strong>94.2%</strong> mean success rate across 2000 episodes (+2.0 pp over official, +18.2 pp over OpenVLA-7B).</p>
                                 <div class="pub-links">
-                                    <a href="#" class="pub-link">Paper</a>
-                                    <a href="#" class="pub-link">arXiv</a>
+                                    <a href="#" class="pub-link">Report</a>
+                                    <a href="#" class="pub-link">Code</a>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="pub-entry">
+                            <div class="pub-thumbnail">
+                                <img src="https://via.placeholder.com/160x120?text=Perception" alt="Multimodal perception stack" />
+                            </div>
+                            <div class="pub-info">
+                                <h3 class="pub-title">Full-Chain Multimodal Robot Perception Stack</h3>
+                                <p class="pub-authors"><strong>Yueyi Chen</strong></p>
+                                <p class="pub-venue"><em>Algorithm Intern Project</em>, 2026</p>
+                                <p class="pub-desc">Designed and implemented a production-grade perception pipeline for service robots: 3-tier cascaded VAD (Adaptive Energy + Software AGC + Silero v4) achieving 92% far-field wake rate; streaming ASR with 150&ndash;300ms partial latency; dual-path NLU (regex fast-path + Qwen structured parsing); VLM-guided SAM3 segmentation boosting mask success from 9% to &ge;90%. Integrated barge-in control and 5-layer data consistency safeguards.</p>
+                                <div class="pub-links">
+                                    <a href="#" class="pub-link">Report</a>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="pub-entry">
+                            <div class="pub-thumbnail">
+                                <img src="https://via.placeholder.com/160x120?text=T-RO" alt="T-RO project" />
+                            </div>
+                            <div class="pub-info">
+                                <h3 class="pub-title">TRO-1B: Large-Scale Robot Manipulation Model</h3>
+                                <p class="pub-authors"><strong>Yueyi Chen</strong>, et al.</p>
+                                <p class="pub-venue"><em>Research Project</em>, 2026</p>
+                                <p class="pub-desc">Contributed to a 1B-parameter robot manipulation model with multi-level evaluation. Implemented IK retargeting via Pyroki, multi-machine distributed training, and simulation-based validation pipeline using Isaac Gym.</p>
+                                <div class="pub-links">
                                     <a href="#" class="pub-link">Code</a>
                                 </div>
                             </div>
@@ -147,7 +175,7 @@
     <!-- Footer -->
     <footer class="footer">
         <div class="container">
-            <p>&copy; <span id="year">2026</span> Yueyichen. Powered by <a href="https://pages.github.com/" target="_blank" rel="noopener">GitHub Pages</a>.</p>
+            <p>&copy; <span id="year">2026</span> Yueyi Chen. Powered by <a href="https://pages.github.com/" target="_blank" rel="noopener">GitHub Pages</a>.</p>
         </div>
     </footer>
 
