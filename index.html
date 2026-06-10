@@ -105,13 +105,13 @@
 
                         <div class="pub-entry">
                             <div class="pub-thumbnail">
-                                <img src="https://via.placeholder.com/160x120?text=PLAN-A" alt="PLAN-A system" />
+                                <img src="Pic/plan_a_system.png" alt="PLAN-A system" />
                             </div>
                             <div class="pub-info">
                                 <h3 class="pub-title">PLAN-A: End-to-End Multimodal Robot Interaction System</h3>
                                 <p class="pub-authors"><strong>Yueyi Chen</strong></p>
                                 <p class="pub-venue"><em>Algorithm Intern Project</em>, 2026</p>
-                                <p class="pub-desc">Built a complete perception-to-action pipeline for a 10-DOF humanoid robot: camera/mocap input &rarr; Qwen2.5-VL semantic understanding + emotion recognition &rarr; Text-to-Action CVAE and Image-Conditioned Diffusion Policy &rarr; real-time Dynamixel control. Achieved 2.5&ndash;5.5s end-to-end closed-loop latency across 194 episodes (3 action categories).</p>
+                                <p class="pub-desc">Designed and implemented an end-to-end multimodal human&ndash;robot interaction system for a 10-DOF social robot, spanning perception, representation, policy, and execution. <strong>Perception layer</strong>: cascaded Qwen2.5-VL-7B + OpenCV Haar face detection with emotion recognition (7 classes &rarr; 6 robot states), plus VDMocap quaternion input. <strong>Retargeting</strong>: T-pose calibration pipeline using forward kinematics + <code>scipy.optimize.least_squares</code> numerical IK, mapping global quaternions to encoder values [0, 4095] with zero-position accuracy of 2048 &pm; 3. <strong>Dual policy routes</strong>: (1) Text-to-Action CVAE &mdash; BERT-base-chinese encoding + Transformer Decoder (2L-4H, latent 64d), parallel/autoregressive dual decoding with dynamic stopping, &sim;0.5s inference; (2) Image-Conditioned Diffusion Policy &mdash; DINOv2/Qwen-VL condition encoding + 6-layer Cross-Attention + DDIM 1000-step with v-prediction, self-conditioning (p=0.9), and min-SNR (&gamma;=5) weighting. Introduced offline Qwen-VL embedding precomputation achieving <strong>&sim;9&times; training speedup</strong> (3h &rarr; 20min/epoch). <strong>Execution</strong>: WebSocket + Dynamixel real-time control at 10 FPS with mutex-based concurrent isolation. Closed-loop validated on 194 episodes across 3 action categories, achieving <strong>2.5&ndash;5.5s</strong> end-to-end latency. Also developed a data quality diagnosis methodology that identified and resolved biased training samples.</p>
                                 <div class="pub-links">
                                     <a href="#" class="pub-link">Report</a>
                                 </div>
