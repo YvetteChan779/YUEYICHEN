@@ -367,7 +367,8 @@ img {
 
 .pub-thumbnail img {
     width: 100%;
-    height: auto;
+    height: 120px;
+    object-fit: cover;
     display: block;
 }
 
@@ -427,6 +428,157 @@ img {
     background: var(--accent);
     color: #fff;
     text-decoration: none;
+}
+
+/* ---------- Project Detail Page ---------- */
+.project-detail {
+    max-width: 860px;
+    margin: 0 auto;
+    padding: 0 24px;
+}
+
+.back-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text-secondary);
+    margin-bottom: 32px;
+}
+
+.back-link:hover {
+    color: var(--accent);
+    text-decoration: none;
+}
+
+.project-header {
+    margin-bottom: 40px;
+}
+
+.project-header h1 {
+    font-family: var(--font-serif);
+    font-size: 28px;
+    font-weight: 700;
+    margin-bottom: 8px;
+    line-height: 1.3;
+}
+
+.project-header .subtitle {
+    font-size: 15px;
+    color: var(--text-secondary);
+    margin-bottom: 16px;
+}
+
+.project-header .intro {
+    font-size: 15px;
+    line-height: 1.8;
+}
+
+.detail-section {
+    margin-bottom: 40px;
+}
+
+.detail-section h2 {
+    font-family: var(--font-serif);
+    font-size: 22px;
+    font-weight: 600;
+    margin-bottom: 20px;
+    padding-bottom: 8px;
+    border-bottom: 2px solid var(--border);
+}
+
+.detail-section h2 i {
+    margin-right: 8px;
+    color: var(--accent);
+    font-size: 18px;
+}
+
+.detail-section h3 {
+    font-size: 17px;
+    font-weight: 600;
+    margin: 24px 0 12px;
+    color: var(--text);
+}
+
+.detail-section p {
+    font-size: 15px;
+    line-height: 1.8;
+    margin-bottom: 12px;
+}
+
+.mermaid-wrap {
+    margin: 20px 0;
+    padding: 16px;
+    background: var(--bg-alt);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow-x: auto;
+    transition: background 0.3s, border-color 0.3s;
+}
+
+.metric-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+    margin: 16px 0;
+}
+
+.metric-table th,
+.metric-table td {
+    padding: 10px 14px;
+    border: 1px solid var(--border);
+    text-align: left;
+    vertical-align: top;
+}
+
+.metric-table th {
+    background: var(--bg-alt);
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.metric-table code {
+    font-family: var(--font-mono);
+    font-size: 13px;
+    background: var(--bg-alt);
+    padding: 1px 5px;
+    border-radius: 3px;
+}
+
+.metric-highlight {
+    color: var(--accent);
+    font-weight: 600;
+}
+
+.case-study {
+    background: var(--bg-alt);
+    border-left: 4px solid var(--accent);
+    padding: 16px 20px;
+    border-radius: 4px;
+    margin: 16px 0;
+    font-size: 14px;
+    line-height: 1.7;
+    transition: background 0.3s;
+}
+
+.case-study strong {
+    color: var(--text);
+}
+
+@media (max-width: 768px) {
+    .project-header h1 {
+        font-size: 22px;
+    }
+
+    .metric-table {
+        font-size: 13px;
+    }
+
+    .metric-table th,
+    .metric-table td {
+        padding: 8px 10px;
+    }
 }
 
 /* ---------- Footer ---------- */

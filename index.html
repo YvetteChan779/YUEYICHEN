@@ -137,14 +137,15 @@
 
                         <div class="pub-entry">
                             <div class="pub-thumbnail">
-                                <img src="https://via.placeholder.com/160x120?text=Perception" alt="Multimodal perception stack" />
+                                <img src="https://via.placeholder.com/160x120?text=PLAN-B" alt="PLAN-B system" />
                             </div>
                             <div class="pub-info">
-                                <h3 class="pub-title" data-i18n="proj.perception.title">Full-Chain Multimodal Robot Perception Stack</h3>
+                                <h3 class="pub-title" data-i18n="proj.planb.title">PLAN-B: Multimodal Perception &amp; Closed-Loop Grasping for Humanoid Robot</h3>
                                 <p class="pub-authors"><strong>Yueyi Chen</strong></p>
-                                <p class="pub-venue" data-i18n-html="proj.perception.venue"><em>Algorithm Intern Project</em>, 2026</p>
-                                <p class="pub-desc" data-i18n-html="proj.perception.desc">Designed and implemented a production-grade perception pipeline for service robots: 3-tier cascaded VAD (Adaptive Energy + Software AGC + Silero v4) achieving 92% far-field wake rate; streaming ASR with 150&ndash;300ms partial latency; dual-path NLU (regex fast-path + Qwen structured parsing); VLM-guided SAM3 segmentation boosting mask success from 9% to &ge;90%. Integrated barge-in control and 5-layer data consistency safeguards.</p>
+                                <p class="pub-venue" data-i18n-html="proj.planb.venue"><em>Algorithm Intern Project</em> &middot; Jetson AGX Orin, 2026</p>
+                                <p class="pub-desc" data-i18n-html="proj.planb.desc">Built a full-stack multimodal perception &amp; grasping pipeline for a humanoid robot on Jetson AGX Orin: 3-tier cascaded VAD boosting far-field Silero hit rate from <strong>0% &rarr; 92%</strong>; dual-path NLU + VLM-guided SAM3 segmentation raising mask success from <strong>9% &rarr; &ge;90%</strong>; 8-state closed-loop FSM with 7 guard mechanisms and 3D multi-feature grasp verification (median/P25/frac voting). Diagnosed and fixed a P0 cascading bug via 7-step root-cause audit.</p>
                                 <div class="pub-links">
+                                    <a href="planb.html" class="pub-link">Details</a>
                                     <a href="#" class="pub-link">Report</a>
                                 </div>
                             </div>
