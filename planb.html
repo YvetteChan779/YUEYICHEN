@@ -3,13 +3,162 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="PLAN-B: Multimodal Perception & Closed-Loop Grasping Pipeline for Humanoid Robot" />
+    <meta name="description" content="PLAN-B: Multimodal Perception & Closed-Loop Grasping for Humanoid Robot" />
     <title>PLAN-B | Yueyi Chen</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Lora:wght@400;500;600;700&family=JetBrains+Mono:wght@400&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
     <link rel="stylesheet" href="styles.css" />
+    <style>
+        /* ---- Product-page overrides ---- */
+        .hero {
+            text-align: center;
+            padding: 56px 0 40px;
+            border-bottom: 1px solid var(--border);
+            margin-bottom: 48px;
+        }
+        .hero h1 {
+            font-family: var(--font-serif);
+            font-size: 32px;
+            font-weight: 700;
+            line-height: 1.3;
+            margin-bottom: 12px;
+        }
+        .hero .subtitle {
+            font-size: 15px;
+            color: var(--text-secondary);
+            margin-bottom: 24px;
+        }
+        .hero .intro {
+            font-size: 15px;
+            line-height: 1.8;
+            max-width: 700px;
+            margin: 0 auto;
+            text-align: left;
+        }
+
+        /* Big metric callout strip */
+        .metrics-strip {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 16px;
+            margin-bottom: 48px;
+        }
+        .metric-card {
+            text-align: center;
+            padding: 24px 12px;
+            background: var(--bg-alt);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            transition: background 0.3s, border-color 0.3s;
+        }
+        .metric-card .number {
+            font-size: 32px;
+            font-weight: 700;
+            color: var(--accent);
+            line-height: 1.2;
+        }
+        .metric-card .label {
+            font-size: 13px;
+            color: var(--text-secondary);
+            margin-top: 6px;
+        }
+
+        /* Section with figure */
+        .section-block {
+            margin-bottom: 56px;
+        }
+        .section-block h2 {
+            font-family: var(--font-serif);
+            font-size: 22px;
+            font-weight: 600;
+            margin-bottom: 16px;
+            padding-bottom: 8px;
+            border-bottom: 2px solid var(--border);
+        }
+        .section-block h2 i {
+            margin-right: 8px;
+            color: var(--accent);
+            font-size: 18px;
+        }
+        .section-block h3 {
+            font-size: 17px;
+            font-weight: 600;
+            margin: 28px 0 12px;
+        }
+        .section-block p {
+            font-size: 15px;
+            line-height: 1.8;
+            margin-bottom: 14px;
+        }
+
+        /* Diagram figure */
+        .diagram {
+            margin: 20px 0 28px;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            overflow: hidden;
+            background: #fff;
+        }
+        .diagram img {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+        .diagram figcaption {
+            font-size: 13px;
+            color: var(--text-secondary);
+            text-align: center;
+            padding: 10px 16px;
+            border-top: 1px solid var(--border);
+            background: var(--bg-alt);
+        }
+        [data-theme="dark"] .diagram {
+            background: #1e1e2e;
+        }
+        [data-theme="dark"] .diagram img {
+            filter: invert(0.88) hue-rotate(180deg);
+        }
+
+        /* Inline highlight block */
+        .result-block {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            background: var(--bg-alt);
+            border-left: 4px solid var(--accent);
+            padding: 16px 20px;
+            border-radius: 4px;
+            margin: 16px 0 24px;
+            font-size: 14px;
+            line-height: 1.7;
+            transition: background 0.3s;
+        }
+        .result-block i {
+            color: var(--accent);
+            margin-top: 3px;
+            flex-shrink: 0;
+        }
+
+        /* Two-col layout for FSM diagrams */
+        .two-col {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin: 20px 0;
+        }
+
+        @media (max-width: 768px) {
+            .hero h1 { font-size: 24px; }
+            .metrics-strip { grid-template-columns: repeat(2, 1fr); }
+            .metric-card .number { font-size: 26px; }
+            .two-col { grid-template-columns: 1fr; }
+        }
+        @media (max-width: 480px) {
+            .metrics-strip { grid-template-columns: 1fr; }
+        }
+    </style>
 </head>
 <body>
 
@@ -27,377 +176,152 @@
         </div>
     </nav>
 
-    <!-- Main Content -->
     <main class="main">
         <div class="project-detail">
 
             <a href="index.html" class="back-link"><i class="fa-solid fa-arrow-left"></i> <span data-i18n="back">Back to Home</span></a>
 
-            <!-- Header -->
-            <div class="project-header">
-                <h1 data-i18n="header.title">PLAN-B: Multimodal Perception & Closed-Loop Grasping for Humanoid Robot</h1>
-                <p class="subtitle"><strong>Yueyi Chen</strong> &middot; <span data-i18n="header.venue">Algorithm Intern Project</span> &middot; Jetson AGX Orin &middot; 2026-03 &rarr; 2026-05</p>
-                <p class="intro" data-i18n-html="header.intro">planb-robot is a multimodal human&ndash;robot interaction system deployed on Jetson AGX Orin, covering the full closed loop of <strong>Speech &rarr; Semantics &rarr; Perception &rarr; Planning &rarr; Execution &rarr; Verification</strong>. This page documents the system architecture, key technical innovations, and quantitative results across five subsystems.</p>
+            <!-- Hero -->
+            <div class="hero">
+                <h1 data-i18n="hero.title">PLAN-B: Multimodal Perception &amp; Closed-Loop Grasping for Humanoid Robot</h1>
+                <p class="subtitle"><strong>Yueyi Chen</strong> &middot; <span data-i18n="hero.venue">Algorithm Intern</span> &middot; Jetson AGX Orin &middot; 2026.03 &ndash; 2026.05</p>
+                <p class="intro" data-i18n-html="hero.intro">A full-stack multimodal human&ndash;robot interaction system deployed on Jetson AGX Orin, covering the complete closed loop: <strong>Speech &rarr; Semantics &rarr; Perception &rarr; Planning &rarr; Execution &rarr; Verification</strong>. I owned the perception &amp; integration layer &mdash; VAD/ASR tuning, NLU pipeline, VLM-SAM3 grounding, closed-loop state machine, and 3D grasp verification.</p>
             </div>
 
-            <!-- S1: System Overview -->
-            <section class="detail-section">
-                <h2><i class="fa-solid fa-diagram-project"></i> <span data-i18n="s1.title">System Overview</span></h2>
-                <div class="mermaid-wrap">
-                    <pre class="mermaid">
-graph LR
-    A["🎤 Mic 16kHz"] --> B["VadQualityGate\n3-tier VAD"]
-    B --> C["Streaming ASR\n4-engine Router"]
-    C --> D["NLU Parser\nRegex + LLM"]
-    D --> E["VLM + SAM3\nGrounding & Segmentation"]
-    E --> F["Pipeline FSM\n8-state Machine"]
-    F --> G["Navigation\n+ Grasping"]
-    G --> H["Verify\ngrasp_check 3D"]
-    H -->|"retry ≤ 3"| F
-    H -->|"success"| I["✅ TTS\nFeedback"]
-                    </pre>
+            <!-- Metric Strip -->
+            <div class="metrics-strip">
+                <div class="metric-card">
+                    <div class="number">0→92%</div>
+                    <div class="label" data-i18n="m.vad">Far-field Silero hit rate</div>
                 </div>
-                <p data-i18n-html="s1.desc">The system is organized as a <strong>linear pipeline</strong> where each stage's output serves as the next stage's input contract. Key design principles: (1) TTS reverse-gates VAD via <code>/tts/playback_active</code> to prevent self-triggering; (2) the verification layer feeds failures back to the planning layer (not idle), enabling retry on &ldquo;executor reports success but vision reports failure&rdquo;; (3) any stage's error can be grepped via ROS topic constants.</p>
+                <div class="metric-card">
+                    <div class="number">9→90%</div>
+                    <div class="label" data-i18n="m.mask">SAM3 mask success (small obj)</div>
+                </div>
+                <div class="metric-card">
+                    <div class="number">8+5</div>
+                    <div class="label" data-i18n="m.fsm">State machine (main + grasp)</div>
+                </div>
+                <div class="metric-card">
+                    <div class="number">7</div>
+                    <div class="label" data-i18n="m.guard">Guard mechanisms + P0 fix</div>
+                </div>
+            </div>
+
+            <!-- S1: System Architecture -->
+            <section class="section-block">
+                <h2><i class="fa-solid fa-diagram-project"></i> <span data-i18n="s1.title">System Architecture</span></h2>
+                <figure class="diagram">
+                    <img src="Pic/planb/arch_pipeline.png" alt="PLAN-B pipeline architecture" />
+                    <figcaption data-i18n="s1.cap">planb-robot Pipeline: Speech → State Machine → Perception → Execution, with color-coded subsystem boundaries</figcaption>
+                </figure>
+                <p data-i18n-html="s1.p1">The system is a <strong>linear pipeline</strong> where each stage's output serves as the next stage's input contract. The central <code>multimodal_pipeline_node</code> (red) orchestrates an 8-state FSM. Left: voice frontend (VAD → ASR → NLU/LLM). Right: visual perception (RGB-D → VLM bbox → SAM3 mask) and execution (navigation → grasp). TTS reverse-gates VAD via <code>/tts/playback_active</code> to prevent self-triggering.</p>
             </section>
 
             <!-- S2: Voice Frontend -->
-            <section class="detail-section">
+            <section class="section-block">
                 <h2><i class="fa-solid fa-microphone"></i> <span data-i18n="s2.title">Voice Frontend: 3-Tier VAD + Streaming ASR</span></h2>
 
-                <h3 data-i18n="s2.vad.title">Three-Layer VAD Decision Path</h3>
-                <div class="mermaid-wrap">
-                    <pre class="mermaid">
-graph TD
-    A["PCM Frame\n32ms / 512 samples"] --> B{"Energy ≥ threshold\n& ≤ clip?"}
-    B -->|No| C["Discard:\nsilence / noise"]
-    B -->|Yes| D["Software AGC\nRMS → −20 dB"]
-    D --> E["Silero v4 ONNX\nh/c stateful"]
-    E --> F{"prob ≥ 0.3\n& speech_ratio ≥ 0.15?"}
-    F -->|No| G["Discard:\nnoise"]
-    F -->|Yes| H["→ Streaming\nASR Engine"]
-                    </pre>
-                </div>
+                <figure class="diagram">
+                    <img src="Pic/planb/vad_asr_dataflow.png" alt="VAD + ASR streaming data flow" />
+                    <figcaption data-i18n="s2.cap1">Data flow: Mic 16kHz → VadQualityGate (3-tier) → Streaming Engine Router (4 engines) → ASR post-processing → /asr/text</figcaption>
+                </figure>
 
-                <table class="metric-table">
-                    <thead>
-                        <tr>
-                            <th data-i18n="s2.param">Parameter</th>
-                            <th data-i18n="s2.value">Value</th>
-                            <th data-i18n="s2.meaning">Meaning</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <td><code>silero_threshold</code></td>
-                            <td><strong>0.3</strong></td>
-                            <td data-i18n="s2.p1">Lowered from 0.5 default for far-field recall</td>
-                        </tr>
-                        <tr>
-                            <td><code>min_energy_db</code></td>
-                            <td><strong>−48</strong></td>
-                            <td data-i18n="s2.p2">Noise floor −46 dB − 2 dB safety margin</td>
-                        </tr>
-                        <tr>
-                            <td><code>noise_floor_margin_db</code></td>
-                            <td><strong>4</strong></td>
-                            <td data-i18n="s2.p3">Adaptive threshold → −42 dB, leaving 3 dB speech headroom</td>
-                        </tr>
-                        <tr>
-                            <td><code>agc_target_db</code></td>
-                            <td><strong>−20</strong></td>
-                            <td data-i18n="s2.p4">AGC RMS normalization target for far-field matching</td>
-                        </tr>
-                        <tr>
-                            <td><code>noise_floor_window_sec</code></td>
-                            <td><strong>15</strong></td>
-                            <td data-i18n="s2.p5">P10 sliding window for noise floor estimation</td>
-                        </tr>
-                    </tbody>
-                </table>
+                <h3 data-i18n="s2.vad.title">Three-Layer VAD Cascade</h3>
+                <figure class="diagram">
+                    <img src="Pic/planb/vad_decision_path.png" alt="VAD decision path" />
+                    <figcaption data-i18n="s2.cap2">VAD decision path: Energy gate (before AGC) → Software AGC → Silero v4 ONNX (stateful h/c)</figcaption>
+                </figure>
+                <p data-i18n-html="s2.vad.p">The core challenge was far-field weak signals coupled with on-site noise, TTS self-echo, and long-command repetition. The 3-tier cascade (Adaptive Energy → Software AGC → Silero v4 stateful) was <strong>calibrated on-site</strong>: <code>silero_threshold</code> lowered from 0.5 to <strong>0.3</strong> for far-field recall; <code>min_energy_db=-48</code> (noise floor −46 dB − 2 dB margin); <code>noise_floor_margin_db=4</code> yielding −42 dB adaptive threshold with 3 dB speech headroom. The key fix was keeping Silero's <code>h/c</code> state across calls (not resetting each 64ms frame), which boosted far-field hit rate from <strong>0% to 92%</strong>.</p>
 
                 <h3 data-i18n="s2.asr.title">Streaming ASR Engine Router</h3>
-                <p data-i18n-html="s2.asr.desc">Four ASR engines switchable within the Router: <strong>cloud_qwen3</strong> (default, real-time streaming), <strong>cloud_paraformer</strong> (hot-swap backup), <strong>local Qwen3-ASR TRT</strong> (offline), and <strong>FunASR</strong> (chunk streaming). Cloud streaming is production-preferred with server-side VAD + endpointing; the final text undergoes <code>clean_asr_text</code> post-processing (Overlap Stitcher &rarr; Hallucination Filter &rarr; Length Guard).</p>
+                <p data-i18n-html="s2.asr.p">Four engines switchable within the Router: <strong>cloud_qwen3</strong> (default, real-time streaming), <strong>cloud_paraformer</strong> (hot-swap backup), <strong>local Qwen3-ASR TRT</strong> (3-engine split: Conv Frontend / Encoder / Decoder INT8 KV-cache), and <strong>FunASR</strong> (chunk streaming). Post-processing chain: Overlap Stitcher → Hallucination Filter → Length Guard → <code>clean_asr_text</code> (4/5/6-gram N-gram dedup).</p>
 
-                <h3 data-i18n="s2.bargein.title">Barge-in Controller</h3>
-                <p data-i18n-html="s2.bargein.desc">TTS playback state reverse-gates VAD via <code>/tts/playback_active</code>, forming a closed-loop dialogue guard: when TTS is speaking, VAD is suppressed to prevent the robot from hearing its own voice. Users can interrupt at any time — barge-in detection immediately stops TTS and re-enables the pipeline.</p>
-
-                <div class="case-study">
-                    <strong data-i18n="s2.result.label">Key Result:</strong> <span data-i18n-html="s2.result.text">Far-field Silero hit rate <strong>0% &rarr; 92%</strong>; VAD discrimination: white noise prob &lt; 0.01, real speech prob &gt; 0.99; partial ASR latency <strong>150&ndash;300 ms</strong>.</span>
+                <div class="result-block">
+                    <i class="fa-solid fa-chart-line"></i>
+                    <span data-i18n-html="s2.result">Far-field Silero hit rate <strong>0% → 92%</strong> &nbsp;|&nbsp; VAD discrimination: noise prob &lt; 0.01, speech prob &gt; 0.99 &nbsp;|&nbsp; partial ASR latency <strong>150–300 ms</strong></span>
                 </div>
             </section>
 
-            <!-- S3: NLU + VLM -->
-            <section class="detail-section">
-                <h2><i class="fa-solid fa-brain"></i> <span data-i18n="s3.title">Multimodal Semantic Understanding: NLU + VLM + SAM3</span></h2>
+            <!-- S3: NLU + VLM + SAM3 -->
+            <section class="section-block">
+                <h2><i class="fa-solid fa-brain"></i> <span data-i18n="s3.title">Multimodal Semantic Understanding</span></h2>
 
-                <h3 data-i18n="s3.nlu.title">Dual-Path NLU Design</h3>
-                <div class="mermaid-wrap">
-                    <pre class="mermaid">
-graph LR
-    A["/asr/text"] --> B{"Regex\nMatch?"}
-    B -->|"Yes (≈0ms)"| C["intent + slots\nFast Path"]
-    B -->|No| D["Qwen3-0.6B\nJSON Schema"]
-    D --> E["intent + entities\n+ confidence"]
-    C --> F["Whitelist\nValidation"]
-    E --> F
-    F --> G["VLM bbox\n+ SAM3 mask"]
-                    </pre>
-                </div>
+                <h3 data-i18n="s3.nlu.title">Dual-Path NLU: Regex Fast Path + LLM Fallback</h3>
+                <figure class="diagram">
+                    <img src="Pic/planb/nlu_semantic_chain.png" alt="NLU semantic chain" />
+                    <figcaption data-i18n="s3.cap1">End-to-end semantic chain: ASR text → regex/whitelist fast path (≈0ms) or Qwen3-0.6B JSON parsing → VLM bbox → SAM3 segmentation</figcaption>
+                </figure>
+                <p data-i18n-html="s3.nlu.p">7 regex templates cover 90% common commands at 0 ms latency, freeing LLM compute for VLM. A ~300-word whitelist guards against ASR noise false matches. Qwen3-0.6B runs with <code>temperature=0</code> + <code>max_new_tokens=28</code> for stable JSON output. 8 ASR noise examples in the system prompt force-label noise as <code>unknown</code>, blocking false chat triggers.</p>
 
-                <table class="metric-table">
-                    <thead>
-                        <tr>
-                            <th data-i18n="s3.design">Design Point</th>
-                            <th data-i18n="s3.principle">Principle</th>
-                            <th data-i18n="s3.outcome">Outcome</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <td data-i18n="s3.d1.name">Regex Fast Path</td>
-                            <td data-i18n="s3.d1.p">7 templates cover 90% common commands at 0 ms</td>
-                            <td data-i18n="s3.d1.o">Frees LLM compute for VLM</td>
-                        </tr>
-                        <tr>
-                            <td data-i18n="s3.d2.name">Whitelist Guard</td>
-                            <td data-i18n="s3.d2.p">~300 word dictionary substring match</td>
-                            <td data-i18n="s3.d2.o">Prevents ASR noise false matches</td>
-                        </tr>
-                        <tr>
-                            <td data-i18n="s3.d3.name">JSON Schema Constraint</td>
-                            <td data-i18n="s3.d3.p"><code>temperature=0</code> + <code>max_new_tokens=28</code></td>
-                            <td data-i18n="s3.d3.o">Greedy decoding, stable output</td>
-                        </tr>
-                        <tr>
-                            <td data-i18n="s3.d4.name">Noise &rarr; unknown</td>
-                            <td data-i18n="s3.d4.p">8 ASR noise examples in system prompt</td>
-                            <td data-i18n="s3.d4.o">Force-labels noise, blocks false chat</td>
-                        </tr>
-                        <tr>
-                            <td data-i18n="s3.d5.name">chat_fallback</td>
-                            <td data-i18n="s3.d5.p">Only when LLM says unknown but sentence ends with ?</td>
-                            <td data-i18n="s3.d5.o">Saves clear questions, not garbled input</td>
-                        </tr>
-                    </tbody>
-                </table>
-
-                <h3 data-i18n="s3.vlm.title">VLM bbox &rarr; SAM3 Mask (Letterbox Alignment)</h3>
-                <p data-i18n-html="s3.vlm.desc">Key fix: unified scale ratio from separate 0.7875/1.4 to <code>min(size/W, size/H)</code>, preserving 16:9 aspect ratio. The API passes original-image pixel coordinates; a layout-aware inverse function maps them into letterbox-internal coordinates. This prevents ViT from seeing targets stretched 1.78&times; vertically. Combined with CLIP English text joint grounding (<code>HAR_SAM3_BOX_TEXT_EMPTY=0</code>), small-object mask success jumped from <strong>9% to &ge;90%</strong> (44 green-apple trials).</p>
+                <h3 data-i18n="s3.vlm.title">VLM bbox → SAM3 Mask with Letterbox Alignment</h3>
+                <p data-i18n-html="s3.vlm.p">The key fix: unified scale ratio from separate 0.7875/1.4 to <code>min(size/W, size/H)</code>, preserving 16:9 aspect ratio. A layout-aware inverse function maps original-image pixel coordinates into letterbox-internal coordinates, preventing ViT from seeing targets stretched 1.78&times;. Combined with CLIP English text joint grounding (<code>HAR_SAM3_BOX_TEXT_EMPTY=0</code>), small-object mask success jumped from <strong>9% to &ge;90%</strong> across 44 green-apple trials.</p>
 
                 <h3 data-i18n="s3.defense.title">5-Layer Semantic Defense Chain</h3>
-                <table class="metric-table">
-                    <thead>
-                        <tr>
-                            <th data-i18n="s3.layer">Layer</th>
-                            <th data-i18n="s3.mechanism">Mechanism</th>
-                            <th data-i18n="s3.purpose">Purpose</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <td>1</td>
-                            <td data-i18n="s3.l1.m">Whitelist longest-substring recovery</td>
-                            <td data-i18n="s3.l1.p">Recovers objects from ASR sliding-window noise</td>
-                        </tr>
-                        <tr>
-                            <td>2</td>
-                            <td data-i18n="s3.l2.m">ASR color backfill into prompt</td>
-                            <td data-i18n="s3.l2.p">Fixes NLU dropping color attributes</td>
-                        </tr>
-                        <tr>
-                            <td>3</td>
-                            <td data-i18n="s3.l3.m">Hallucinated location stripping</td>
-                            <td data-i18n="s3.l3.p">Removes phantom placement locations from LLM</td>
-                        </tr>
-                        <tr>
-                            <td>4</td>
-                            <td data-i18n="s3.l4.m">Translation sentinel blacklist</td>
-                            <td data-i18n="s3.l4.p">Breaks dictionary-miss infinite loops</td>
-                        </tr>
-                        <tr>
-                            <td>5</td>
-                            <td data-i18n="s3.l5.m">VLM-SAM3 IoU / center-distance validation</td>
-                            <td data-i18n="s3.l5.p">Catches VLM-SAM3 spatial contradictions before cache write</td>
-                        </tr>
-                    </tbody>
-                </table>
+                <figure class="diagram">
+                    <img src="Pic/planb/defense_chain.png" alt="5-layer defense chain" />
+                    <figcaption data-i18n="s3.cap2">5-layer defense: (1) whitelist recovery, (2) ASR color backfill, (3) hallucination stripping, (4) sentinel anti-pollution, (5) VLM-SAM3 IoU/center-distance validation</figcaption>
+                </figure>
+                <p data-i18n-html="s3.defense.p">Root cause across 5 failure types: <strong>upstream modules lacked signal-consistency validation against downstream artifacts</strong> &mdash; ASR didn't verify known objects, NLU didn't verify color completeness, LLM didn't verify placement verbs, translation cache didn't verify sentinel tokens, VLM-SAM3 didn't verify spatial consistency. Any stage letting dirty data through causes exponential amplification downstream.</p>
 
-                <div class="case-study">
-                    <strong data-i18n="s3.result.label">Key Results:</strong> <span data-i18n-html="s3.result.text">SAM3 mask success (small targets): <strong>9% &rarr; &ge;90%</strong>; VLM bbox TTFB saved <strong>300&ndash;500 ms</strong>; color/brand routing error rate &rarr; <strong>0</strong>.</span>
+                <div class="result-block">
+                    <i class="fa-solid fa-chart-line"></i>
+                    <span data-i18n-html="s3.result">SAM3 mask success (small targets): <strong>9% → ≥90%</strong> &nbsp;|&nbsp; VLM bbox TTFB: <strong>−300–500 ms</strong> &nbsp;|&nbsp; color/brand routing error → <strong>0</strong></span>
                 </div>
+
+                <figure class="diagram">
+                    <img src="Pic/planb/ttfb_chart.png" alt="VLM TTFB optimization" />
+                    <figcaption data-i18n="s3.cap3">VLM bbox HTTP TTFB: max_side 768 → 512, saving 300–500 ms per call (15–41% reduction)</figcaption>
+                </figure>
             </section>
 
-            <!-- S4: State Machine & Verification -->
-            <section class="detail-section">
-                <h2><i class="fa-solid fa-gears"></i> <span data-i18n="s4.title">Closed-Loop State Machine & Grasp Verification</span></h2>
+            <!-- S4: State Machine -->
+            <section class="section-block">
+                <h2><i class="fa-solid fa-gears"></i> <span data-i18n="s4.title">Closed-Loop State Machine &amp; Grasp Verification</span></h2>
 
-                <h3 data-i18n="s4.fsm.title">Pipeline Main FSM (8 States)</h3>
-                <div class="mermaid-wrap">
-                    <pre class="mermaid">
-stateDiagram-v2
-    [*] --> idle
-    idle --> classify: /asr/text
-    classify --> parse: command
-    classify --> chat: casual
-    parse --> sam3: pick_up / place
-    sam3 --> waitNav: _nav_pending
-    waitNav --> flushGrasp: REACHED
-    flushGrasp --> waitGrasp: _grasp_pending
-    waitGrasp --> verify: SUCCESS
-    verify --> idle: pass
-    verify --> retryLoop: fail & retry≤3
-    retryLoop --> waitGrasp
-    retryLoop --> giveUp: max retries
-    giveUp --> idle: TTS feedback
-    chat --> idle: TTS done
-    idle --> idle: noise / too short
-                    </pre>
-                </div>
-
-                <h3 data-i18n="s4.sub.title">Grasp Sub-FSM (5 States)</h3>
-                <div class="mermaid-wrap">
-                    <pre class="mermaid">
-stateDiagram-v2
-    [*] --> idle
-    idle --> executing: GraspFeedback.STARTED
-    executing --> verifying: EXEC_DONE
-    verifying --> idle: pass / VERIFY_SKIP
-    verifying --> retrying: fail
-    retrying --> executing: re-EXEC_GRASP
-    retrying --> aborting: max retries
-    executing --> aborting: STATE_FAILED
-    aborting --> idle: retract + TTS
-                    </pre>
+                <div class="two-col">
+                    <figure class="diagram">
+                        <img src="Pic/planb/fsm_main.png" alt="Pipeline main FSM" />
+                        <figcaption data-i18n="s4.cap1">Pipeline Main FSM: 8 states from idle → classify → parse → sam3 → waitNav → flushGrasp → waitGrasp → verify, with retry loop and giveUp</figcaption>
+                    </figure>
+                    <figure class="diagram">
+                        <img src="Pic/planb/fsm_grasp_sub.png" alt="Grasp sub-FSM" />
+                        <figcaption data-i18n="s4.cap2">Grasp Sub-FSM: 5 states — idle → executing → verifying → retrying → aborting, adding a verifying intermediate state for "executor self-report + visual verification" two-level judgment</figcaption>
+                    </figure>
                 </div>
 
                 <h3 data-i18n="s4.check.title">grasp_check: 3D Multi-Feature Voting</h3>
-                <div class="mermaid-wrap">
-                    <pre class="mermaid">
-graph TD
-    A["Object + Hand\nPoint Cloud"] --> B{"median\n< 0.055m?"}
-    B -->|No| C["❌ FAIL\nmedian_too_large"]
-    B -->|Yes| D{"P25\n< 0.045m?"}
-    D -->|Yes| E["vote +1"]
-    D -->|No| F[" "]
-    B -->|Yes| G{"frac<3cm\n≥ 2%?"}
-    G -->|Yes| H["vote +1"]
-    G -->|No| I[" "]
-    B -->|Yes| J{"frac<5cm\n≥ 8%?"}
-    J -->|Yes| K["vote +1"]
-    J -->|No| L[" "]
-    E --> M{"votes ≥ 1?"}
-    H --> M
-    K --> M
-    F --> M
-    I --> M
-    L --> M
-    M -->|Yes| N["✅ PASS"]
-    M -->|No| O["❌ FAIL\ninsufficient_support"]
-                    </pre>
-                </div>
-                <p data-i18n-html="s4.check.desc">The main gate (median &lt; 0.055m) is mandatory &mdash; if the distribution center is too far, the object is clearly not in hand. Three auxiliary voters (P25, frac&lt;3cm, frac&lt;5cm) each capture different contact evidence; any one passing suffices. SAM3 runs <code>batch=2</code> to output both object and hand masks simultaneously, avoiding cross-frame misalignment.</p>
+                <figure class="diagram">
+                    <img src="Pic/planb/grasp_check_voting.png" alt="grasp_check voting decision path" />
+                    <figcaption data-i18n="s4.cap3">Multi-feature voting: main gate median &lt; 0.055m (mandatory) + 3 auxiliary voters (P25, frac&lt;3cm, frac&lt;5cm), any 1 passing suffices</figcaption>
+                </figure>
+                <p data-i18n-html="s4.check.p">The algorithm upgrade from v0 (single Z-threshold) to v1.0.0 (hand+object 3D voting): input expanded from object mask + depth to object mask + <strong>hand mask</strong> + depth; judgment metrics from 1 (centroid_Z + z_min) to 4 (median/P25/frac&lt;3cm/frac&lt;5cm); failure fallback changed from pure depth center to <strong>reverse ROI re-check</strong> (refusing hand's own false positives). SAM3 runs <code>batch=2</code> to co-segment object and dexterous hand simultaneously.</p>
 
-                <h3 data-i18n="s4.guard.title">7 Guard Mechanisms</h3>
-                <table class="metric-table">
-                    <thead>
-                        <tr>
-                            <th>#</th>
-                            <th data-i18n="s4.guard.name">Guard</th>
-                            <th data-i18n="s4.guard.param">Key Parameter</th>
-                            <th data-i18n="s4.guard.value">Value</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr><td>1</td><td><code>_nav_pending</code></td><td data-i18n="s4.g1">Nav status arbiter</td><td>nav_status</td></tr>
-                        <tr><td>2</td><td data-i18n="s4.g2.name">Deferred command flush</td><td data-i18n="s4.g2.p">REACHED &rarr; EXEC</td><td><code>_deferred_grasp_cmd</code></td></tr>
-                        <tr><td>3</td><td data-i18n="s4.g3.name">Grasp retry &le; 3</td><td data-i18n="s4.g3.p">Infra / real fail / moved</td><td><code>grasp_max_retries=3</code></td></tr>
-                        <tr><td>4</td><td><code>grasp_check</code></td><td data-i18n="s4.g4.p">3D point cloud voting</td><td>median/P25/frac</td></tr>
-                        <tr><td>5</td><td><code>pick_fast_verify</code></td><td data-i18n="s4.g5.p">Left-cam SAM3 re-check</td><td>post-grasp</td></tr>
-                        <tr><td>6</td><td><code>_place_verify_mixin</code></td><td data-i18n="s4.g6.p">mask inclusion / IoU / depth</td><td>post-place</td></tr>
-                        <tr><td>7</td><td data-i18n="s4.g7.name">VLM grasp verify (opt.)</td><td data-i18n="s4.g7.p">Qwen2.5-VL override</td><td><code>enable_grasp_verification</code></td></tr>
-                    </tbody>
-                </table>
-
-                <h3 data-i18n="s4.p0.title">P0 Bug Case Study</h3>
-                <div class="case-study">
-                    <p data-i18n-html="s4.p0.desc"><strong>Symptom:</strong> grasping &ldquo;apple&rdquo; repeatedly retried 3+ times, always failing. <strong>Root cause:</strong> <code>_bg_write_shm()</code> success path only logged but never set <code>shm_write_ok["ok"]=True</code>. This single missing flag triggered a <strong>7-step cascading error chain</strong>: flag False &rarr; fallback path &rarr; stale parser state &rarr; VLM sees old frame &rarr; SAM3 gets wrong bbox &rarr; mask too small (27/65/93 px) &rarr; depth_meta=None &rarr; fail-fast retry. <strong>Fix:</strong> one line &mdash; add <code>shm_write_ok["ok"] = True</code> after successful <code>os.replace()</code>.</p>
+                <h3 data-i18n="s4.p0.title">P0 Bug: 7-Step Cascading Failure Audit</h3>
+                <div class="result-block">
+                    <i class="fa-solid fa-bug"></i>
+                    <span data-i18n-html="s4.p0.desc"><strong>Symptom:</strong> grasping &ldquo;apple&rdquo; retried 3+ times, always failing. <strong>Root cause:</strong> <code>_bg_write_shm()</code> logged success but never set <code>shm_write_ok["ok"]=True</code>. One missing flag triggered a <strong>7-step cascade:</strong> flag False → fallback path → stale parser state → VLM old frame → SAM3 wrong bbox → mask &lt;93px → depth_meta=None → fail-fast retry. <strong>Fix:</strong> one line.</span>
                 </div>
             </section>
 
-            <!-- S5: Key Metrics -->
-            <section class="detail-section">
-                <h2><i class="fa-solid fa-chart-line"></i> <span data-i18n="s5.title">Key Metrics Summary</span></h2>
-                <table class="metric-table">
-                    <thead>
-                        <tr>
-                            <th data-i18n="s5.metric">Metric</th>
-                            <th data-i18n="s5.before">Before</th>
-                            <th data-i18n="s5.after">After</th>
-                            <th data-i18n="s5.source">Source</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <td data-i18n="s5.m1">SAM3 mask success (small targets)</td>
-                            <td>4/44 &approx; 9%</td>
-                            <td class="metric-highlight">&ge; 90%</td>
-                            <td>letterbox + box+text</td>
-                        </tr>
-                        <tr>
-                            <td>VLM bbox HTTP TTFB</td>
-                            <td>850&ndash;2950 ms</td>
-                            <td class="metric-highlight">500&ndash;2500 ms</td>
-                            <td><code>BBOX_MAX_SIDE=512</code></td>
-                        </tr>
-                        <tr>
-                            <td data-i18n="s5.m3">Far-field Silero hit rate</td>
-                            <td>0%</td>
-                            <td class="metric-highlight">92%</td>
-                            <td>stateful h/c + params</td>
-                        </tr>
-                        <tr>
-                            <td data-i18n="s5.m4">Fallback drift pollution</td>
-                            <td data-i18n="s5.m4b">Frequent (log L399-420)</td>
-                            <td class="metric-highlight" data-i18n="s5.m4a">All blocked by defense</td>
-                            <td data-i18n="s5.m4s">Defense Layer 5</td>
-                        </tr>
-                        <tr>
-                            <td data-i18n="s5.m5">Dictionary-miss infinite loop</td>
-                            <td data-i18n="s5.m5b">Permanent cache pollution</td>
-                            <td class="metric-highlight" data-i18n="s5.m5a">Sentinel blacklist rejects</td>
-                            <td data-i18n="s5.m5s">Defense Layer 4</td>
-                        </tr>
-                        <tr>
-                            <td data-i18n="s5.m6">Color/brand routing</td>
-                            <td data-i18n="s5.m6b">HSV rejects <code>red bull</code></td>
-                            <td class="metric-highlight" data-i18n="s5.m6a">VLM-stage routing, correct</td>
-                            <td data-i18n="s5.m6s">Disabled HSV rerank</td>
-                        </tr>
-                        <tr>
-                            <td data-i18n="s5.m7">Longest-word priority</td>
-                            <td data-i18n="s5.m7b">&ldquo;green apple&rdquo; truncated to &ldquo;apple&rdquo;</td>
-                            <td class="metric-highlight" data-i18n="s5.m7a">Whitelist longest-match recovery</td>
-                            <td data-i18n="s5.m7s">Defense Layer 1</td>
-                        </tr>
-                    </tbody>
-                </table>
+            <!-- S5: Metrics Summary -->
+            <section class="section-block">
+                <h2><i class="fa-solid fa-table"></i> <span data-i18n="s5.title">Quantified Improvements</span></h2>
+                <figure class="diagram">
+                    <img src="Pic/planb/metrics_table.png" alt="Metrics summary table" />
+                    <figcaption data-i18n="s5.cap">Before/after comparison across model layer (mask success), latency layer (TTFB), and robustness layer (4 types of pollution defense)</figcaption>
+                </figure>
             </section>
 
         </div>
     </main>
 
-    <!-- Footer -->
     <footer class="footer">
         <div class="container">
             <p data-i18n-html="footer">&copy; <span id="year">2026</span> Yueyi Chen. Powered by <a href="https://pages.github.com/" target="_blank" rel="noopener">GitHub Pages</a>.</p>
         </div>
     </footer>
 
-    <script type="module">
-        import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
-        mermaid.initialize({ startOnLoad: true, theme: 'neutral', securityLevel: 'loose' });
-        window.__mermaid = mermaid;
-    </script>
     <script src="planb.js"></script>
 </body>
 </html>
