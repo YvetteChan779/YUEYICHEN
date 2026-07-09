@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="ALOHA/LeKiwi SFT Full Episode: DreamZero VLA reproduction and robot inference project — Yueyi Chen" />
+    <title>ALOHA/LeKiwi SFT Full Episode | Yueyi Chen</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Lora:wght@400;500;600;700&family=JetBrains+Mono:wght@400&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+    <link rel="stylesheet" href="styles.css" />
+    <style>
+        .hero {
+            text-align: center;
+            padding: 56px 0 40px;
+            border-bottom: 1px solid var(--border);
+            margin-bottom: 44px;
+        }
+        .hero h1 {
+            font-family: var(--font-serif);
+            font-size: 32px;
+            font-weight: 700;
+            line-height: 1.3;
+            margin-bottom: 12px;
+        }
+        .hero .subtitle,
+        .hero .tagline {
+            font-size: 15px;
+            color: var(--text-secondary);
+            margin-bottom: 8px;
+        }
+        .hero .tagline {
+            font-style: italic;
+            margin-bottom: 26px;
+        }
+        .hero .links {
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .hero .links a {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 13px;
+            font-weight: 600;
+            padding: 6px 16px;
+            border: 1px solid var(--accent);
+            border-radius: 4px;
+            color: var(--accent);
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+            text-decoration: none;
+            transition: all 0.2s;
+        }
+        .hero .links a:hover {
+            background: var(--accent);
+            color: #fff;
+            text-decoration: none;
+        }
+        .metrics-strip {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 16px;
+            margin-bottom: 44px;
+        }
+        .metric-card {
+            text-align: center;
+            padding: 22px 12px;
+            background: var(--bg-alt);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            transition: background 0.3s, border-color 0.3s, transform 0.2s;
+        }
+        .metric-card:hover { transform: translateY(-2px); }
+        .metric-card .number {
+            font-size: 28px;
+            font-weight: 700;
+            color: var(--accent);
+            line-height: 1.2;
+        }
+        .metric-card .label {
+            font-size: 13px;
+            color: var(--text-secondary);
+            margin-top: 6px;
+        }
+        .section-block {
+            margin-bottom: 52px;
+        }
+        .section-block h2 {
+            font-family: var(--font-serif);
+            font-size: 22px;
+            font-weight: 600;
+            margin-bottom: 16px;
+            padding-bottom: 8px;
+            border-bottom: 2px solid var(--border);
+        }
+        .section-block h2 i {
+            margin-right: 8px;
+            color: var(--accent);
+            font-size: 18px;
+        }
+        .section-block h3 {
+            font-size: 17px;
+            font-weight: 600;
+            margin: 26px 0 12px;
+        }
+        .section-block p {
+            font-size: 15px;
+            line-height: 1.8;
+            margin-bottom: 14px;
+        }
+        .diagram {
+            margin: 20px 0 28px;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            overflow: hidden;
+            background: var(--bg-alt);
+            transition: background 0.3s, border-color 0.3s;
+        }
+        .diagram img {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+        .diagram figcaption {
+            font-size: 13px;
+            color: var(--text-secondary);
+            text-align: center;
+            padding: 10px 16px;
+            border-top: 1px solid var(--border);
+            background: var(--bg-alt);
+        }
+        .scope-callout,
+        .result-block {
+            background: var(--bg-alt);
+            border-left: 4px solid var(--accent);
+            padding: 16px 20px;
+            border-radius: 4px;
+            margin: 16px 0 24px;
+            font-size: 14px;
+            line-height: 1.7;
+            transition: background 0.3s;
+        }
+        .scope-callout {
+            background: var(--highlight-bg);
+            border-left-color: var(--highlight-border);
+        }
+        .scope-callout i {
+            margin-right: 8px;
+            color: var(--highlight-border);
+        }
+        .result-block i {
+            color: var(--accent);
+            margin-right: 8px;
+        }
+        .contrib-list {
+            list-style: none;
+            padding: 0;
+            margin: 16px 0 24px;
+        }
+        .contrib-list li {
+            position: relative;
+            padding-left: 24px;
+            margin-bottom: 10px;
+            font-size: 15px;
+            line-height: 1.7;
+        }
+        .contrib-list li::before {
+            content: "";
+            position: absolute;
+            left: 0;
+            top: 10px;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--accent);
+        }
+        .highlight-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 16px;
+            margin: 20px 0;
+        }
+        .hl-card {
+            padding: 20px;
+            background: var(--bg-alt);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            transition: background 0.3s, border-color 0.3s, transform 0.2s;
+        }
+        .hl-card:hover { transform: translateY(-2px); }
+        .hl-card .hl-icon {
+            font-size: 22px;
+            color: var(--accent);
+            margin-bottom: 10px;
+        }
+        .hl-card h4 {
+            font-size: 15px;
+            font-weight: 600;
+            margin-bottom: 6px;
+        }
+        .hl-card p {
+            font-size: 13px;
+            color: var(--text-secondary);
+            line-height: 1.6;
+            margin: 0;
+        }
+        .video-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 16px;
+            margin: 20px 0 12px;
+        }
+        .video-card {
+            background: var(--bg-alt);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            overflow: hidden;
+            transition: background 0.3s, border-color 0.3s;
+        }
+        .video-card video {
+            width: 100%;
+            display: block;
+            background: #000;
+            aspect-ratio: 16 / 9;
+        }
+        .video-card figcaption {
+            padding: 10px 12px;
+            font-size: 13px;
+            color: var(--text-secondary);
+        }
+        .table-wrapper {
+            overflow-x: auto;
+            margin: 16px 0 24px;
+        }
+        .results-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 14px;
+        }
+        .results-table th,
+        .results-table td {
+            padding: 10px 14px;
+            border: 1px solid var(--border);
+            text-align: left;
+            vertical-align: top;
+        }
+        .results-table th {
+            background: var(--bg-alt);
+            font-weight: 600;
+            white-space: nowrap;
+        }
+        code {
+            font-family: var(--font-mono);
+            font-size: 13px;
+            background: var(--bg-alt);
+            border: 1px solid var(--border);
+            padding: 1px 5px;
+            border-radius: 3px;
+        }
+        @media (max-width: 768px) {
+            .hero h1 { font-size: 24px; }
+            .metrics-strip { grid-template-columns: repeat(2, 1fr); }
+            .video-grid { grid-template-columns: 1fr; }
+            .highlight-grid { grid-template-columns: 1fr; }
+        }
+        @media (max-width: 480px) {
+            .metrics-strip { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <a href="index.html" class="nav-brand">Yueyi Chen</a>
+            <div class="nav-right">
+                <button class="lang-toggle" id="langToggle" aria-label="Toggle language">中</button>
+                <button class="theme-toggle" id="themeToggle" aria-label="Toggle theme">
+                    <i class="fa-solid fa-sun icon-light"></i>
+                    <i class="fa-solid fa-moon icon-dark"></i>
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <main class="main">
+        <div class="project-detail">
+            <a href="index.html" class="back-link"><i class="fa-solid fa-arrow-left"></i> <span data-i18n="back">Back to Home</span></a>
+
+            <div class="hero">
+                <h1 data-i18n="hero.title">ALOHA/LeKiwi SFT Full Episode: DreamZero VLA Reproduction</h1>
+                <p class="subtitle"><strong>Yueyi Chen</strong> &middot; <span data-i18n="hero.venue">Embodied AI / Robot Learning Project</span> &middot; 2026</p>
+                <p class="tagline" data-i18n="hero.tagline">LeRobot data collection, GEAR-style conversion, DreamZero LoRA fine-tuning, and receding-horizon robot inference.</p>
+                <div class="links">
+                    <a href="#architecture"><i class="fa-solid fa-diagram-project"></i> <span data-i18n="hero.arch">Architecture</span></a>
+                    <a href="#design"><i class="fa-solid fa-flask"></i> <span data-i18n="hero.design">Experiment Design</span></a>
+                    <a href="#demo"><i class="fa-solid fa-play"></i> <span data-i18n="hero.demo">Rollout Videos</span></a>
+                </div>
+            </div>
+
+            <div class="metrics-strip">
+                <div class="metric-card">
+                    <div class="number">3-View</div>
+                    <div class="label" data-i18n="m.views">Synchronized observation</div>
+                </div>
+                <div class="metric-card">
+                    <div class="number">LeRobot</div>
+                    <div class="label" data-i18n="m.data">State/action dataset</div>
+                </div>
+                <div class="metric-card">
+                    <div class="number">LoRA</div>
+                    <div class="label" data-i18n="m.sft">DreamZero fine-tuning</div>
+                </div>
+                <div class="metric-card">
+                    <div class="number">24-step</div>
+                    <div class="label" data-i18n="m.chunk">Action chunk inference</div>
+                </div>
+            </div>
+
+            <section class="section-block">
+                <h2><i class="fa-solid fa-bullseye"></i> <span data-i18n="s0.title">Overview</span></h2>
+                <p data-i18n-html="s0.p1">This project reproduces a <strong>DreamZero-style Vision-Language-Action pipeline</strong> on an ALOHA/LeKiwi tabletop manipulation setup. I treated the existing synchronized mp4 rollouts as qualitative inference references, then designed the trainable path around LeRobot demonstrations with aligned RGB, robot state, action, timestamp, and language annotation.</p>
+                <ul class="contrib-list">
+                    <li data-i18n-html="s0.c1">Designed the end-to-end reproduction route: <strong>LeRobot collection -> GEAR metadata -> DreamZero embodiment config -> LoRA SFT -> WebSocket inference</strong>.</li>
+                    <li data-i18n-html="s0.c2">Defined a 3-camera observation contract and action/state schema for ALOHA/LeKiwi, with explicit checks for camera order, gripper convention, and action normalization.</li>
+                    <li data-i18n-html="s0.c3">Built the experiment design around staged validation: small-episode overfit, 50-episode pilot, 100-300 episode SFT, then real-robot rollout evaluation.</li>
+                    <li data-i18n-html="s0.c4">Integrated rollout videos into the project page as visual evidence for the inference/evaluation interface, while keeping them separate from trainable data.</li>
+                </ul>
+                <div class="scope-callout">
+                    <i class="fa-solid fa-circle-info"></i>
+                    <span data-i18n-html="s0.scope"><strong>Data note:</strong> the mp4 files shown below are inference results, not training data. Training requires synchronized state/action trajectories, episode metadata, and language labels collected through LeRobot.</span>
+                </div>
+            </section>
+
+            <section class="section-block" id="architecture">
+                <h2><i class="fa-solid fa-diagram-project"></i> <span data-i18n="s1.title">System Architecture</span></h2>
+                <figure class="diagram">
+                    <img src="Pic/aloha_lekiwi/aloha_lekiwi_arch.svg" alt="DreamZero ALOHA LeKiwi system architecture" />
+                    <figcaption data-i18n="s1.cap">Full reproduction pipeline: data acquisition, LeRobot-to-GEAR conversion, DreamZero LoRA fine-tuning, WebSocket inference, safety adapter, and closed-loop rollout evaluation.</figcaption>
+                </figure>
+            </section>
+
+            <section class="section-block" id="design">
+                <h2><i class="fa-solid fa-flask"></i> <span data-i18n="s2.title">Experimental Design</span></h2>
+                <p data-i18n-html="s2.p1">I designed the experiment as an engineering-first reproduction, because VLA failures on real robots are often caused by data-control interface bugs rather than model capacity. The first priority is proving that the observation/action schema is correct before scaling training.</p>
+                <div class="table-wrapper">
+                    <table class="results-table">
+                        <thead>
+                            <tr>
+                                <th data-i18n="s2.th.stage">Stage</th>
+                                <th data-i18n="s2.th.goal">Goal</th>
+                                <th data-i18n="s2.th.check">Main Check</th>
+                                <th data-i18n="s2.th.output">Output</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td data-i18n="s2.r1.stage">0. Data sanity</td>
+                                <td data-i18n="s2.r1.goal">Collect a small clean set</td>
+                                <td data-i18n="s2.r1.check">camera order, timestamp alignment, action dimension</td>
+                                <td data-i18n="s2.r1.output">validated LeRobot dataset</td>
+                            </tr>
+                            <tr>
+                                <td data-i18n="s2.r2.stage">1. Overfit run</td>
+                                <td data-i18n="s2.r2.goal">Catch schema bugs early</td>
+                                <td data-i18n="s2.r2.check">loss drop, action direction, gripper timing</td>
+                                <td data-i18n="s2.r2.output">conversion/config fix list</td>
+                            </tr>
+                            <tr>
+                                <td data-i18n="s2.r3.stage">2. LoRA pilot</td>
+                                <td data-i18n="s2.r3.goal">Adapt DreamZero-AgiBot</td>
+                                <td data-i18n="s2.r3.check">offline rollout smoothness and chunk stability</td>
+                                <td data-i18n="s2.r3.output">task LoRA checkpoint</td>
+                            </tr>
+                            <tr>
+                                <td data-i18n="s2.r4.stage">3. Real rollout</td>
+                                <td data-i18n="s2.r4.goal">Evaluate closed-loop behavior</td>
+                                <td data-i18n="s2.r4.check">success phase, clipping rate, failure mode</td>
+                                <td data-i18n="s2.r4.output">video + phase metrics</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="result-block">
+                    <i class="fa-solid fa-wrench"></i>
+                    <span data-i18n-html="s2.result">The key implementation detail is the <strong>robot adapter</strong>: unnormalize model actions, clamp joint/gripper limits, execute only the first few steps of each generated chunk, then replan from fresh camera observations.</span>
+                </div>
+            </section>
+
+            <section class="section-block">
+                <h2><i class="fa-solid fa-database"></i> <span data-i18n="s3.title">Data, Training and Fine-Tuning Protocol</span></h2>
+                <p data-i18n-html="s3.p1">The trainable dataset should be collected with LeRobot rather than reconstructed from mp4 files. Each episode needs three RGB streams, robot state, action command, timestamps, episode boundaries, and a consistent English task instruction. The DreamZero side then consumes the dataset through a GEAR-style modality description.</p>
+                <div class="highlight-grid">
+                    <div class="hl-card">
+                        <div class="hl-icon"><i class="fa-solid fa-video"></i></div>
+                        <h4 data-i18n="s3.h1.title">Multi-view Contract</h4>
+                        <p data-i18n="s3.h1.desc">Front, side, and wrist views are fixed as embodiment-level keys. I avoid changing camera order between collection, training, and inference.</p>
+                    </div>
+                    <div class="hl-card">
+                        <div class="hl-icon"><i class="fa-solid fa-ruler-combined"></i></div>
+                        <h4 data-i18n="s3.h2.title">Action Scale Audit</h4>
+                        <p data-i18n="s3.h2.desc">Joint, gripper, and optional base actions are inspected from parquet shapes before writing modality configs.</p>
+                    </div>
+                    <div class="hl-card">
+                        <div class="hl-icon"><i class="fa-solid fa-brain"></i></div>
+                        <h4 data-i18n="s3.h3.title">LoRA First</h4>
+                        <p data-i18n="s3.h3.desc">I start from DreamZero-AgiBot and tune low-rank adapters before attempting heavier full-parameter training.</p>
+                    </div>
+                    <div class="hl-card">
+                        <div class="hl-icon"><i class="fa-solid fa-shield-halved"></i></div>
+                        <h4 data-i18n="s3.h4.title">Safety-Aware Inference</h4>
+                        <p data-i18n="s3.h4.desc">Model output is treated as a high-level command stream; the low-level controller still handles limits, smoothing, and emergency stop.</p>
+                    </div>
+                </div>
+            </section>
+
+            <section class="section-block" id="demo">
+                <h2><i class="fa-solid fa-video"></i> <span data-i18n="s4.title">Inference Rollout Videos</span></h2>
+                <p data-i18n-html="s4.p1">The videos below are representative synchronized rollouts from the provided project folder. I use them on the homepage as qualitative inference evidence and as a target format for later closed-loop evaluation videos.</p>
+                <div class="video-grid">
+                    <figure class="video-card">
+                        <video src="Pic/aloha_lekiwi/ep000_sync.mp4" controls preload="metadata" muted></video>
+                        <figcaption data-i18n="s4.v1">Episode 000: synchronized multi-view inference rollout.</figcaption>
+                    </figure>
+                    <figure class="video-card">
+                        <video src="Pic/aloha_lekiwi/ep003_sync.mp4" controls preload="metadata" muted></video>
+                        <figcaption data-i18n="s4.v2">Episode 003: longer rollout used for phase and stability inspection.</figcaption>
+                    </figure>
+                    <figure class="video-card">
+                        <video src="Pic/aloha_lekiwi/ep009_sync.mp4" controls preload="metadata" muted></video>
+                        <figcaption data-i18n="s4.v3">Episode 009: compact rollout for fast page review.</figcaption>
+                    </figure>
+                </div>
+            </section>
+
+            <section class="section-block">
+                <h2><i class="fa-solid fa-star"></i> <span data-i18n="s5.title">Interview-Ready Technical Points</span></h2>
+                <div class="highlight-grid">
+                    <div class="hl-card">
+                        <div class="hl-icon"><i class="fa-solid fa-layer-group"></i></div>
+                        <h4 data-i18n="s5.h1.title">VLA Reproduction</h4>
+                        <p data-i18n="s5.h1.desc">The main challenge is not just training, but aligning vision, language, state, action, and robot execution conventions.</p>
+                    </div>
+                    <div class="hl-card">
+                        <div class="hl-icon"><i class="fa-solid fa-clock"></i></div>
+                        <h4 data-i18n="s5.h2.title">Latency vs Closed Loop</h4>
+                        <p data-i18n="s5.h2.desc">Action chunking reduces server pressure, while receding-horizon execution limits open-loop drift.</p>
+                    </div>
+                    <div class="hl-card">
+                        <div class="hl-icon"><i class="fa-solid fa-sliders"></i></div>
+                        <h4 data-i18n="s5.h3.title">Control Interface</h4>
+                        <p data-i18n="s5.h3.desc">The VLA policy outputs commands, but safety clamp, interpolation, and low-level servo control stay outside the model.</p>
+                    </div>
+                    <div class="hl-card">
+                        <div class="hl-icon"><i class="fa-solid fa-bug"></i></div>
+                        <h4 data-i18n="s5.h4.title">Failure Diagnosis</h4>
+                        <p data-i18n="s5.h4.desc">If loss looks normal but rollout fails, I first check camera order, gripper sign, action scale, and time alignment.</p>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <footer class="footer">
+        <div class="container">
+            <p data-i18n-html="footer">&copy; <span id="year">2026</span> Yueyi Chen. Powered by <a href="https://pages.github.com/" target="_blank" rel="noopener">GitHub Pages</a>.</p>
+        </div>
+    </footer>
+
+    <script src="aloha_lekiwi.js"></script>
+</body>
+</html>
