@@ -372,6 +372,12 @@ img {
     display: block;
 }
 
+.pub-thumbnail img.pub-thumbnail-contain {
+    object-fit: contain;
+    padding: 6px;
+    background: #fff;
+}
+
 .pub-info {
     flex: 1;
     min-width: 0;

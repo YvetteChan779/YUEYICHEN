@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="pi0.5 VLA fine-tuning on LIBERO benchmark project by Yueyi Chen" />
+    <title>pi0.5 VLA Fine-Tuning on LIBERO | Yueyi Chen</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Lora:wght@400;500;600;700&family=JetBrains+Mono:wght@400&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+    <link rel="stylesheet" href="styles.css" />
+    <style>
+        .hero {
+            text-align: center;
+            padding: 56px 0 40px;
+            border-bottom: 1px solid var(--border);
+            margin-bottom: 44px;
+        }
+        .hero h1 {
+            font-family: var(--font-serif);
+            font-size: 32px;
+            font-weight: 700;
+            line-height: 1.3;
+            margin-bottom: 12px;
+        }
+        .hero .subtitle,
+        .hero .tagline {
+            font-size: 15px;
+            color: var(--text-secondary);
+            margin-bottom: 8px;
+        }
+        .hero .tagline {
+            font-style: italic;
+            margin-bottom: 26px;
+        }
+        .hero .links {
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .hero .links a {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            min-height: 32px;
+            font-size: 13px;
+            font-weight: 600;
+            padding: 6px 16px;
+            border: 1px solid var(--accent);
+            border-radius: 4px;
+            color: var(--accent);
+            text-decoration: none;
+            transition: all 0.2s;
+        }
+        .hero .links a:hover {
+            background: var(--accent);
+            color: #fff;
+            text-decoration: none;
+        }
+        .metrics-strip {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 16px;
+            margin-bottom: 44px;
+        }
+        .metric-card {
+            text-align: center;
+            padding: 22px 12px;
+            background: var(--bg-alt);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            transition: background 0.3s, border-color 0.3s, transform 0.2s;
+        }
+        .metric-card:hover { transform: translateY(-2px); }
+        .metric-card .number {
+            font-size: 28px;
+            font-weight: 700;
+            color: var(--accent);
+            line-height: 1.2;
+        }
+        .metric-card .label {
+            font-size: 13px;
+            color: var(--text-secondary);
+            margin-top: 6px;
+            line-height: 1.5;
+        }
+        .section-block {
+            margin-bottom: 52px;
+        }
+        .section-block h2 {
+            font-family: var(--font-serif);
+            font-size: 22px;
+            font-weight: 600;
+            margin-bottom: 16px;
+            padding-bottom: 8px;
+            border-bottom: 2px solid var(--border);
+        }
+        .section-block h2 i {
+            margin-right: 8px;
+            color: var(--accent);
+            font-size: 18px;
+        }
+        .section-block h3 {
+            font-size: 17px;
+            font-weight: 600;
+            margin: 26px 0 12px;
+        }
+        .section-block p {
+            font-size: 15px;
+            line-height: 1.8;
+            margin-bottom: 14px;
+        }
+        .diagram {
+            margin: 20px 0 28px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            overflow: hidden;
+            background: #fff;
+            transition: border-color 0.3s;
+        }
+        .diagram img {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+        .diagram figcaption {
+            font-size: 13px;
+            color: var(--text-secondary);
+            text-align: center;
+            padding: 10px 16px;
+            border-top: 1px solid var(--border);
+            background: var(--bg-alt);
+        }
+        .two-figure-grid,
+        .highlight-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 16px;
+            margin: 20px 0;
+        }
+        .mini-figure,
+        .hl-card {
+            background: var(--bg-alt);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            overflow: hidden;
+            transition: background 0.3s, border-color 0.3s, transform 0.2s;
+        }
+        .mini-figure:hover,
+        .hl-card:hover { transform: translateY(-2px); }
+        .mini-figure img {
+            width: 100%;
+            background: #fff;
+        }
+        .mini-figure figcaption {
+            padding: 10px 12px;
+            font-size: 13px;
+            color: var(--text-secondary);
+            line-height: 1.5;
+        }
+        .hl-card {
+            padding: 20px;
+        }
+        .hl-card .hl-icon {
+            font-size: 22px;
+            color: var(--accent);
+            margin-bottom: 10px;
+        }
+        .hl-card h4 {
+            font-size: 15px;
+            font-weight: 600;
+            margin-bottom: 6px;
+        }
+        .hl-card p {
+            font-size: 13px;
+            color: var(--text-secondary);
+            line-height: 1.6;
+            margin: 0;
+        }
+        .contrib-list {
+            list-style: none;
+            padding: 0;
+            margin: 16px 0 24px;
+        }
+        .contrib-list li {
+            position: relative;
+            padding-left: 24px;
+            margin-bottom: 10px;
+            font-size: 15px;
+            line-height: 1.7;
+        }
+        .contrib-list li::before {
+            content: "";
+            position: absolute;
+            left: 0;
+            top: 10px;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--accent);
+        }
+        .result-block {
+            background: var(--bg-alt);
+            border-left: 4px solid var(--accent);
+            padding: 16px 20px;
+            border-radius: 4px;
+            margin: 16px 0 24px;
+            font-size: 14px;
+            line-height: 1.7;
+            transition: background 0.3s;
+        }
+        .result-block i {
+            color: var(--accent);
+            margin-right: 8px;
+        }
+        .table-wrapper {
+            overflow-x: auto;
+            margin: 16px 0 24px;
+        }
+        .results-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 14px;
+        }
+        .results-table th,
+        .results-table td {
+            padding: 10px 14px;
+            border: 1px solid var(--border);
+            text-align: left;
+            vertical-align: top;
+        }
+        .results-table th {
+            background: var(--bg-alt);
+            font-weight: 600;
+            white-space: nowrap;
+        }
+        .results-table .metric-highlight {
+            color: var(--accent);
+            font-weight: 700;
+        }
+        .code-panel {
+            margin: 18px 0 24px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            overflow: hidden;
+            background: var(--bg-alt);
+        }
+        .code-panel pre {
+            margin: 0;
+            padding: 16px;
+            overflow-x: auto;
+        }
+        .code-panel code {
+            font-family: var(--font-mono);
+            font-size: 13px;
+            line-height: 1.6;
+            background: transparent;
+            border: 0;
+            padding: 0;
+        }
+        code {
+            font-family: var(--font-mono);
+            font-size: 13px;
+            background: var(--bg-alt);
+            border: 1px solid var(--border);
+            padding: 1px 5px;
+            border-radius: 3px;
+        }
+        @media (max-width: 768px) {
+            .hero h1 { font-size: 24px; }
+            .metrics-strip { grid-template-columns: repeat(2, 1fr); }
+            .two-figure-grid,
+            .highlight-grid { grid-template-columns: 1fr; }
+        }
+        @media (max-width: 480px) {
+            .metrics-strip { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <a href="index.html" class="nav-brand">Yueyi Chen</a>
+            <div class="nav-right">
+                <button class="lang-toggle" id="langToggle" aria-label="Toggle language">中</button>
+                <button class="theme-toggle" id="themeToggle" aria-label="Toggle theme">
+                    <i class="fa-solid fa-sun icon-light"></i>
+                    <i class="fa-solid fa-moon icon-dark"></i>
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <main class="main">
+        <div class="project-detail">
+            <a href="index.html" class="back-link"><i class="fa-solid fa-arrow-left"></i> <span data-i18n="back">Back to Home</span></a>
+
+            <div class="hero">
+                <h1 data-i18n="hero.title">pi0.5 VLA Fine-Tuning on LIBERO Benchmark</h1>
+                <p class="subtitle"><strong>Yueyi Chen</strong> &middot; <span data-i18n="hero.venue">Embodied AI / VLA Fine-Tuning Project</span> &middot; 2026</p>
+                <p class="tagline" data-i18n="hero.tagline">Single-GPU LoRA adaptation of Physical Intelligence's pi0.5 VLA model with reproducible LIBERO evaluation.</p>
+                <div class="links">
+                    <a href="#results"><i class="fa-solid fa-chart-column"></i> <span data-i18n="hero.results">Results</span></a>
+                    <a href="#architecture"><i class="fa-solid fa-diagram-project"></i> <span data-i18n="hero.arch">Architecture</span></a>
+                    <a href="#engineering"><i class="fa-solid fa-screwdriver-wrench"></i> <span data-i18n="hero.engineering">Engineering</span></a>
+                    <a href="Pic/pi05/pi05_libero_finetune_report.pdf" target="_blank" rel="noopener"><i class="fa-solid fa-file-pdf"></i> <span data-i18n="hero.report">Report</span></a>
+                    <a href="https://github.com/jjjjqqqz101/aloha-pi05-lerobot/tree/main" target="_blank" rel="noopener"><i class="fa-brands fa-github"></i> <span data-i18n="hero.code">Code</span></a>
+                </div>
+            </div>
+
+            <div class="metrics-strip">
+                <div class="metric-card">
+                    <div class="number">94.2%</div>
+                    <div class="label" data-i18n="m.mean">Mean success rate</div>
+                </div>
+                <div class="metric-card">
+                    <div class="number">+2.0 pp</div>
+                    <div class="label" data-i18n="m.official">vs. official pi0.5 LIBERO</div>
+                </div>
+                <div class="metric-card">
+                    <div class="number">2000</div>
+                    <div class="label" data-i18n="m.episodes">Evaluation episodes</div>
+                </div>
+                <div class="metric-card">
+                    <div class="number">1x4090</div>
+                    <div class="label" data-i18n="m.gpu">Low-memory LoRA training</div>
+                </div>
+            </div>
+
+            <section class="section-block">
+                <h2><i class="fa-solid fa-bullseye"></i> <span data-i18n="s0.title">Overview</span></h2>
+                <p data-i18n-html="s0.p1">This project migrates Physical Intelligence's <strong>pi0.5 Vision-Language-Action model</strong> to the LIBERO simulation benchmark under a 24 GB single-GPU budget. I used LoRA fine-tuning from <code>pi05_base</code>, built a freeze-filter strategy matrix, and completed a reproducible evaluation path across the four LIBERO suites.</p>
+                <ul class="contrib-list">
+                    <li data-i18n-html="s0.c1"><strong>Algorithm:</strong> designed three freeze-filter strategies covering about 2.6M, 18M, and 305M trainable parameters.</li>
+                    <li data-i18n-html="s0.c2"><strong>Training:</strong> ran full-model LoRA on a single RTX 4090 with batch 16, peak LR 5e-5, 10k warmup, and no EMA shadow copy.</li>
+                    <li data-i18n-html="s0.c3"><strong>Evaluation:</strong> served checkpoints through WebSocket and evaluated 4 suites x 10 tasks x 50 trials, with checkpoint-aware logs and videos.</li>
+                    <li data-i18n-html="s0.c4"><strong>Result:</strong> selected the 55k-step LoRA checkpoint, reaching 96.6 / 98.8 / 92.6 / 88.8 success across Spatial, Object, Goal, and Long-10.</li>
+                </ul>
+                <div class="result-block">
+                    <i class="fa-solid fa-circle-info"></i>
+                    <span data-i18n-html="s0.scope">All success rates on this page are from the 50-trials-per-task protocol unless explicitly marked otherwise; the weighted mean uses <strong>2000 total episodes</strong>.</span>
+                </div>
+            </section>
+
+            <section class="section-block" id="architecture">
+                <h2><i class="fa-solid fa-diagram-project"></i> <span data-i18n="s1.title">Model and Fine-Tuning Design</span></h2>
+                <p data-i18n-html="s1.p1">The pi0.5 policy keeps the visual-language backbone and adapts the continuous action path: a PaliGemma-style visual-language stack feeds a Gemma-300M Action Expert and a Flow Matching action head. The LIBERO adaptation focuses on LoRA placement, trainable-parameter scope, and action/state normalization.</p>
+                <figure class="diagram">
+                    <img src="Pic/pi05/pi_0.5_model_architechture_important.png" alt="pi0.5 model architecture and project entry points" />
+                    <figcaption data-i18n="s1.cap1">pi0.5 architecture and project entry points: LoRA adaptation, action expert, Flow Matching action head, and LIBERO serve/eval path.</figcaption>
+                </figure>
+                <figure class="diagram">
+                    <img src="Pic/pi05/fig_freeze_strategies.png" alt="freeze filter strategy matrix for pi0.5 LIBERO fine-tuning" />
+                    <figcaption data-i18n="s1.cap2">Freeze-filter strategy matrix: action-expert LoRA, full-model LoRA, and action-head full fine-tuning under the 24 GB budget.</figcaption>
+                </figure>
+                <div class="code-panel">
+<pre><code>def _freeze_filter_train_action_expert_lora_only():
+    action_expert_lora = nnx.All(
+        nnx_utils.PathRegex(".*llm.*_1.*"),
+        nnx_utils.PathRegex(".*lora.*"),
+    )
+    return nnx.All(nnx.Param, nnx.Not(action_expert_lora))</code></pre>
+                </div>
+                <p data-i18n-html="s1.p2">The key implementation detail is that <code>freeze_filter</code> marks parameters to freeze, so the action-expert LoRA intersection must be negated. This reduced an accidental large trainable set to the intended action-expert adapter parameters.</p>
+            </section>
+
+            <section class="section-block" id="results">
+                <h2><i class="fa-solid fa-chart-column"></i> <span data-i18n="s2.title">LIBERO Results</span></h2>
+                <p data-i18n-html="s2.p1">The final checkpoint is <strong>Full LoRA at 55k steps</strong>. It improves the official pi0.5 LIBERO baseline by 2.0 percentage points and the OpenVLA-7B baseline by 18.2 percentage points, with the largest practical gain on the long-horizon suite.</p>
+                <div class="table-wrapper">
+                    <table class="results-table">
+                        <thead>
+                            <tr>
+                                <th data-i18n="s2.th.suite">Suite</th>
+                                <th>Spatial</th>
+                                <th>Object</th>
+                                <th>Goal</th>
+                                <th>Long-10</th>
+                                <th>Mean</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td data-i18n="s2.row.ours">Ours, Full LoRA 55k</td>
+                                <td>96.6%</td>
+                                <td>98.8%</td>
+                                <td>92.6%</td>
+                                <td>88.8%</td>
+                                <td class="metric-highlight">94.2%</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="two-figure-grid">
+                    <figure class="mini-figure">
+                        <img src="Pic/pi05/fig5_method_comparison.png" alt="LIBERO method comparison" />
+                        <figcaption data-i18n="s2.cap1">Method comparison: the 55k-step LoRA checkpoint leads the public baselines across all four suites.</figcaption>
+                    </figure>
+                    <figure class="mini-figure">
+                        <img src="Pic/pi05/fig8_table.png" alt="LIBERO fine-tuning variant table" />
+                        <figcaption data-i18n="s2.cap2">Fine-tuning variants: head-only LoRA is memory-light but saturates far below full-model LoRA.</figcaption>
+                    </figure>
+                </div>
+            </section>
+
+            <section class="section-block">
+                <h2><i class="fa-solid fa-wave-square"></i> <span data-i18n="s3.title">Training Dynamics and Checkpoint Choice</span></h2>
+                <p data-i18n-html="s3.p1">The Flow Matching MSE drops quickly in the first 10k steps and stabilizes near 0.018 by 50k steps. The scaling curve shows that most suites converge by 20k-30k, while Long-10 continues improving until the 55k checkpoint.</p>
+                <div class="two-figure-grid">
+                    <figure class="mini-figure">
+                        <img src="Pic/pi05/fig2_loss_curve_clean.png" alt="pi0.5 LoRA training loss curve" />
+                        <figcaption data-i18n="s3.cap1">Training loss: smooth convergence without large spikes or plateau collapse.</figcaption>
+                    </figure>
+                    <figure class="mini-figure">
+                        <img src="Pic/pi05/fig6_scaling_curve_clean.png" alt="LIBERO success rate scaling curve over fine-tuning steps" />
+                        <figcaption data-i18n="s3.cap2">Scaling curve: 55k steps is the selected ROI point, especially for Long-10.</figcaption>
+                    </figure>
+                </div>
+            </section>
+
+            <section class="section-block" id="engineering">
+                <h2><i class="fa-solid fa-screwdriver-wrench"></i> <span data-i18n="s4.title">Engineering and Reproducibility</span></h2>
+                <p data-i18n-html="s4.p1">The project was built as a reproducible benchmark pipeline, not just a one-off run. The evaluation scripts serve one checkpoint, loop all four LIBERO suites, preserve checkpoint metadata, and archive logs/videos under timestamped directories.</p>
+                <div class="highlight-grid">
+                    <div class="hl-card">
+                        <div class="hl-icon"><i class="fa-solid fa-memory"></i></div>
+                        <h4 data-i18n="s4.h1.title">24 GB Training Budget</h4>
+                        <p data-i18n="s4.h1.desc">Batch 16, LoRA adapters, disabled EMA, and XLA memory fraction tuning make pi0.5 adaptation runnable on a single RTX 4090.</p>
+                    </div>
+                    <div class="hl-card">
+                        <div class="hl-icon"><i class="fa-solid fa-filter"></i></div>
+                        <h4 data-i18n="s4.h2.title">Freeze-Filter Audit</h4>
+                        <p data-i18n="s4.h2.desc">Regular-expression filters separate backbone, action expert, LoRA adapters, and action head for controlled ablation.</p>
+                    </div>
+                    <div class="hl-card">
+                        <div class="hl-icon"><i class="fa-solid fa-network-wired"></i></div>
+                        <h4 data-i18n="s4.h3.title">Serve/Eval Metadata</h4>
+                        <p data-i18n="s4.h3.desc">WebSocket metadata carries policy config and checkpoint path so client-side logs and rollout videos are checkpoint-aware.</p>
+                    </div>
+                    <div class="hl-card">
+                        <div class="hl-icon"><i class="fa-solid fa-folder-tree"></i></div>
+                        <h4 data-i18n="s4.h4.title">One-Run Archiving</h4>
+                        <p data-i18n="s4.h4.desc">A shared run id groups Spatial, Object, Goal, and Long-10 logs, making 2000-episode evaluation auditable.</p>
+                    </div>
+                </div>
+            </section>
+
+            <section class="section-block">
+                <h2><i class="fa-solid fa-stethoscope"></i> <span data-i18n="s5.title">Debug Cases</span></h2>
+                <div class="highlight-grid">
+                    <div class="hl-card">
+                        <div class="hl-icon"><i class="fa-solid fa-lock"></i></div>
+                        <h4 data-i18n="s5.h1.title">LoRA Leakage</h4>
+                        <p data-i18n="s5.h1.desc">The default config left too many backbone parameters trainable when only the action expert used LoRA; a custom filter isolated action-expert adapters.</p>
+                    </div>
+                    <div class="hl-card">
+                        <div class="hl-icon"><i class="fa-solid fa-temperature-half"></i></div>
+                        <h4 data-i18n="s5.h2.title">OOM on Full Fine-Tuning</h4>
+                        <p data-i18n="s5.h2.desc">Full-parameter pi0.5 fine-tuning was infeasible on 24 GB, so the run was redesigned around low-rank adapters and smaller batches.</p>
+                    </div>
+                    <div class="hl-card">
+                        <div class="hl-icon"><i class="fa-solid fa-scale-balanced"></i></div>
+                        <h4 data-i18n="s5.h3.title">Missing norm_stats</h4>
+                        <p data-i18n="s5.h3.desc">The base checkpoint lacked LIBERO normalization statistics; reusing official LIBERO assets made zero-shot and fine-tuned evaluation comparable.</p>
+                    </div>
+                    <div class="hl-card">
+                        <div class="hl-icon"><i class="fa-solid fa-box-archive"></i></div>
+                        <h4 data-i18n="s5.h4.title">Overwritten Videos</h4>
+                        <p data-i18n="s5.h4.desc">Flat video directories caused rollout collisions; checkpoint and timestamp based paths fixed multi-suite evaluation tracking.</p>
+                    </div>
+                </div>
+            </section>
+
+            <section class="section-block">
+                <h2><i class="fa-solid fa-star"></i> <span data-i18n="s6.title">Interview-Ready Technical Points</span></h2>
+                <div class="highlight-grid">
+                    <div class="hl-card">
+                        <div class="hl-icon"><i class="fa-solid fa-robot"></i></div>
+                        <h4 data-i18n="s6.h1.title">VLA Adaptation</h4>
+                        <p data-i18n="s6.h1.desc">Explain how visual-language representations, action expert parameters, and continuous Flow Matching action prediction interact.</p>
+                    </div>
+                    <div class="hl-card">
+                        <div class="hl-icon"><i class="fa-solid fa-sliders"></i></div>
+                        <h4 data-i18n="s6.h2.title">Ablation Logic</h4>
+                        <p data-i18n="s6.h2.desc">The 2.6M -> 18M -> 305M matrix turns memory constraints into a controlled experimental variable.</p>
+                    </div>
+                    <div class="hl-card">
+                        <div class="hl-icon"><i class="fa-solid fa-chart-line"></i></div>
+                        <h4 data-i18n="s6.h3.title">Checkpoint Selection</h4>
+                        <p data-i18n="s6.h3.desc">Use suite-level scaling curves to justify 55k steps rather than selecting only by final loss.</p>
+                    </div>
+                    <div class="hl-card">
+                        <div class="hl-icon"><i class="fa-solid fa-clipboard-check"></i></div>
+                        <h4 data-i18n="s6.h4.title">Reproducible Evaluation</h4>
+                        <p data-i18n="s6.h4.desc">A benchmark claim is credible only when checkpoint, suite, trial count, logs, and videos can be traced together.</p>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <footer class="footer">
+        <div class="container">
+            <p data-i18n-html="footer">&copy; <span id="year">2026</span> Yueyi Chen. Powered by <a href="https://pages.github.com/" target="_blank" rel="noopener">GitHub Pages</a>.</p>
+        </div>
+    </footer>
+
+    <script src="pi05.js"></script>
+</body>
+</html>
