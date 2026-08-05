@@ -3,9 +3,9 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="Yueyichen (Yvette Chan) - Academic Homepage" />
+    <meta name="description" content="Yueyi Chen - Embodied AI, robot learning, VLA, and real-robot deployment" />
     <meta name="author" content="Yueyichen" />
-    <title>Yueyi Chen | Embodied AI</title>
+    <title>Yueyi Chen | Embodied AI & Real-Robot Systems</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Lora:wght@400;500;600;700&family=JetBrains+Mono:wght@400&display=swap" rel="stylesheet" />
@@ -21,7 +21,8 @@
             <div class="nav-right">
                 <ul class="nav-links">
                     <li><a href="#about" class="nav-link active" data-i18n="nav.about">about</a></li>
-                    <li><a href="#publications" class="nav-link" data-i18n="nav.pubs">publications</a></li>
+                    <li><a href="#skills" class="nav-link" data-i18n="nav.skills">skills</a></li>
+                    <li><a href="#publications" class="nav-link" data-i18n="nav.pubs">projects</a></li>
                 </ul>
                 <button class="lang-toggle" id="langToggle" aria-label="Toggle language">中</button>
                 <button class="theme-toggle" id="themeToggle" aria-label="Toggle theme">
@@ -64,45 +65,97 @@
 
                     <!-- Biography -->
                     <section class="bio-section">
-                        <p data-i18n-html="bio.p1">I am a M.Sc. student at <a href="https://www.cuhk.edu.hk/" target="_blank" rel="noopener">The Chinese University of Hong Kong (CUHK)</a>. My research interests lie in <strong>embodied AI</strong>, <strong>multimodal perception</strong>, and <strong>robot learning</strong>, with a focus on vision-language-action models and end-to-end robot manipulation systems.</p>
-                        <p data-i18n-html="bio.p2">I have hands-on experience building full-stack robot perception pipelines (ASR/NLU/VLM/SAM) and fine-tuning large-scale VLA models (pi0.5) for robotic control. I am also experienced in designing multimodal interaction systems for humanoid robots.</p>
+                        <p data-i18n-html="bio.p1">I am a M.Sc. student at <a href="https://www.cuhk.edu.hk/" target="_blank" rel="noopener">The Chinese University of Hong Kong (CUHK)</a>. I build embodied AI systems that connect teleoperation, multimodal perception, policy learning, and real-robot deployment.</p>
+                        <p data-i18n-html="bio.p2">My recent work spans xArm6 + LEAP Hand manipulation, VLA fine-tuning, diffusion-policy style robot control, humanoid perception, dataset tooling, and deployment pipelines that run beyond offline benchmarks.</p>
                     </section>
 
                     <!-- Highlight Box -->
                     <div class="highlight-box">
-                        <p data-i18n-html="highlight"><i class="fa-solid fa-bullhorn"></i> I am actively looking for research / industry opportunities in embodied AI and robot learning. Feel free to reach out!</p>
+                        <p data-i18n-html="highlight"><i class="fa-solid fa-bullhorn"></i> Current focus: real-robot manipulation systems with traceable data flow, policy serving, sensor feedback, and recovery logic.</p>
                     </div>
 
-                    <!-- News -->
-                    <section class="news-section">
-                        <h2 data-i18n-html="news.title"><i class="fa-solid fa-newspaper"></i> News</h2>
-                        <div class="news-list">
-                            <table>
-                                <tbody>
-                                    <tr>
-                                        <td class="news-date">Jun 2026</td>
-                                        <td data-i18n="news.1">Personal academic homepage is online!</td>
-                                    </tr>
-                                    <tr>
-                                        <td class="news-date">May 2026</td>
-                                        <td data-i18n-html="news.2">Completed the full-chain multimodal perception stack (ASR + VAD + TTS + NLU + VLM) and presented at the internship defense.</td>
-                                    </tr>
-                                    <tr>
-                                        <td class="news-date">May 2026</td>
-                                        <td data-i18n-html="news.3">Achieved <strong>94.2%</strong> mean success rate on LIBERO benchmark with pi0.5 LoRA fine-tuning (+2.0 pp over official baseline).</td>
-                                    </tr>
-                                    <tr>
-                                        <td class="news-date">Apr 2026</td>
-                                        <td data-i18n="news.4">Built PLAN-A end-to-end multimodal robot interaction system: voice + vision + 10-DOF manipulation, achieving 2.5-5.5s closed-loop latency.</td>
-                                    </tr>
-                                </tbody>
-                            </table>
+                    <!-- Skill Graph -->
+                    <section class="skills-section" id="skills">
+                        <h2><i class="fa-solid fa-diagram-project"></i> Skill Graph</h2>
+                        <div class="skill-list" aria-label="Skill graph">
+                            <div class="skill-row">
+                                <span>Real-robot deployment</span>
+                                <div class="skill-track"><span style="width: 94%"></span></div>
+                            </div>
+                            <div class="skill-row">
+                                <span>Robot learning systems</span>
+                                <div class="skill-track"><span style="width: 90%"></span></div>
+                            </div>
+                            <div class="skill-row">
+                                <span>VLA and policy training</span>
+                                <div class="skill-track"><span style="width: 88%"></span></div>
+                            </div>
+                            <div class="skill-row">
+                                <span>Perception and calibration</span>
+                                <div class="skill-track"><span style="width: 86%"></span></div>
+                            </div>
+                            <div class="skill-row">
+                                <span>Data collection and replay</span>
+                                <div class="skill-track"><span style="width: 86%"></span></div>
+                            </div>
+                            <div class="skill-row">
+                                <span>Simulation and evaluation</span>
+                                <div class="skill-track"><span style="width: 74%"></span></div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <section class="tag-section">
+                        <h2><i class="fa-solid fa-layer-group"></i> Tech Stack</h2>
+                        <div class="tag-cloud">
+                            <span>xArm SDK</span>
+                            <span>LEAP Hand</span>
+                            <span>RealSense</span>
+                            <span>AprilTag</span>
+                            <span>OpenCV</span>
+                            <span>PyTorch</span>
+                            <span>Hydra</span>
+                            <span>OmegaConf</span>
+                            <span>ZMQ</span>
+                            <span>Viser</span>
+                            <span>zarr</span>
+                            <span>LoRA</span>
+                            <span>Transformers</span>
+                        </div>
+                    </section>
+
+                    <section class="tag-section">
+                        <h2><i class="fa-solid fa-compass"></i> Research Interests</h2>
+                        <div class="tag-cloud tag-cloud-large">
+                            <span>Embodied AI</span>
+                            <span>Robot Learning</span>
+                            <span>VLA</span>
+                            <span>Diffusion Policy</span>
+                            <span>Perception</span>
+                            <span>Simulation</span>
+                            <span>Deployment</span>
                         </div>
                     </section>
 
                     <!-- Selected Projects -->
                     <section class="publications-section" id="publications">
-                        <h2 data-i18n-html="projects.title"><i class="fa-solid fa-book"></i> Selected Projects</h2>
+                        <h2 data-i18n-html="projects.title"><i class="fa-solid fa-thumbtack"></i> Pinned Projects</h2>
+
+                        <div class="pub-entry featured-project">
+                            <div class="pub-thumbnail">
+                                <img src="Pic/coin_stand/coin_stand_pipeline.svg" alt="Coin Stand to Place real-robot pipeline" class="pub-thumbnail-contain" />
+                            </div>
+                            <div class="pub-info">
+                                <h3 class="pub-title">Coin Stand to Place: Real-Robot Closed-Loop Manipulation</h3>
+                                <p class="pub-authors"><strong>Yueyi Chen</strong></p>
+                                <p class="pub-venue"><em>Embodied AI / Real-Robot Deployment Project</em>, 2026</p>
+                                <p class="pub-desc">Built a real-robot pipeline on xArm6 + LEAP Hand with D435 / fingertip cameras: stand a coin, verify the upright state with HSV tilt and hand-joint conditions, hot-switch from a stand checkpoint to a place checkpoint, run grasp verification, execute a rule-based half-arc move, release into a white box, return, and loop to the next episode.</p>
+                                <div class="pub-links">
+                                    <a href="coin_stand.html" class="pub-link">Details</a>
+                                    <a href="coin_stand.html#modules" class="pub-link">Modules</a>
+                                </div>
+                            </div>
+                        </div>
 
                         <div class="pub-entry">
                             <div class="pub-thumbnail">

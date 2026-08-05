@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Coin Stand to Place real-robot pipeline project by Yueyi Chen" />
+    <title>Coin Stand to Place | Yueyi Chen</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Lora:wght@400;500;600;700&family=JetBrains+Mono:wght@400&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+    <link rel="stylesheet" href="styles.css" />
+    <style>
+        .hero {
+            text-align: center;
+            padding: 54px 0 38px;
+            border-bottom: 1px solid var(--border);
+            margin-bottom: 44px;
+        }
+        .hero h1 {
+            font-family: var(--font-serif);
+            font-size: 34px;
+            font-weight: 700;
+            line-height: 1.25;
+            margin-bottom: 12px;
+        }
+        .hero .subtitle,
+        .hero .tagline {
+            font-size: 15px;
+            color: var(--text-secondary);
+            margin-bottom: 8px;
+        }
+        .hero .tagline {
+            max-width: 720px;
+            margin: 0 auto 26px;
+            font-style: italic;
+        }
+        .hero .links {
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .hero .links a {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            min-height: 32px;
+            font-size: 13px;
+            font-weight: 600;
+            padding: 6px 16px;
+            border: 1px solid var(--accent);
+            border-radius: 4px;
+            color: var(--accent);
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+            text-decoration: none;
+            transition: all 0.2s;
+        }
+        .hero .links a:hover {
+            background: var(--accent);
+            color: #fff;
+            text-decoration: none;
+        }
+        .metrics-strip {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 16px;
+            margin-bottom: 44px;
+        }
+        .metric-card {
+            text-align: center;
+            padding: 22px 12px;
+            background: var(--bg-alt);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            transition: background 0.3s, border-color 0.3s, transform 0.2s;
+        }
+        .metric-card:hover { transform: translateY(-2px); }
+        .metric-card .number {
+            font-size: 28px;
+            font-weight: 700;
+            color: var(--accent);
+            line-height: 1.2;
+        }
+        .metric-card .label {
+            font-size: 13px;
+            color: var(--text-secondary);
+            margin-top: 6px;
+            line-height: 1.5;
+        }
+        .section-block { margin-bottom: 52px; }
+        .section-block h2 {
+            font-family: var(--font-serif);
+            font-size: 22px;
+            font-weight: 600;
+            margin-bottom: 16px;
+            padding-bottom: 8px;
+            border-bottom: 2px solid var(--border);
+        }
+        .section-block h2 i {
+            margin-right: 8px;
+            color: var(--accent);
+            font-size: 18px;
+        }
+        .section-block p {
+            font-size: 15px;
+            line-height: 1.8;
+            margin-bottom: 14px;
+        }
+        .diagram {
+            margin: 20px 0 28px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            overflow: hidden;
+            background: #fff;
+            transition: border-color 0.3s;
+        }
+        .diagram img {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+        .diagram figcaption {
+            font-size: 13px;
+            color: var(--text-secondary);
+            text-align: center;
+            padding: 10px 16px;
+            border-top: 1px solid var(--border);
+            background: var(--bg-alt);
+        }
+        .highlight-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 16px;
+            margin: 20px 0;
+        }
+        .hl-card {
+            padding: 20px;
+            background: var(--bg-alt);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            transition: background 0.3s, border-color 0.3s, transform 0.2s;
+        }
+        .hl-card:hover { transform: translateY(-2px); }
+        .hl-card .hl-icon {
+            font-size: 22px;
+            color: var(--accent);
+            margin-bottom: 10px;
+        }
+        .hl-card h4 {
+            font-size: 15px;
+            font-weight: 600;
+            margin-bottom: 6px;
+        }
+        .hl-card p {
+            font-size: 13px;
+            color: var(--text-secondary);
+            line-height: 1.6;
+            margin: 0;
+        }
+        .two-col {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 18px;
+            margin: 18px 0;
+        }
+        .note-card {
+            background: var(--bg-alt);
+            border: 1px solid var(--border);
+            border-left: 4px solid var(--accent);
+            border-radius: 6px;
+            padding: 16px 18px;
+        }
+        .note-card h3 {
+            font-size: 15px;
+            margin: 0 0 8px;
+        }
+        .note-card p {
+            font-size: 13px;
+            color: var(--text-secondary);
+            line-height: 1.65;
+            margin: 0;
+        }
+        .contrib-list {
+            list-style: none;
+            padding: 0;
+            margin: 16px 0 24px;
+        }
+        .contrib-list li {
+            position: relative;
+            padding-left: 24px;
+            margin-bottom: 10px;
+            font-size: 15px;
+            line-height: 1.7;
+        }
+        .contrib-list li::before {
+            content: "";
+            position: absolute;
+            left: 0;
+            top: 10px;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--accent);
+        }
+        .results-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 14px;
+        }
+        .results-table th,
+        .results-table td {
+            padding: 10px 14px;
+            border: 1px solid var(--border);
+            text-align: left;
+            vertical-align: top;
+        }
+        .results-table th {
+            background: var(--bg-alt);
+            font-weight: 600;
+            white-space: nowrap;
+        }
+        .table-wrapper {
+            overflow-x: auto;
+            margin: 16px 0 24px;
+        }
+        code {
+            font-family: var(--font-mono);
+            font-size: 13px;
+            background: var(--bg-alt);
+            border: 1px solid var(--border);
+            border-radius: 3px;
+            padding: 1px 5px;
+        }
+        @media (max-width: 768px) {
+            .hero h1 { font-size: 25px; }
+            .metrics-strip { grid-template-columns: repeat(2, 1fr); }
+            .highlight-grid,
+            .two-col { grid-template-columns: 1fr; }
+        }
+        @media (max-width: 480px) {
+            .metrics-strip { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+
+    <nav class="navbar">
+        <div class="nav-container">
+            <a href="index.html" class="nav-brand">Yueyi Chen</a>
+            <div class="nav-right">
+                <button class="theme-toggle" id="themeToggle" aria-label="Toggle theme">
+                    <i class="fa-solid fa-sun icon-light"></i>
+                    <i class="fa-solid fa-moon icon-dark"></i>
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <main class="main">
+        <div class="project-detail">
+            <a href="index.html" class="back-link"><i class="fa-solid fa-arrow-left"></i> Back to Home</a>
+
+            <header class="hero">
+                <p class="subtitle">ConSens real-world system</p>
+                <h1>Coin Stand to Place Full Pipeline</h1>
+                <p class="tagline">A real-robot closed loop for standing a coin, confirming it with vision and hand-state checks, switching policy phases, transporting it through a rule-based arc, and returning for the next episode.</p>
+                <div class="links">
+                    <a href="#overview"><i class="fa-solid fa-circle-info"></i> Overview</a>
+                    <a href="#architecture"><i class="fa-solid fa-diagram-project"></i> Architecture</a>
+                    <a href="#pipeline"><i class="fa-solid fa-repeat"></i> Pipeline</a>
+                    <a href="#modules"><i class="fa-solid fa-code"></i> Modules</a>
+                </div>
+            </header>
+
+            <section class="metrics-strip" aria-label="Project facts">
+                <div class="metric-card">
+                    <div class="number">xArm6</div>
+                    <div class="label">Real robot arm with LEAP Hand</div>
+                </div>
+                <div class="metric-card">
+                    <div class="number">2 ckpts</div>
+                    <div class="label">Stand and place policy bundles</div>
+                </div>
+                <div class="metric-card">
+                    <div class="number">3 modes</div>
+                    <div class="label">record, tele_test, policy</div>
+                </div>
+                <div class="metric-card">
+                    <div class="number">pkl/zarr</div>
+                    <div class="label">Teleop logs to training dataset</div>
+                </div>
+            </section>
+
+            <section class="section-block" id="overview">
+                <h2><i class="fa-solid fa-circle-info"></i> Overview</h2>
+                <p>This project builds the real-world side of ConSens for a coin manipulation task: stand a coin on a table, verify the upright state, grasp it, move it to a white box, release it, return home, and continue with the next coin.</p>
+                <p>The repository is split into <code>ConSensRW</code> for real-robot control, teleoperation, recording, camera and hand integration, and deployment; and <code>ConSensPolicy</code> for policy architecture, dataset preprocessing, offline training, and checkpoint evaluation.</p>
+            </section>
+
+            <section class="section-block" id="architecture">
+                <h2><i class="fa-solid fa-diagram-project"></i> System Architecture</h2>
+                <figure class="diagram">
+                    <img src="Pic/coin_stand/coin_stand_pipeline.svg" alt="Coin Stand to Place pipeline architecture" />
+                    <figcaption>Evidence-backed map of the real-robot runtime, data flow, policy switch, grasp check, and rule-based arm takeover.</figcaption>
+                </figure>
+                <div class="highlight-grid">
+                    <div class="hl-card">
+                        <div class="hl-icon"><i class="fa-solid fa-robot"></i></div>
+                        <h4>Real Robot Stack</h4>
+                        <p>The runtime connects xArm, LEAP Hand, RealSense, fingertip cameras, AprilTag detection, Viser visualization, and keyboard recovery hooks.</p>
+                    </div>
+                    <div class="hl-card">
+                        <div class="hl-icon"><i class="fa-solid fa-shuffle"></i></div>
+                        <h4>Policy Hot Switch</h4>
+                        <p>The stand and place checkpoints are treated as preloaded policy bundles, so the pipeline switches phases by activating a bundle rather than rebuilding the model path.</p>
+                    </div>
+                    <div class="hl-card">
+                        <div class="hl-icon"><i class="fa-solid fa-eye"></i></div>
+                        <h4>Sensor-Conditioned Phase Change</h4>
+                        <p>The stand confirmation combines HSV coin tilt stability with selected LEAP hand-joint thresholds before entering the place phase.</p>
+                    </div>
+                    <div class="hl-card">
+                        <div class="hl-icon"><i class="fa-solid fa-route"></i></div>
+                        <h4>Rule-Based Arm Takeover</h4>
+                        <p>The learned policies focus on hand behavior while the arm follows configured half-arc waypoints after the grasp is considered stable.</p>
+                    </div>
+                </div>
+            </section>
+
+            <section class="section-block" id="pipeline">
+                <h2><i class="fa-solid fa-repeat"></i> Inference Pipeline</h2>
+                <ul class="contrib-list">
+                    <li><strong>Start policy mode:</strong> load the stand checkpoint, wait for the keyboard trigger, and begin real-time policy inference.</li>
+                    <li><strong>Confirm standing:</strong> run coin monitoring on camera frames and require the tilt and hand-joint conditions to remain stable.</li>
+                    <li><strong>Switch phase:</strong> publish the stand confirmation and activate the place checkpoint while holding robot state and clearing rollout buffers.</li>
+                    <li><strong>Grasp before moving:</strong> use LEAP joint thresholds and ROI-based gold-pixel checks to detect whether the coin is actually between the fingers.</li>
+                    <li><strong>Move and place:</strong> execute a configured xArm half-arc while the hand policy keeps the grasp, then continue the place policy until the hand opens.</li>
+                    <li><strong>Return and loop:</strong> run the reverse arc back toward the start state and switch back to the stand checkpoint for the next episode.</li>
+                </ul>
+            </section>
+
+            <section class="section-block" id="data">
+                <h2><i class="fa-solid fa-database"></i> Data Flow</h2>
+                <div class="two-col">
+                    <div class="note-card">
+                        <h3>Collection</h3>
+                        <p><code>mode=record</code> uses teleoperation and recorder utilities to store per-episode pickle logs under <code>logs/</code>.</p>
+                    </div>
+                    <div class="note-card">
+                        <h3>Conversion</h3>
+                        <p><code>pickle2zarr.py</code> converts recorded pickle directories into zarr datasets used by the policy training repository.</p>
+                    </div>
+                    <div class="note-card">
+                        <h3>Training</h3>
+                        <p><code>ConSensPolicy</code> trains the policy with RADIO visual summaries and Hydra settings under <code>consens/configs</code>.</p>
+                    </div>
+                    <div class="note-card">
+                        <h3>Deployment</h3>
+                        <p><code>TrainWorkspace.run_eval()</code> loads checkpoints for <code>ConSensRW/main.py</code>, which sends policy actions to hardware.</p>
+                    </div>
+                </div>
+            </section>
+
+            <section class="section-block" id="modules">
+                <h2><i class="fa-solid fa-code"></i> Module Map</h2>
+                <div class="table-wrapper">
+                    <table class="results-table">
+                        <thead>
+                            <tr>
+                                <th>File / module</th>
+                                <th>Responsibility</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><code>ConSensRW/main.py</code></td>
+                                <td>Runtime entry for record, tele_test, and policy modes; owns robot handles, camera managers, policy activation, phase switching, and recovery hooks.</td>
+                            </tr>
+                            <tr>
+                                <td><code>ConSensRW/configs/coin_standing.yaml</code></td>
+                                <td>Task configuration for initial poses, active LEAP joints, coin detection thresholds, checkpoint paths, half-arc waypoints, grasp checks, and auto return.</td>
+                            </tr>
+                            <tr>
+                                <td><code>ConSensRW/teleop_server.py</code></td>
+                                <td>ZMQ server for leader xArm and LEAP hand state queries used by teleoperation workflows.</td>
+                            </tr>
+                            <tr>
+                                <td><code>ConSensRW/record_arc_traj.py</code></td>
+                                <td>Read-only xArm trajectory sampler for recording the half-arc move used by the place phase.</td>
+                            </tr>
+                            <tr>
+                                <td><code>ConSensRW/replay_pickle_joints_robot.py</code></td>
+                                <td>Conservative real-robot replay tool for pickle recordings, with xArm hold by default and LEAP joint playback.</td>
+                            </tr>
+                            <tr>
+                                <td><code>ConSensPolicy/consens/policies/consens</code></td>
+                                <td>Policy implementation using a RADIO-based visual encoder path and transformer decoder over selected observations and actions.</td>
+                            </tr>
+                            <tr>
+                                <td><code>ConSensPolicy/consens/datasets</code></td>
+                                <td>Dataset loading, replay buffer utilities, zarr access, sampling, normalizers, and RADIO summary preprocessing.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <section class="section-block" id="tradeoffs">
+                <h2><i class="fa-solid fa-scale-balanced"></i> Engineering Tradeoffs</h2>
+                <div class="case-study">
+                    <strong>What this project demonstrates:</strong> a complete real-robot manipulation pipeline with teleoperation data, policy deployment, sensor-conditioned phase transition, hand-policy execution, rule-based arm motion, and explicit recovery paths.
+                </div>
+                <div class="case-study">
+                    <strong>What should not be overclaimed:</strong> the current evidence in the repository documents the system and configuration, but does not include quantitative success-rate tables, ablations, cross-day robustness studies, or comparisons against single-policy and vision-only baselines.
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <footer class="footer">
+        <div class="container">
+            <p>&copy; <span id="year">2026</span> Yueyi Chen. Powered by <a href="https://pages.github.com/" target="_blank" rel="noopener">GitHub Pages</a>.</p>
+        </div>
+    </footer>
+
+    <script>
+        (function () {
+            'use strict';
+            const toggle = document.getElementById('themeToggle');
+            const root = document.documentElement;
+            const saved = localStorage.getItem('theme') || 'dark';
+            root.setAttribute('data-theme', saved);
+            toggle?.addEventListener('click', () => {
+                const next = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+                root.setAttribute('data-theme', next);
+                localStorage.setItem('theme', next);
+            });
+            const yearEl = document.getElementById('year');
+            if (yearEl) yearEl.textContent = new Date().getFullYear();
+        })();
+    </script>
+</body>
+</html>
