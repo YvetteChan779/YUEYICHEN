@@ -5,7 +5,7 @@ Static GitHub Pages portfolio for embodied AI, robot learning, VLA fine-tuning, 
 ## Pages
 
 - `index.html` - profile, skill graph, tech stack, research interests, and pinned projects.
-- `coin_stand.html` - real-robot Coin Stand to Place project page.
+- `coin_stand.html` - real-robot Embodied Coin Standing and Placement project page.
 - `pi05.html` - pi0.5 VLA fine-tuning project page.
 - `aloha_lekiwi.html` - ALOHA/LeKiwi VLA reproduction project page.
 - `planb.html` - multimodal perception and closed-loop grasping project page.

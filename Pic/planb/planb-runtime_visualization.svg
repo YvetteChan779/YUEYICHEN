@@ -1,0 +1,147 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1900 980" role="img" aria-labelledby="title desc">
+  <title id="title">PLAN-B runtime visualization</title>
+  <desc id="desc">Runtime timeline and diagnostic summary for PLAN-B, including ASR partial latency, VLM TTFB, SAM3 grounding, grasp_check, and retry loops.</desc>
+  <defs>
+    <marker id="arrow" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto">
+      <path d="M0,0 L12,6 L0,12 z" fill="#475569"/>
+    </marker>
+    <marker id="arrowBlue" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto">
+      <path d="M0,0 L12,6 L0,12 z" fill="#2563eb"/>
+    </marker>
+    <marker id="arrowOrange" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto">
+      <path d="M0,0 L12,6 L0,12 z" fill="#d97706"/>
+    </marker>
+    <style>
+      .bg { fill: #f8fafc; }
+      .title { font: 700 30px Inter, Arial, sans-serif; fill: #0f172a; }
+      .sub { font: 500 15px Inter, Arial, sans-serif; fill: #475569; }
+      .card { stroke-width: 2; rx: 18; ry: 18; }
+      .label { font: 700 18px Inter, Arial, sans-serif; fill: #0f172a; }
+      .note { font: 500 13px Inter, Arial, sans-serif; fill: #334155; }
+      .tiny { font: 500 12px Inter, Arial, sans-serif; fill: #475569; }
+      .metric { font: 700 14px Inter, Arial, sans-serif; fill: #0f172a; }
+      .arrow { stroke: #475569; stroke-width: 3; fill: none; marker-end: url(#arrow); }
+      .arrow-blue { stroke: #2563eb; stroke-width: 3; fill: none; marker-end: url(#arrowBlue); }
+      .arrow-orange { stroke: #d97706; stroke-width: 3; fill: none; marker-end: url(#arrowOrange); stroke-dasharray: 10 8; }
+      .axis { stroke: #94a3b8; stroke-width: 2; }
+      .timeline { stroke: #0f172a; stroke-width: 3; fill: none; marker-end: url(#arrow); }
+    </style>
+  </defs>
+
+  <rect class="bg" x="0" y="0" width="1900" height="980" />
+  <text class="title" x="54" y="62">PLAN-B runtime visualization</text>
+  <text class="sub" x="54" y="93">One command travels through audio, parsing, vision grounding, grasp verification, and retry logic while barge-in and target-lost guards stay live.</text>
+
+  <!-- Metric cards -->
+  <rect class="card" x="52" y="132" width="410" height="124" fill="#ffffff" stroke="#cbd5e1" />
+  <text class="metric" x="82" y="170">ASR partial latency</text>
+  <text class="title" x="82" y="212" font-size="26">150-300 ms</text>
+  <text class="note" x="82" y="238">cloud endpointing owns sentence finalization</text>
+
+  <rect class="card" x="494" y="132" width="410" height="124" fill="#ffffff" stroke="#cbd5e1" />
+  <text class="metric" x="524" y="170">Field calibration</text>
+  <text class="title" x="524" y="212" font-size="26">0% → 92%</text>
+  <text class="note" x="524" y="238">far-field Silero hit rate with stateful h/c</text>
+
+  <rect class="card" x="936" y="132" width="410" height="124" fill="#ffffff" stroke="#cbd5e1" />
+  <text class="metric" x="966" y="170">Small-object grounding</text>
+  <text class="title" x="966" y="212" font-size="26">4 / 44 → ≥90%</text>
+  <text class="note" x="966" y="238">box-only vs box+text SAM3 success</text>
+
+  <rect class="card" x="1378" y="132" width="470" height="124" fill="#ffffff" stroke="#cbd5e1" />
+  <text class="metric" x="1408" y="170">P0 audit</text>
+  <text class="title" x="1408" y="212" font-size="26">stale frame → ok=True fix</text>
+  <text class="note" x="1408" y="238">missing write-complete flag caused the retry deadlock</text>
+
+  <!-- Timeline -->
+  <line class="axis" x1="92" y1="438" x2="1810" y2="438" />
+  <text class="metric" x="54" y="432">single-request timeline</text>
+
+  <rect class="card" x="90" y="300" width="210" height="160" fill="#dbeafe" stroke="#2563eb" />
+  <text class="label" x="195" y="336" text-anchor="middle">Voice front end</text>
+  <text class="note" x="195" y="362" text-anchor="middle">16 kHz PCM</text>
+  <text class="tiny" x="195" y="388" text-anchor="middle">VAD gate + envelope AGC</text>
+  <text class="tiny" x="195" y="410" text-anchor="middle">stateful Silero h/c [2,1,64]</text>
+  <text class="tiny" x="195" y="432" text-anchor="middle">barge-in stays active</text>
+
+  <rect class="card" x="332" y="300" width="230" height="160" fill="#c7d2fe" stroke="#6366f1" />
+  <text class="label" x="447" y="336" text-anchor="middle">Streaming ASR</text>
+  <text class="note" x="447" y="362" text-anchor="middle">cloud_qwen3 default</text>
+  <text class="tiny" x="447" y="388" text-anchor="middle">heartbeat avoids 23 s SDK timeout</text>
+  <text class="tiny" x="447" y="410" text-anchor="middle">cloud_paraformer / local qwen3-asr / FunASR</text>
+  <text class="tiny" x="447" y="432" text-anchor="middle">sentence_end -> publish_final</text>
+
+  <rect class="card" x="594" y="300" width="210" height="160" fill="#ede9fe" stroke="#7c3aed" />
+  <text class="label" x="699" y="336" text-anchor="middle">NLU parser</text>
+  <text class="note" x="699" y="362" text-anchor="middle">regex_then_llm</text>
+  <text class="tiny" x="699" y="388" text-anchor="middle">qwen3.5-flash via OpenAI-compatible HTTP</text>
+  <text class="tiny" x="699" y="410" text-anchor="middle">7 regex templates first</text>
+  <text class="tiny" x="699" y="432" text-anchor="middle">chat_fallback catches true questions</text>
+
+  <rect class="card" x="836" y="300" width="240" height="160" fill="#dcfce7" stroke="#16a34a" />
+  <text class="label" x="956" y="336" text-anchor="middle">VLM bbox</text>
+  <text class="note" x="956" y="362" text-anchor="middle">openai_http + source pixels</text>
+  <text class="tiny" x="956" y="388" text-anchor="middle">TTFB 850-2950 ms</text>
+  <text class="tiny" x="956" y="410" text-anchor="middle">500-2500 ms when max_side=512</text>
+  <text class="tiny" x="956" y="432" text-anchor="middle">letterbox space is inverse-mapped</text>
+
+  <rect class="card" x="1108" y="300" width="240" height="160" fill="#d1fae5" stroke="#059669" />
+  <text class="label" x="1228" y="336" text-anchor="middle">SAM3 grounder</text>
+  <text class="note" x="1228" y="362" text-anchor="middle">box + English text</text>
+  <text class="tiny" x="1228" y="388" text-anchor="middle">HAR_SAM3_PREPROCESS=letterbox</text>
+  <text class="tiny" x="1228" y="410" text-anchor="middle">pixel_boxes_xyxy_list keeps original pixels</text>
+  <text class="tiny" x="1228" y="432" text-anchor="middle">44 trials, 4/44 box-only success</text>
+
+  <rect class="card" x="1380" y="300" width="230" height="160" fill="#ffedd5" stroke="#f97316" />
+  <text class="label" x="1495" y="336" text-anchor="middle">grasp_check</text>
+  <text class="note" x="1495" y="362" text-anchor="middle">3D overlap + tactile</text>
+  <text class="tiny" x="1495" y="388" text-anchor="middle">median &lt; 55 mm, P25 &lt; 45 mm</text>
+  <text class="tiny" x="1495" y="410" text-anchor="middle">50 N force gate, baseline settle 0.5 s</text>
+  <text class="tiny" x="1495" y="432" text-anchor="middle">retry cap = 3</text>
+
+  <rect class="card" x="1640" y="300" width="180" height="160" fill="#fee2e2" stroke="#dc2626" />
+  <text class="label" x="1730" y="336" text-anchor="middle">FSM</text>
+  <text class="note" x="1730" y="362" text-anchor="middle">13 mixins</text>
+  <text class="tiny" x="1730" y="388" text-anchor="middle">8-state control flow</text>
+  <text class="tiny" x="1730" y="410" text-anchor="middle">target-lost timeout = 3 s</text>
+  <text class="tiny" x="1730" y="432" text-anchor="middle">downstream nav / IK / motor</text>
+
+  <path class="timeline" d="M300 438 L332 438" />
+  <path class="timeline" d="M562 438 L594 438" />
+  <path class="timeline" d="M804 438 L836 438" />
+  <path class="timeline" d="M1076 438 L1108 438" />
+  <path class="timeline" d="M1348 438 L1380 438" />
+  <path class="timeline" d="M1610 438 L1640 438" />
+
+  <!-- Feedback loops -->
+  <path class="arrow-blue" d="M195 300 C195 262, 304 262, 304 224" />
+  <text class="tiny" x="244" y="266" text-anchor="middle">barge-in</text>
+
+  <path class="arrow-orange" d="M1495 460 C1495 520, 1220 520, 1220 460" />
+  <text class="tiny" x="1366" y="512" text-anchor="middle">retry / re-ground</text>
+
+  <path class="arrow-blue" d="M956 460 C956 526, 820 526, 820 460" />
+  <text class="tiny" x="884" y="520" text-anchor="middle">vision prior</text>
+
+  <!-- Diagnostic sidebar -->
+  <rect x="90" y="600" width="520" height="230" rx="22" fill="#ffffff" stroke="#cbd5e1" stroke-width="2" />
+  <text class="metric" x="120" y="642">Observed runtime guarantees</text>
+  <text class="note" x="120" y="676">• cloud_qwen3 owns endpointing, so silence gaps do not force session rebuilds.</text>
+  <text class="note" x="120" y="706">• `head_rgb_shm` is the main RGB path; DDS stays off unless explicitly enabled.</text>
+  <text class="note" x="120" y="736">• `grasp_check` uses geometry first, then tactile confirmation on top of the same endpoint.</text>
+  <text class="note" x="120" y="766">• The P0 path was traced as stale frame → wrong bbox → degraded mask → retry deadlock.</text>
+
+  <rect x="648" y="600" width="600" height="230" rx="22" fill="#ffffff" stroke="#cbd5e1" stroke-width="2" />
+  <text class="metric" x="678" y="642">Interface contracts that matter at runtime</text>
+  <text class="note" x="678" y="676">• VLM and SAM3 must agree on original pixel coordinates, not letterbox canvas coordinates.</text>
+  <text class="note" x="678" y="706">• `qwen3.5-flash` only sees clean intent strings after regex, cleanup, and chat fallback.</text>
+  <text class="note" x="678" y="736">• `pixel_boxes_xyxy_list` is the production path for SAM3; legacy normalized boxes are stretch-only.</text>
+  <text class="note" x="678" y="766">• The FSM retry cap stays at 3 for pick, while place uses a separate higher cap.</text>
+
+  <rect x="1284" y="600" width="560" height="230" rx="22" fill="#ffffff" stroke="#cbd5e1" stroke-width="2" />
+  <text class="metric" x="1314" y="642">Reported numbers to keep on the slide</text>
+  <text class="note" x="1314" y="676">• 150-300 ms ASR partials</text>
+  <text class="note" x="1314" y="706">• 0% → 92% far-field Silero hit rate</text>
+  <text class="note" x="1314" y="736">• 4 / 44 → ≥90% SAM3 mask success</text>
+  <text class="note" x="1314" y="766">• 850-2950 ms → 500-2500 ms VLM TTFB when max_side is reduced to 512</text>
+</svg>

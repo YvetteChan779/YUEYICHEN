@@ -1,0 +1,152 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1900 980" role="img" aria-labelledby="title desc">
+  <title id="title">PLAN-B model architecture</title>
+  <desc id="desc">Voice-to-grasp pipeline with VAD, ASR routing, NLU, VLM bounding boxes, SAM3 grounding, grasp verification, and FSM execution.</desc>
+  <defs>
+    <marker id="arrow" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto">
+      <path d="M0,0 L12,6 L0,12 z" fill="#475569"/>
+    </marker>
+    <marker id="arrowBlue" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto">
+      <path d="M0,0 L12,6 L0,12 z" fill="#2563eb"/>
+    </marker>
+    <style>
+      .bg { fill: #f8fafc; }
+      .title { font: 700 30px Inter, Arial, sans-serif; fill: #0f172a; }
+      .sub { font: 500 15px Inter, Arial, sans-serif; fill: #475569; }
+      .block { stroke-width: 2; rx: 18; ry: 18; }
+      .label { font: 700 20px Inter, Arial, sans-serif; fill: #0f172a; }
+      .note { font: 500 13px Inter, Arial, sans-serif; fill: #334155; }
+      .tiny { font: 500 12px Inter, Arial, sans-serif; fill: #475569; }
+      .arrow { stroke: #475569; stroke-width: 3; fill: none; marker-end: url(#arrow); }
+      .arrow-blue { stroke: #2563eb; stroke-width: 3; fill: none; marker-end: url(#arrowBlue); stroke-dasharray: 8 7; }
+      .chip { font: 600 12px "JetBrains Mono", Consolas, monospace; fill: #0f172a; }
+      .metric { font: 700 14px Inter, Arial, sans-serif; fill: #0f172a; }
+    </style>
+  </defs>
+
+  <rect class="bg" x="0" y="0" width="1900" height="980" />
+  <text class="title" x="54" y="62">PLAN-B voice-to-grasp model architecture</text>
+  <text class="sub" x="54" y="93">16 kHz PCM enters the voice front end, then branches through semantic routing, visual grounding, grasp verification, and closed-loop execution.</text>
+
+  <!-- Top lane -->
+  <rect class="block" x="50" y="150" width="150" height="124" fill="#e0f2fe" stroke="#2563eb" />
+  <text class="label" x="125" y="184" text-anchor="middle">16 kHz PCM</text>
+  <text class="note" x="125" y="208" text-anchor="middle">/audio/stream</text>
+  <text class="tiny" x="125" y="232" text-anchor="middle">ALSA mic input</text>
+
+  <rect class="block" x="228" y="150" width="170" height="124" fill="#dbeafe" stroke="#2563eb" />
+  <text class="label" x="313" y="180" text-anchor="middle">VAD gate</text>
+  <text class="note" x="313" y="204" text-anchor="middle">energy + AGC</text>
+  <text class="tiny" x="313" y="228" text-anchor="middle">stateful Silero v4 h/c [2,1,64]</text>
+  <text class="tiny" x="313" y="248" text-anchor="middle">field-calibrated thresholds</text>
+
+  <rect class="block" x="426" y="150" width="220" height="124" fill="#c7d2fe" stroke="#6366f1" />
+  <text class="label" x="536" y="180" text-anchor="middle">ASR router</text>
+  <text class="note" x="536" y="204" text-anchor="middle">cloud_qwen3 default</text>
+  <text class="tiny" x="536" y="228" text-anchor="middle">cloud_paraformer / local qwen3-asr / FunASR</text>
+  <text class="tiny" x="536" y="248" text-anchor="middle">heartbeat + cloud endpointing ownership</text>
+
+  <rect class="block" x="674" y="150" width="150" height="124" fill="#e0f2fe" stroke="#0ea5e9" />
+  <text class="label" x="749" y="184" text-anchor="middle">ASR text</text>
+  <text class="note" x="749" y="208" text-anchor="middle">/asr/text</text>
+  <text class="tiny" x="749" y="232" text-anchor="middle">150-300 ms partials</text>
+
+  <rect class="block" x="852" y="150" width="200" height="124" fill="#ede9fe" stroke="#7c3aed" />
+  <text class="label" x="952" y="180" text-anchor="middle">NLU parser</text>
+  <text class="note" x="952" y="204" text-anchor="middle">regex_then_llm</text>
+  <text class="tiny" x="952" y="228" text-anchor="middle">qwen3.5-flash via OpenAI-compatible HTTP</text>
+  <text class="tiny" x="952" y="248" text-anchor="middle">7 regex templates + chat fallback</text>
+
+  <rect class="block" x="1080" y="150" width="180" height="124" fill="#dcfce7" stroke="#16a34a" />
+  <text class="label" x="1170" y="180" text-anchor="middle">VLM bbox</text>
+  <text class="note" x="1170" y="204" text-anchor="middle">source pixel xyxy</text>
+  <text class="tiny" x="1170" y="228" text-anchor="middle">openai_http + letterbox alignment</text>
+  <text class="tiny" x="1170" y="248" text-anchor="middle">HAR_VLM_BBOX_MAX_SIDE can shrink TTFB</text>
+
+  <rect class="block" x="1288" y="150" width="200" height="124" fill="#d1fae5" stroke="#059669" />
+  <text class="label" x="1388" y="180" text-anchor="middle">SAM3 grounder</text>
+  <text class="note" x="1388" y="204" text-anchor="middle">box + English text</text>
+  <text class="tiny" x="1388" y="228" text-anchor="middle">HAR_SAM3_PREPROCESS=letterbox</text>
+  <text class="tiny" x="1388" y="248" text-anchor="middle">pixel_boxes_xyxy_list / CLIP ASCII prompt</text>
+
+  <rect class="block" x="1516" y="150" width="180" height="124" fill="#ffedd5" stroke="#f97316" />
+  <text class="label" x="1606" y="180" text-anchor="middle">grasp_check</text>
+  <text class="note" x="1606" y="204" text-anchor="middle">3D overlap + tactile</text>
+  <text class="tiny" x="1606" y="228" text-anchor="middle">median &lt; 55 mm, P25 &lt; 45 mm</text>
+  <text class="tiny" x="1606" y="248" text-anchor="middle">frac&lt;3cm &ge; 2%, frac&lt;5cm &ge; 8%</text>
+
+  <rect class="block" x="1724" y="150" width="126" height="124" fill="#fee2e2" stroke="#dc2626" />
+  <text class="label" x="1787" y="180" text-anchor="middle">FSM</text>
+  <text class="note" x="1787" y="204" text-anchor="middle">13 mixins</text>
+  <text class="tiny" x="1787" y="228" text-anchor="middle">retry &le; 3</text>
+  <text class="tiny" x="1787" y="248" text-anchor="middle">downstream nav / IK / motor control</text>
+
+  <path class="arrow" d="M200 212 L228 212" />
+  <path class="arrow" d="M398 212 L426 212" />
+  <path class="arrow" d="M646 212 L674 212" />
+  <path class="arrow" d="M824 212 L852 212" />
+  <path class="arrow" d="M1052 212 L1080 212" />
+  <path class="arrow" d="M1260 212 L1288 212" />
+  <path class="arrow" d="M1488 212 L1516 212" />
+  <path class="arrow" d="M1696 212 L1724 212" />
+
+  <!-- Middle support lane -->
+  <rect class="block" x="78" y="352" width="224" height="114" fill="#eff6ff" stroke="#2563eb" />
+  <text class="label" x="190" y="385" text-anchor="middle">TTS playback_active</text>
+  <text class="note" x="190" y="410" text-anchor="middle">barge-in feedback loop</text>
+  <text class="tiny" x="190" y="434" text-anchor="middle">keeps users able to interrupt speech</text>
+
+  <rect class="block" x="352" y="352" width="224" height="114" fill="#f8fafc" stroke="#94a3b8" />
+  <text class="label" x="464" y="385" text-anchor="middle">RGB-D inputs</text>
+  <text class="note" x="464" y="410" text-anchor="middle">head RGB SHM + chest RGB + depth</text>
+  <text class="tiny" x="464" y="434" text-anchor="middle">shared-memory readers avoid DDS copies</text>
+
+  <rect class="block" x="628" y="352" width="260" height="114" fill="#ecfccb" stroke="#65a30d" />
+  <text class="label" x="758" y="385" text-anchor="middle">Vision contracts</text>
+  <text class="note" x="758" y="410" text-anchor="middle">original pixels in, original pixels out</text>
+  <text class="tiny" x="758" y="434" text-anchor="middle">VLM bbox and SAM3 share the same image frame</text>
+
+  <rect class="block" x="940" y="352" width="280" height="114" fill="#fef3c7" stroke="#d97706" />
+  <text class="label" x="1080" y="385" text-anchor="middle">Closed-loop verification</text>
+  <text class="note" x="1080" y="410" text-anchor="middle">grasp_check + tactile baseline</text>
+  <text class="tiny" x="1080" y="434" text-anchor="middle">fail-open false, retry on error limited to 3</text>
+
+  <rect class="block" x="1262" y="352" width="274" height="114" fill="#fee2e2" stroke="#dc2626" />
+  <text class="label" x="1399" y="385" text-anchor="middle">Retry + state machine</text>
+  <text class="note" x="1399" y="410" text-anchor="middle">13 mixins, 8-state control flow</text>
+  <text class="tiny" x="1399" y="434" text-anchor="middle">dialog follow-up, place verify, target-lost handling</text>
+
+  <rect class="block" x="1570" y="352" width="280" height="114" fill="#f1f5f9" stroke="#64748b" />
+  <text class="label" x="1710" y="385" text-anchor="middle">Downstream execution</text>
+  <text class="note" x="1710" y="410" text-anchor="middle">navigation / IK / motor control</text>
+  <text class="tiny" x="1710" y="434" text-anchor="middle">owned by collaborators; PLAN-B provides the control entry</text>
+
+  <path class="arrow-blue" d="M190 352 C190 306, 286 306, 313 274" />
+  <path class="arrow-blue" d="M464 352 C464 312, 570 300, 758 274" />
+  <path class="arrow-blue" d="M758 352 C758 310, 960 300, 1170 274" />
+  <path class="arrow-blue" d="M1080 352 C1080 312, 1230 298, 1388 274" />
+  <path class="arrow-blue" d="M1399 352 C1399 312, 1520 300, 1606 274" />
+  <path class="arrow-blue" d="M1710 352 C1710 312, 1760 300, 1787 274" />
+
+  <!-- Bottom metric strip -->
+  <rect x="52" y="560" width="422" height="126" rx="20" fill="#ffffff" stroke="#cbd5e1" stroke-width="2" />
+  <text class="metric" x="84" y="600">Reported voice metrics</text>
+  <text class="title" x="84" y="640" font-size="24">150-300 ms</text>
+  <text class="note" x="84" y="668">ASR partial latency</text>
+
+  <rect x="502" y="560" width="422" height="126" rx="20" fill="#ffffff" stroke="#cbd5e1" stroke-width="2" />
+  <text class="metric" x="534" y="600">Field calibration result</text>
+  <text class="title" x="534" y="640" font-size="24">0% → 92%</text>
+  <text class="note" x="534" y="668">far-field Silero hit rate</text>
+
+  <rect x="952" y="560" width="422" height="126" rx="20" fill="#ffffff" stroke="#cbd5e1" stroke-width="2" />
+  <text class="metric" x="984" y="600">VLM + SAM3 result</text>
+  <text class="title" x="984" y="640" font-size="24">4 / 44 → ≥90%</text>
+  <text class="note" x="984" y="668">box-only vs box+text mask success</text>
+
+  <rect x="1402" y="560" width="446" height="126" rx="20" fill="#ffffff" stroke="#cbd5e1" stroke-width="2" />
+  <text class="metric" x="1434" y="600">P0 audit boundary</text>
+  <text class="title" x="1434" y="640" font-size="24">stale frame → ok=True fix</text>
+  <text class="note" x="1434" y="668">missing write-complete flag caused retry deadlock</text>
+
+  <text class="sub" x="54" y="760">Pipeline ownership: voice front end, NLU, visual grounding, closed-loop verification, and retry policy are on this page; downstream navigation, IK, and motor execution remain collaborator-owned.</text>
+</svg>

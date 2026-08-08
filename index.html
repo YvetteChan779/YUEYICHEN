@@ -116,7 +116,7 @@
                                 <ul class="info-bullets">
                                     <li data-i18n-html="experience.roboscience.b1"><strong>Affective Robot Interaction:</strong> engineered a multimodal social-robot interaction stack with Qwen2.5-VL/OpenCV perception, Text-to-Action CVAE, image-conditioned Diffusion Policy, and 10D WebSocket + Dynamixel execution over 194 reaction episodes.</li>
                                     <li data-i18n-html="experience.roboscience.b2"><strong>PLAN-B:</strong> built a Jetson AGX Orin voice-to-grasp pipeline spanning VAD/ASR/NLU/VLM/SAM3/depth/grasp FSM, lifting documented far-field VAD hit rate from 0% to 92% and SAM3 mask success from 9% to at least 90%.</li>
-                                    <li data-i18n-html="experience.roboscience.b3"><strong>Coin Stand to Place:</strong> developed an xArm6 + LEAP Hand closed-loop manipulation workflow with D435 / fingertip cameras, checkpoint hot-switching, grasp verification, rule-based half-arc transfer, and automated episode reset.</li>
+                                    <li data-i18n-html="experience.roboscience.b3"><strong>Embodied Coin Standing and Placement:</strong> architected an xArm6 + LEAP Hand closed-loop manipulation workflow with D435 / fingertip cameras, frozen RADIO summaries, a 16-step / 6-step ACT-style policy, checkpoint hot-switching, HSV tilt + hand-joint gating, grasp verification, rule-based half-arc transfer, and automatic episode reset.</li>
                                 </ul>
                             </article>
                             <article class="info-item">
@@ -203,13 +203,13 @@
 
                         <div class="pub-entry featured-project">
                             <div class="pub-thumbnail">
-                                <img src="Pic/coin_stand/coin_stand_pipeline.svg" alt="Coin Stand to Place real-robot pipeline" class="pub-thumbnail-contain" />
+                                <img src="Pic/coin_stand/coin_stand_pipeline.svg" alt="Embodied Coin Standing and Placement runtime pipeline" class="pub-thumbnail-contain" />
                             </div>
                             <div class="pub-info">
-                                <h3 class="pub-title">Coin Stand to Place: Real-Robot Closed-Loop Manipulation</h3>
+                                <h3 class="pub-title" data-i18n="proj.coin.title">Embodied Coin Standing and Placement</h3>
                                 <p class="pub-authors"><strong>Yueyi Chen</strong></p>
-                                <p class="pub-venue"><em>Embodied AI / Real-Robot Deployment Project</em>, 2026</p>
-                                <p class="pub-desc">Built a real-robot pipeline on xArm6 + LEAP Hand with D435 / fingertip cameras: stand a coin, verify the upright state with HSV tilt and hand-joint conditions, hot-switch from a stand checkpoint to a place checkpoint, run grasp verification, execute a rule-based half-arc move, release into a white box, return, and loop to the next episode.</p>
+                                <p class="pub-venue" data-i18n-html="proj.coin.venue"><em>Embodied AI / Real-Robot Deployment Project</em>, 2026</p>
+                                <p class="pub-desc" data-i18n-html="proj.coin.desc">Architected a closed-loop embodied coin manipulation system on xArm6 + LEAP Hand, with D435 / fingertip cameras feeding frozen 2304D RADIO summaries and an ACT-style 4-layer encoder / 4-layer decoder policy. Two preloaded checkpoints handle stand and place phases with a 16-step horizon and 6-step action chunk. HSV tilt plus LEAP joint thresholds gate the stand→place switch, and ROI-based grasp verification blocks the arm arc until the coin is actually in-hand. A configured half-arc transfer and reverse return loop reset the episode automatically.</p>
                                 <div class="pub-links">
                                     <a href="coin_stand.html" class="pub-link">Details</a>
                                     <a href="coin_stand.html#modules" class="pub-link">Modules</a>
@@ -269,16 +269,16 @@
 
                         <div class="pub-entry">
                             <div class="pub-thumbnail">
-                                <img src="Pic/planb/system_overview.png" alt="PLAN-B system" />
+                                <img src="Pic/planb/planb-model_architechture.svg" alt="PLAN-B model architecture" class="pub-thumbnail-contain" />
                             </div>
                             <div class="pub-info">
-                                <h3 class="pub-title" data-i18n="proj.planb.title">PLAN-B: Multimodal Perception &amp; Closed-Loop Grasping for Humanoid Robot</h3>
+                                <h3 class="pub-title" data-i18n="proj.planb.title">PLAN-B: Voice-to-Grasp Pipeline for Humanoid Robot</h3>
                                 <p class="pub-authors"><strong>Yueyi Chen</strong></p>
                                 <p class="pub-venue" data-i18n-html="proj.planb.venue"><em>Algorithm Intern Project</em> &middot; Jetson AGX Orin, 2026</p>
-                                <p class="pub-desc" data-i18n-html="proj.planb.desc">Built a full-stack multimodal perception &amp; grasping pipeline for a humanoid robot on Jetson AGX Orin: 3-tier cascaded VAD boosting far-field Silero hit rate from <strong>0% &rarr; 92%</strong>; dual-path NLU + VLM-guided SAM3 segmentation raising mask success from <strong>9% &rarr; &ge;90%</strong>; 8-state closed-loop FSM with 7 guard mechanisms and 3D multi-feature grasp verification (median/P25/frac voting). Diagnosed and fixed a P0 cascading bug via 7-step root-cause audit.</p>
+                                <p class="pub-desc" data-i18n-html="proj.planb.desc">Architected a Jetson AGX Orin voice-to-grasp pipeline around 3-tier VAD, cloud_qwen3 ASR, qwen3.5-flash NLU, Qwen2.5-VL + SAM3 grounding, depth-based grasp_check, and a 13-mixin FSM. The documented route lifted far-field VAD hit rate from <strong>0% -> 92%</strong> and small-target SAM3 mask success from <strong>9% -> >=90%</strong>, while target-lost timeout dropped from <strong>60 s -> 3 s</strong>. I redrew the model_architechture and runtime visualization pages so the pipeline boundaries are explicit. No controlled end-to-end success benchmark is claimed beyond module-level measurements.</p>
                                 <div class="pub-links">
                                     <a href="planb.html" class="pub-link">Details</a>
-                                    <a href="#" class="pub-link">Report</a>
+                                    <a href="planb.html#results" class="pub-link">Report</a>
                                 </div>
                             </div>
                         </div>

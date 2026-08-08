@@ -1,61 +1,60 @@
-# Chen Yueyi CV Bullets - Affective Robot Interaction: A Multimodal System for Companion Robots
+# PLAN-B Resume Bullets
 
-Source gate: `Project Mining Protocol.md`, `personnel page technical content KB.md`, Affective Robot Interaction source files, result tables, and readable excellent CV references were inspected before writing these bullets.
+Source gate: `Project Mining Protocol.md`, `personnel page technical content KB.md`, the PLAN-B source tree, and the excellent CV references were read before writing these bullets.
 
 ## Excellent CV Grammar Extracted
 
-Reference pattern from `excellent cv/gl_cv_bullet_version.txt`, `excellent cv/lfy_cv_bullet.txt`, and `excellent cv/分层碰撞机制_末端姿态对.txt`:
-
-| Grammar rule | Migration rule for Affective Robot Interaction |
+| Grammar rule | Migration rule for PLAN-B |
 | --- | --- |
-| Start with ownership verbs such as `Led`, `Architected`, `Engineered`, `Calibrated`, `Optimized`, or `Validated`. | Use `Architected`, `Engineered`, and `Calibrated` because source evidence shows integration, model implementation, and calibration work. |
-| Name the model stack early, not as a vague domain label. | Say `Qwen2.5-VL/OpenCV`, `Text-to-Action CVAE`, `image-conditioned Diffusion Policy`, `VDMocap`, `WebSocket + Dynamixel`. |
-| Put mechanism before metric. | Describe interface contracts and training routes before 194 episodes, 535.95 val loss, 10 FPS, or Qwen-cache speedup. |
-| Qualify metrics by scope. | Mark classification accuracy as a sanity check; mark Teleop MAE as retargeting support; do not claim CVAE-vs-DP real-robot success. |
-| Avoid weak verbs and generic AI phrases. | Do not use `worked on`, `used multimodal AI`, `state-of-the-art`, `robust system`, or `VLA`. |
+| Start with ownership verbs. | Use `Architected`, `Engineered`, `Calibrated`, `Debugged`, and `Optimized` because the evidence is about system ownership and integration. |
+| Name the stack early. | Put `cloud_qwen3`, `qwen3.5-flash`, `Qwen2.5-VL`, `SAM3`, `grasp_check`, and `13-mixin FSM` in the first clause. |
+| Put mechanism before metric. | Describe endpointing, letterbox inversion, or point-cloud voting before the percentage or latency. |
+| Scope-qualify metrics. | Use `documented`, `field-calibrated`, or `reported` so the number stays defensible. |
+| Avoid generic AI phrases. | Do not say `built an advanced system`, `used multimodal AI`, or `leveraged state-of-the-art`. |
+| Fixed sentence shape. | `[verb] + [specific what] + [technical how] + [quantified scope]` |
 
 ## Final English Resume Bullets
 
-1. Architected Affective Robot Interaction, a social-robot multimodal interaction stack that routes Qwen2.5-VL/OpenCV perception and VDMocap inputs into Text-to-Action CVAE / image-conditioned Diffusion Policy branches, then streams 10D WebSocket + Dynamixel encoder trajectories at 10 FPS with a non-blocking execution lock over 194 three-class reaction episodes.
+1. Architected PLAN-B, a Jetson AGX Orin voice-to-grasp pipeline that chains 3-tier VAD, cloud_qwen3 ASR, qwen3.5-flash intent parsing, Qwen2.5-VL + SAM3 grounding, depth-based grasp_check, and a 13-mixin FSM, lifting documented far-field VAD hit rate from 0% to 92% and small-target SAM3 mask success from 9% to >=90%.
 
-中文解释：这条是系统架构 ownership bullet，先定义 Affective Robot Interaction 的边界，再把 perception、policy、execution 三层接口串起来，最后用 194 episodes、10D、10 FPS 和 execution lock 做证据锚点。`Architected` 是轻微 overclaim，但可以防守，因为证据覆盖了多模块集成、执行链路和页面级架构重画。
+   中文解释：这条先把系统边界说清楚，再把语音、语义、视觉、抓取和状态机串成一条完整链路，最后用 0% -> 92% 和 9% -> >=90% 作为可防守的量化锚点。`Architected` 属于轻微 overclaim，但可以防守，因为代码和文档都证明了跨模块集成与页面级重画。
 
-Predicted interviewer follow-up: What exactly crosses the boundary between the policy and robot runtime, and how do you prevent overlapping robot commands?
+   Predicted interviewer follow-up: What exactly crosses the boundary between ASR, NLU, VLM, SAM3, depth, and grasp_check?
 
-Evidence:
-- `/home/CNS2026391745/Documents/PLAN-A-CYY/RBS-Software-Interaction/docs/PLAN-A_云文档.md:10-30`
-- `/home/CNS2026391745/Documents/PLAN-A-CYY/RBS-Software-Interaction/docs/assets/tables/t2_dataset_stats.csv:1-4`
-- `/home/CNS2026391745/Documents/PLAN-A-CYY/RBS-Software-Interaction/text_to_action_cvae/websocket_text_to_action.py:30-75,138-157,339-421`
+   Evidence:
+   - `/home/CNS2026391745/Documents/PLAN-B-CYY/planb-robot/src/har_interaction/config/asr_params.yaml:62-90`
+   - `/home/CNS2026391745/Documents/PLAN-B-CYY/planb-robot/src/har_interaction/config/parser_params.yaml:32-52`
+   - `/home/CNS2026391745/Documents/PLAN-B-CYY/planb-robot/src/har_interaction/src/pipeline/node/streaming_asr_node.py:177-675`
+   - `/home/CNS2026391745/Documents/PLAN-B-CYY/planb-robot/src/har_interaction/src/pipeline/node/multimodal_pipeline_node.py:36-117`
+   - `/home/CNS2026391745/Documents/PLAN-B-CYY/planb-robot/src/har_interaction/src/pipeline/segmentation/vlm_box_sam_bridge.py:1-43,139-220`
+   - `/home/CNS2026391745/Documents/PLAN-B-CYY/planb-robot/src/har_interaction/src/grasp_check/core.py:220-319`
+   - `/home/CNS2026391745/Documents/PLAN-B-CYY/planb-robot/docs/cyy/算法答辩云文档_new.md:555-600,637-774`
 
-Risk boundary: Do not claim a controlled real-robot task-success benchmark; the defensible claim is integrated robot execution path plus documented module metrics.
+   Risk boundary: Do not claim a controlled end-to-end success benchmark; the defensible claim is integrated robot execution plus module-level measurements.
 
-2. Engineered the report Text-to-Action CVAE route with BERT-base-chinese CLS projection, 64D latent conditioning, a 2-layer / 4-head Transformer Decoder, and MSE + KL + CE training, reaching 535.95 best validation loss in a 50-epoch RTX 4090 run while keeping the 100% category accuracy framed as a label sanity check.
+2. Engineered the streaming speech stack with stateful Silero v4 [2,1,64], envelope AGC v5, cloud-owned endpointing, and rapid-stitch recovery for split verb-head fragments, cutting partial ASR latency to 150-300 ms and preventing session-rebuild deadlocks on the cloud_qwen3 path.
 
-中文解释：这条是模型实现 bullet，语法模仿优秀简历里“模型名 + 训练机制 + 指标 + 限定语”的写法。它只写报告版 3 类 CVAE，不把 8 类主代码路径混进同一个结果里；100% 分类准确率明确降级为 sanity check，避免被问穿。
+   中文解释：这条把语音前端的核心工程点集中在一条里：状态化 VAD、AGC、端点所有权和短动词片段拼接。它比“做了语音识别”更具体，也更容易被追问实现细节。
 
-Predicted interviewer follow-up: Why is the classification accuracy not a strong semantic understanding metric, and what actually dominates the CVAE loss?
+   Predicted interviewer follow-up: How did you keep the cloud ASR session alive while still allowing barge-in and endpointing?
 
-Evidence:
-- `/home/CNS2026391745/Documents/PLAN-A-CYY/RBS-Software-Interaction/docs/scripts/01_train_cvae.py:29-95`
-- `/home/CNS2026391745/Documents/PLAN-A-CYY/RBS-Software-Interaction/text_to_action_cvae/models/model_text_action_vae_transformer.py:48-164,166-223`
-- `/home/CNS2026391745/Documents/PLAN-A-CYY/RBS-Software-Interaction/docs/assets/tables/t5_training_summary.csv:1-14`
-- `/home/CNS2026391745/Documents/PLAN-A-CYY/RBS-Software-Interaction/docs/PLAN-A_云文档.md:260-281`
+   Evidence:
+   - `/home/CNS2026391745/Documents/PLAN-B-CYY/planb-robot/src/har_interaction/config/asr_params.yaml:62-90`
+   - `/home/CNS2026391745/Documents/PLAN-B-CYY/planb-robot/src/har_interaction/src/pipeline/node/streaming_asr_node.py:177-675`
+   - `/home/CNS2026391745/Documents/PLAN-B-CYY/planb-robot/docs/cyy/算法答辩云文档_new.md:82-84,182-183,572-589`
 
-Risk boundary: Keep this as the report CVAE route; the main 8-category route has different latent/hidden/layer settings and should not inherit the 535.95 metric.
+   Risk boundary: Keep this as a routing and latency story, not a claim about a new ASR model.
 
-3. Calibrated the actuator-facing motion interface by mapping VDMocap 23-node pose/quaternion streams to `[0,4095]` 10D encoder commands with T-pose 2048 +/- 3 zeroing, while optimizing the heavier DP route through cached Qwen 256D condition tokens that reduced documented training cost from about 3 h/epoch to about 20 min/epoch.
+3. Debugged the closed-loop grasp path by tracing one missing ok=True write-complete flag through shared memory, stale VLM frames, SAM3 misalignment, and retry deadlock, then tightened target-lost timeout from 60 s to 3 s and validated grasp_check v1.0.0 voting on median<55 mm, P25<45 mm, frac<3 cm>=2%, and frac<5 cm>=8%.
 
-中文解释：这条把硬件接口和 DP 训练优化合并为一条工程深度 bullet：前半句强调 retargeting 的执行器合约，后半句强调 Qwen cache 的算力 trade-off。它没有声称 DP 真机成功率，只声称训练成本下降和接口标定结果。
+   中文解释：这条最像优秀简历里的“问题定位 + 修复 + 结果”写法。它把 P0 故障、超时参数和 grasp_check 的 3D 票决放在一起，既像工程 ownership，也能被面试官顺着追问。
 
-Predicted interviewer follow-up: How did T-pose zeroing convert global mocap rotations into robot encoder commands, and how does cached Qwen conditioning enter the DP forward path?
+   Predicted interviewer follow-up: How did the stale-frame bug propagate into the grasp loop, and why was 3 s the right timeout?
 
-Evidence:
-- `/home/CNS2026391745/Documents/PLAN-A-CYY/RBS-Software-Interaction/retargeting/vd_mocap_listener_struct.py:28-110`
-- `/home/CNS2026391745/Documents/PLAN-A-CYY/RBS-Software-Interaction/retargeting/校准流程说明.md:52-104`
-- `/home/CNS2026391745/Documents/PLAN-A-CYY/RBS-Software-Interaction/retargeting/calibrate_all_joints.py:215-298,623-633`
-- `/home/CNS2026391745/Documents/PLAN-A-CYY/RBS-Software-Interaction/text_to_action_diffusion/dataset_qwen_episode.py:23-78,112-176`
-- `/home/CNS2026391745/Documents/PLAN-A-CYY/RBS-Software-Interaction/text_to_action_diffusion/models/image_conditioned_dp_dynamic.py:287-459`
-- `/home/CNS2026391745/Documents/PLAN-A-CYY/RBS-Software-Interaction/text_to_action_diffusion/diffusion_wrapper.py:94-145,307-391`
-- `/home/CNS2026391745/Documents/PLAN-A-CYY/RBS-Software-Interaction/docs/PLAN-A_云文档.md:340-373,407-421`
+   Evidence:
+   - `/home/CNS2026391745/Documents/PLAN-B-CYY/planb-robot/src/har_interaction/src/grasp_check/core.py:220-319`
+   - `/home/CNS2026391745/Documents/PLAN-B-CYY/planb-robot/src/har_interaction/src/grasp_check/server.py:1-12`
+   - `/home/CNS2026391745/Documents/PLAN-B-CYY/planb-robot/src/har_interaction/src/pipeline/node/multimodal_pipeline_node.py:193-197`
+   - `/home/CNS2026391745/Documents/PLAN-B-CYY/planb-robot/docs/cyy/算法答辩云文档_new.md:790-869`
 
-Risk boundary: This bullet combines two engineering contributions; if a shorter CV is required, split into one retargeting bullet and one DP cache bullet. Do not add Teleop Transformer MAE here unless the resume section explicitly includes retargeting support experiments.
+   Risk boundary: Do not turn the P0 fix into an end-to-end benchmark claim; it is a root-cause fix on the reported route.

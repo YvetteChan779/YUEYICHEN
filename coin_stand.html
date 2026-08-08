@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="Coin Stand to Place real-robot pipeline project by Yueyi Chen" />
-    <title>Coin Stand to Place | Yueyi Chen</title>
+    <meta name="description" content="Embodied Coin Standing and Placement real-robot project by Yueyi Chen" />
+    <title>Embodied Coin Standing and Placement | Yueyi Chen</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Lora:wght@400;500;600;700&family=JetBrains+Mono:wght@400&display=swap" rel="stylesheet" />
@@ -129,6 +129,15 @@
             border-top: 1px solid var(--border);
             background: var(--bg-alt);
         }
+        .figure-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 18px;
+            margin: 20px 0 28px;
+        }
+        .figure-grid .diagram {
+            margin: 0;
+        }
         .highlight-grid {
             display: grid;
             grid-template-columns: repeat(2, 1fr);
@@ -236,6 +245,9 @@
         @media (max-width: 768px) {
             .hero h1 { font-size: 25px; }
             .metrics-strip { grid-template-columns: repeat(2, 1fr); }
+            .figure-grid {
+                grid-template-columns: 1fr;
+            }
             .highlight-grid,
             .two-col { grid-template-columns: 1fr; }
         }
@@ -263,9 +275,9 @@
             <a href="index.html" class="back-link"><i class="fa-solid fa-arrow-left"></i> Back to Home</a>
 
             <header class="hero">
-                <p class="subtitle">ConSens real-world system</p>
-                <h1>Coin Stand to Place Full Pipeline</h1>
-                <p class="tagline">A real-robot closed loop for standing a coin, confirming it with vision and hand-state checks, switching policy phases, transporting it through a rule-based arc, and returning for the next episode.</p>
+                <p class="subtitle">ConSens embodied manipulation system</p>
+                <h1>Embodied Coin Standing and Placement</h1>
+                <p class="tagline">A closed-loop embodied manipulation task for standing a coin, confirming it with vision and hand-state gates, switching from a stand checkpoint to a place checkpoint, transferring the coin along a rule-based half-arc, and resetting automatically for the next episode.</p>
                 <div class="links">
                     <a href="#overview"><i class="fa-solid fa-circle-info"></i> Overview</a>
                     <a href="#architecture"><i class="fa-solid fa-diagram-project"></i> Architecture</a>
@@ -280,31 +292,38 @@
                     <div class="label">Real robot arm with LEAP Hand</div>
                 </div>
                 <div class="metric-card">
+                    <div class="number">5 views</div>
+                    <div class="label">4 RGB + 1 RealSense stream</div>
+                </div>
+                <div class="metric-card">
+                    <div class="number">16 / 6</div>
+                    <div class="label">horizon / action chunk</div>
+                </div>
+                <div class="metric-card">
                     <div class="number">2 ckpts</div>
                     <div class="label">Stand and place policy bundles</div>
-                </div>
-                <div class="metric-card">
-                    <div class="number">3 modes</div>
-                    <div class="label">record, tele_test, policy</div>
-                </div>
-                <div class="metric-card">
-                    <div class="number">pkl/zarr</div>
-                    <div class="label">Teleop logs to training dataset</div>
                 </div>
             </section>
 
             <section class="section-block" id="overview">
                 <h2><i class="fa-solid fa-circle-info"></i> Overview</h2>
-                <p>This project builds the real-world side of ConSens for a coin manipulation task: stand a coin on a table, verify the upright state, grasp it, move it to a white box, release it, return home, and continue with the next coin.</p>
+                <p>This project builds the real-world side of ConSens for a coin manipulation task on xArm6 + LEAP Hand. The deployed policy path uses frozen RADIO summaries and an ACT-style 4-layer encoder / 4-layer decoder policy with a 16-step horizon and 6-step action chunk.</p>
+                <p>Stand detection combines HSV coin tilt with selected LEAP hand-joint thresholds. Once the coin is stable, the runtime hot-switches from a stand checkpoint to a place checkpoint, blocks the arm arc until ROI-based grasp verification passes, and then hands the arm over to a configured half-arc and reverse return loop.</p>
                 <p>The repository is split into <code>ConSensRW</code> for real-robot control, teleoperation, recording, camera and hand integration, and deployment; and <code>ConSensPolicy</code> for policy architecture, dataset preprocessing, offline training, and checkpoint evaluation.</p>
             </section>
 
             <section class="section-block" id="architecture">
                 <h2><i class="fa-solid fa-diagram-project"></i> System Architecture</h2>
-                <figure class="diagram">
-                    <img src="Pic/coin_stand/coin_stand_pipeline.svg" alt="Coin Stand to Place pipeline architecture" />
-                    <figcaption>Evidence-backed map of the real-robot runtime, data flow, policy switch, grasp check, and rule-based arm takeover.</figcaption>
-                </figure>
+                <div class="figure-grid">
+                    <figure class="diagram">
+                        <img src="Pic/coin_stand/coin_architechture.png" alt="Academic-style coin architecture sketch" />
+                        <figcaption>Academic-style sketch redrawn from coin-task frames and the ACT reference layout; the deployed coin policy reads frozen RADIO summaries through a ConSens encoder/decoder stack.</figcaption>
+                    </figure>
+                    <figure class="diagram">
+                        <img src="Pic/coin_stand/coin_stand_pipeline.svg" alt="Coin standing and placement runtime pipeline" />
+                        <figcaption>Runtime pipeline showing stand/place checkpoint switching, grasp verification, rule-based half-arc transfer, and automatic cycle reset.</figcaption>
+                    </figure>
+                </div>
                 <div class="highlight-grid">
                     <div class="hl-card">
                         <div class="hl-icon"><i class="fa-solid fa-robot"></i></div>
@@ -326,6 +345,11 @@
                         <h4>Rule-Based Arm Takeover</h4>
                         <p>The learned policies focus on hand behavior while the arm follows configured half-arc waypoints after the grasp is considered stable.</p>
                     </div>
+                    <div class="hl-card">
+                        <div class="hl-icon"><i class="fa-solid fa-brain"></i></div>
+                        <h4>Policy Contract</h4>
+                        <p>The deployed ConSens policy consumes 5 views of frozen 2304D RADIO summaries, 8D proprioception, a 16-step horizon, and a 6-step action chunk through a 4-layer encoder / 4-layer decoder stack.</p>
+                    </div>
                 </div>
             </section>
 
@@ -333,7 +357,7 @@
                 <h2><i class="fa-solid fa-repeat"></i> Inference Pipeline</h2>
                 <ul class="contrib-list">
                     <li><strong>Start policy mode:</strong> load the stand checkpoint, wait for the keyboard trigger, and begin real-time policy inference.</li>
-                    <li><strong>Confirm standing:</strong> run coin monitoring on camera frames and require the tilt and hand-joint conditions to remain stable.</li>
+                    <li><strong>Confirm standing:</strong> run coin monitoring on camera frames and require the HSV tilt and LEAP hand-joint conditions to remain stable.</li>
                     <li><strong>Switch phase:</strong> publish the stand confirmation and activate the place checkpoint while holding robot state and clearing rollout buffers.</li>
                     <li><strong>Grasp before moving:</strong> use LEAP joint thresholds and ROI-based gold-pixel checks to detect whether the coin is actually between the fingers.</li>
                     <li><strong>Move and place:</strong> execute a configured xArm half-arc while the hand policy keeps the grasp, then continue the place policy until the hand opens.</li>
@@ -346,15 +370,15 @@
                 <div class="two-col">
                     <div class="note-card">
                         <h3>Collection</h3>
-                        <p><code>mode=record</code> uses teleoperation and recorder utilities to store per-episode pickle logs under <code>logs/</code>.</p>
+                        <p><code>mode=record</code> uses teleoperation and recorder utilities to store per-episode pickle logs with current RGB, joint values, tag poses, and target actions under <code>logs/</code>.</p>
                     </div>
                     <div class="note-card">
                         <h3>Conversion</h3>
-                        <p><code>pickle2zarr.py</code> converts recorded pickle directories into zarr datasets used by the policy training repository.</p>
+                        <p><code>pickle2zarr.py</code> converts recorded pickle directories into zarr datasets with <code>data/obs/rgb_images</code>, <code>data/obs/all_qpos</code>, <code>data/obs/tag_ori</code>, and <code>data/actions/original_actions</code>.</p>
                     </div>
                     <div class="note-card">
                         <h3>Training</h3>
-                        <p><code>ConSensPolicy</code> trains the policy with RADIO visual summaries and Hydra settings under <code>consens/configs</code>.</p>
+                        <p><code>ConSensPolicy</code> trains the policy with RADIO visual summaries and Hydra settings under <code>consens/configs</code>, including the 5-view coin contract in <code>setting/coin_consens.yaml</code>.</p>
                     </div>
                     <div class="note-card">
                         <h3>Deployment</h3>
@@ -383,8 +407,24 @@
                                 <td>Task configuration for initial poses, active LEAP joints, coin detection thresholds, checkpoint paths, half-arc waypoints, grasp checks, and auto return.</td>
                             </tr>
                             <tr>
+                                <td><code>ConSensPolicy/consens/models/vision/radio.py</code></td>
+                                <td>Frozen RADIO v2.5-b wrapper; exposes 2304D summaries for the deployed policy path.</td>
+                            </tr>
+                            <tr>
+                                <td><code>ConSensPolicy/consens/configs/consens.yaml</code></td>
+                                <td>Policy contract: horizon 16, 6 action steps, 4-layer encoder / 4-layer decoder, 512 hidden size, 16 attention heads, batch size 256.</td>
+                            </tr>
+                            <tr>
+                                <td><code>ConSensPolicy/consens/configs/setting/coin_consens.yaml</code></td>
+                                <td>Coin task data contract: 5 views, 8D proprioception, 11D action, and replay keys <code>obs/all_qpos</code>, <code>obs/rgb_images_radio</code>, <code>obs/rs_rgb_images_radio</code>, <code>actions/original_actions</code>.</td>
+                            </tr>
+                            <tr>
                                 <td><code>ConSensRW/teleop_server.py</code></td>
                                 <td>ZMQ server for leader xArm and LEAP hand state queries used by teleoperation workflows.</td>
+                            </tr>
+                            <tr>
+                                <td><code>ConSensRW/pickle2zarr.py</code></td>
+                                <td>Streaming converter from per-episode pickle logs to zarr, preserving current RGB, joint, tag, and action fields.</td>
                             </tr>
                             <tr>
                                 <td><code>ConSensRW/record_arc_traj.py</code></td>
@@ -396,11 +436,11 @@
                             </tr>
                             <tr>
                                 <td><code>ConSensPolicy/consens/policies/consens</code></td>
-                                <td>Policy implementation using a RADIO-based visual encoder path and transformer decoder over selected observations and actions.</td>
+                                <td>Policy implementation using frozen RADIO summaries, ACT-style encoder/decoder blocks, and action heads over 5 views, 16-step horizon, and 6-step chunks.</td>
                             </tr>
                             <tr>
                                 <td><code>ConSensPolicy/consens/datasets</code></td>
-                                <td>Dataset loading, replay buffer utilities, zarr access, sampling, normalizers, and RADIO summary preprocessing.</td>
+                                <td>Dataset loading, replay buffer utilities, zarr access, sampling, normalizers, and RADIO summary preprocessing over the coin task replay keys.</td>
                             </tr>
                         </tbody>
                     </table>
@@ -411,6 +451,9 @@
                 <h2><i class="fa-solid fa-scale-balanced"></i> Engineering Tradeoffs</h2>
                 <div class="case-study">
                     <strong>What this project demonstrates:</strong> a complete real-robot manipulation pipeline with teleoperation data, policy deployment, sensor-conditioned phase transition, hand-policy execution, rule-based arm motion, and explicit recovery paths.
+                </div>
+                <div class="case-study">
+                    <strong>Model boundary:</strong> the academic-style coin figure borrows ACT's encoder/decoder grammar as a layout reference, but the deployed coin policy reads frozen RADIO summaries through ConSens; do not describe this page as a pure original ACT reproduction.
                 </div>
                 <div class="case-study">
                     <strong>What should not be overclaimed:</strong> the current evidence in the repository documents the system and configuration, but does not include quantitative success-rate tables, ablations, cross-day robustness studies, or comparisons against single-policy and vision-only baselines.

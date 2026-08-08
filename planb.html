@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="PLAN-B: Multimodal Perception & Closed-Loop Grasping for Humanoid Robot — Yueyi Chen" />
-    <title>PLAN-B | Yueyi Chen</title>
+    <meta name="description" content="PLAN-B: Voice-to-Grasp Pipeline for Humanoid Robot — Yueyi Chen" />
+    <title>PLAN-B: Voice-to-Grasp Pipeline for Humanoid Robot | Yueyi Chen</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Lora:wght@400;500;600;700&family=JetBrains+Mono:wght@400&display=swap" rel="stylesheet" />
@@ -58,7 +58,7 @@
             padding: 24px 12px;
             background: var(--bg-alt);
             border: 1px solid var(--border);
-            border-radius: 10px;
+            border-radius: 8px;
             transition: background 0.3s, border-color 0.3s, transform 0.2s;
         }
         .metric-card:hover { transform: translateY(-2px); }
@@ -86,7 +86,7 @@
         .diagram {
             margin: 20px 0 28px;
             border: 1px solid var(--border);
-            border-radius: 10px;
+            border-radius: 8px;
             overflow: hidden;
             background: var(--bg-alt);
             transition: background 0.3s, border-color 0.3s;
@@ -138,7 +138,7 @@
             padding: 20px 16px;
             background: var(--bg-alt);
             border: 1px solid var(--border);
-            border-radius: 10px;
+            border-radius: 8px;
             overflow-x: auto;
             transition: background 0.3s, border-color 0.3s;
         }
@@ -176,7 +176,7 @@
             padding: 20px;
             background: var(--bg-alt);
             border: 1px solid var(--border);
-            border-radius: 10px;
+            border-radius: 8px;
             transition: background 0.3s, border-color 0.3s, transform 0.2s;
         }
         .hl-card:hover { transform: translateY(-2px); }
@@ -191,7 +191,7 @@
             position: relative;
             margin: 20px 0 28px;
             border: 2px dashed var(--border);
-            border-radius: 10px;
+            border-radius: 8px;
             background: var(--bg-alt);
             overflow: hidden;
             transition: background 0.3s, border-color 0.3s;
@@ -277,114 +277,77 @@
         <div class="project-detail">
 
             <a href="index.html" class="back-link"><i class="fa-solid fa-arrow-left"></i> <span data-i18n="back">Back to Home</span></a>
+<!-- ============ HERO ============ -->
+<div class="hero">
+    <h1 data-i18n="hero.title">PLAN-B: Voice-to-Grasp Pipeline for Humanoid Robot</h1>
+    <p class="subtitle"><strong>Yueyi Chen</strong> &middot; <span data-i18n="hero.venue">The Chinese University of Hong Kong</span> &middot; 2026</p>
+    <p class="tagline" data-i18n="hero.tagline">3-tier VAD &middot; cloud_qwen3 ASR &middot; qwen3.5-flash NLU &middot; Qwen2.5-VL + SAM3 &middot; grasp_check + 13-mixin FSM</p>
+    <div class="links">
+        <a href="#voice"><i class="fa-solid fa-file-lines"></i> <span data-i18n="hero.pipeline">Pipeline</span></a>
+        <a href="#runtime"><i class="fa-solid fa-chart-column"></i> <span data-i18n="hero.visuals">Visuals</span></a>
+        <a href="#results"><i class="fa-solid fa-play"></i> <span data-i18n="hero.results">Results</span></a>
+    </div>
+</div>
 
-            <!-- ============ HERO ============ -->
-            <div class="hero">
-                <h1 data-i18n="hero.title">PLAN-B: Multimodal Perception &amp; Closed-Loop Grasping for Humanoid Robot</h1>
-                <p class="subtitle"><strong>Yueyi Chen</strong> &middot; <span data-i18n="hero.venue">The Chinese University of Hong Kong</span> &middot; 2026</p>
-                <p class="tagline" data-i18n="hero.tagline">Full-stack voice-to-grasp pipeline on Jetson AGX Orin &middot; 4 ASR engines &middot; 12-mixin FSM &middot; 3D grasp verification</p>
-                <div class="links">
-                    <a href="#" data-i18n="hero.report"><i class="fa-solid fa-file-lines"></i> Report</a>
-                    <a href="#" data-i18n="hero.code"><i class="fa-brands fa-github"></i> Code</a>
-                    <a href="#demo" data-i18n="hero.demo"><i class="fa-solid fa-play"></i> Demo</a>
-                </div>
-            </div>
+<!-- ============ METRICS ============ -->
+<div class="metrics-strip">
+    <div class="metric-card">
+        <div class="number">150&ndash;300 ms</div>
+        <div class="label" data-i18n="m.vad">ASR partial latency</div>
+    </div>
+    <div class="metric-card">
+        <div class="number">0&rarr;92%</div>
+        <div class="label" data-i18n="m.mask">Far-field VAD hit rate</div>
+    </div>
+    <div class="metric-card">
+        <div class="number">9&rarr;90%</div>
+        <div class="label" data-i18n="m.engines">SAM3 mask success</div>
+    </div>
+    <div class="metric-card">
+        <div class="number">13</div>
+        <div class="label" data-i18n="m.mixins">Closed-loop FSM mixins</div>
+    </div>
+</div>
+<!-- ============ OVERVIEW ============ -->
+<section class="section-block" id="overview">
+    <h2><i class="fa-solid fa-bullseye"></i> <span data-i18n="s0.title">Overview</span></h2>
+    <p data-i18n-html="s0.p1">Deploying voice-controlled grasping on Jetson AGX Orin exposed a hard interface problem: far-field speech sits below the noise floor, cloud ASR needs its own endpointing, small objects collapse under box-only grounding, and grasp verification must close the loop instead of guessing success. <strong>PLAN-B</strong> owns the voice entry of the humanoid-robot chain: 16 kHz PCM enters a three-stage VAD gate, routes through cloud_qwen3 / fallback ASR, is parsed by regex + qwen3.5-flash NLU, then becomes a Qwen2.5-VL box prior, SAM3 mask, depth-based grasp_check vote, and a 13-mixin closed-loop FSM.</p>
 
-            <!-- ============ METRICS ============ -->
-            <div class="metrics-strip">
-                <div class="metric-card">
-                    <div class="number">0&rarr;92%</div>
-                    <div class="label" data-i18n="m.vad">Far-field VAD hit rate</div>
-                </div>
-                <div class="metric-card">
-                    <div class="number">9&rarr;90%</div>
-                    <div class="label" data-i18n="m.mask">SAM3 mask success rate</div>
-                </div>
-                <div class="metric-card">
-                    <div class="number">4</div>
-                    <div class="label" data-i18n="m.engines">ASR engine variants</div>
-                </div>
-                <div class="metric-card">
-                    <div class="number">12</div>
-                    <div class="label" data-i18n="m.mixins">Pipeline FSM mixins</div>
-                </div>
-            </div>
+    <ul class="contrib-list">
+        <li data-i18n-html="s0.c1">Engineered a <strong>3-tier cascaded VAD quality gate</strong> (adaptive energy + software AGC + stateful Silero v4 ONNX h/c [2,1,64]), field-calibrated on-site with noise around &minus;46 dB and speech around &minus;39 dB, lifting far-field hit rate from 0% to 92%.</li>
+        <li data-i18n-html="s0.c2">Architected a <strong>cloud-first 4-engine streaming ASR router</strong> (cloud_qwen3 / cloud_paraformer / local Qwen3-ASR TRT / FunASR) with envelope AGC v5, cloud endpointing ownership transfer, and rapid-stitch recovery for split verb-head fragments.</li>
+        <li data-i18n-html="s0.c3">Designed <strong>dual-path NLU</strong> (7-template regex fast path + qwen3.5-flash LLM, temperature=0, max_new_tokens=28) with a 5-layer semantic defense cascade, plus <strong>VLM bbox + CLIP joint grounding</strong> with letterbox alignment, lifting SAM3 mask success from 9% to at least 90%.</li>
+        <li data-i18n-html="s0.c4">Built a <strong>13-mixin pipeline FSM</strong> with 3D multi-feature grasp verification (grasp_check v1.0.0: median&lt;55 mm, P25&lt;45 mm, frac&lt;3 cm &ge; 2%, frac&lt;5 cm &ge; 8%) and tactile baseline verification, enabling closed-loop retry with 4-class failure grading.</li>
+    </ul>
+</section>
+<!-- ============ RUNTIME VISUALS ============ -->
+<section class="section-block" id="runtime">
+    <h2><i class="fa-solid fa-video"></i> <span data-i18n="sd.title">Runtime Visualization</span></h2>
+    <p data-i18n-html="sd.placeholder">One timeline keeps cloud_qwen3 ASR, qwen3.5-flash parsing, Qwen2.5-VL + SAM3 grounding, depth-based grasp_check, and barge-in recovery aligned on Jetson AGX Orin.</p>
+    <figure class="diagram">
+        <img src="Pic/planb/planb-runtime_visualization.svg" alt="PLAN-B runtime visualization" />
+        <figcaption data-i18n="sd.cap1">Runtime visualization of the serial voice-to-grasp loop: ASR, NLU, VLM-SAM3, depth, grasp_check, and target-lost recovery remain on one timeline.</figcaption>
+    </figure>
+    <div class="result-block">
+        <i class="fa-solid fa-chart-line"></i>
+        <span data-i18n-html="sd.result">Serial scheduling avoids GPU thrash while keeping barge-in and target-loss recovery live.</span>
+    </div>
+</section>
+<!-- ============ S1: SYSTEM ARCHITECTURE ============ -->
+<section class="section-block" id="architecture">
+    <h2><i class="fa-solid fa-diagram-project"></i> <span data-i18n="s1.title">System Architecture</span></h2>
+    <figure class="diagram">
+        <img src="Pic/planb/planb-model_architechture.svg" alt="PLAN-B model architecture" />
+        <figcaption data-i18n="s1.cap">Voice-to-grasp architecture on Jetson AGX Orin: 3-tier VAD, cloud_qwen3/qwen3.5-flash routing, Qwen2.5-VL + SAM3 grounding, depth-based grasp_check, closed-loop verification, and downstream execution.</figcaption>
+    </figure>
+    <div class="scope-callout">
+        <i class="fa-solid fa-user"></i>
+        <span data-i18n-html="s1.scope"><strong>My scope:</strong> I owned the voice front-end, cloud_qwen3 / paraformer ASR, qwen3.5-flash NLU, VLM-SAM3 visual grounding, depth-based grasp_check, and the 13-mixin closed-loop state machine. Downstream execution (navigation, IK planning, motor control) was handled by collaborators.</span>
+    </div>
+</section>
 
-            <!-- ============ OVERVIEW ============ -->
-            <section class="section-block">
-                <h2><i class="fa-solid fa-bullseye"></i> <span data-i18n="s0.title">Overview</span></h2>
-                <p data-i18n-html="s0.p1">Deploying voice-controlled grasping on real robots exposes a critical gap: far-field speech is buried in noise, small objects defy segmentation models, and grasping attempts fail silently. <strong>PLAN-B</strong> is a full-stack voice-to-grasp pipeline deployed on Jetson AGX Orin. It chains a 3-tier VAD quality gate, a 4-engine streaming ASR router, dual-path NLU (regex + Qwen3-0.6B TRT-LLM), VLM bbox + CLIP text joint grounding with SAM3, and a 12-mixin closed-loop FSM with 3D multi-feature grasp verification.</p>
-
-                <ul class="contrib-list">
-                    <li data-i18n-html="s0.c1">Engineered a <strong>3-tier cascaded VAD quality gate</strong> (adaptive energy + software AGC + stateful Silero v4 ONNX h/c [2,1,64]), field-calibrated on-site (noise &minus;46 dB, speech &minus;39 dB, margin 6 dB), boosting far-field hit rate 0% &rarr; 92%.</li>
-                    <li data-i18n-html="s0.c2">Architected a <strong>4-engine streaming ASR framework</strong> (cloud_qwen3 / cloud_paraformer / local Qwen3-ASR TRT / FunASR) with envelope AGC v5 (silence-creep + fast peak ceiling + soft-clip), cloud endpointing ownership transfer, and rapid-stitch for verb-head fragments.</li>
-                    <li data-i18n-html="s0.c3">Designed <strong>dual-path NLU</strong> (7-template regex fast-path + Qwen3-0.6B LLM, temperature=0, max_new_tokens=28) with a 5-layer semantic defense cascade, and <strong>VLM bbox + CLIP joint grounding</strong> with letterbox alignment, lifting SAM3 mask success 9% &rarr; &ge;90%.</li>
-                    <li data-i18n-html="s0.c4">Built a <strong>12-mixin pipeline FSM</strong> with 3D multi-feature grasp verification (grasp_check v1.0.0: median&lt;55mm, P25&lt;45mm, frac&lt;3cm&ge;2%, frac&lt;5cm&ge;8%) and tactile baseline verification, enabling closed-loop retry with 4-class failure grading.</li>
-                </ul>
-
-                <!-- Pipeline SVG -->
-                <div class="pipeline-svg-wrap">
-                    <svg width="820" height="80" viewBox="0 0 820 80" xmlns="http://www.w3.org/2000/svg">
-                        <defs>
-                            <marker id="arrowhead" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
-                                <polygon points="0 0, 8 3, 0 6" fill="var(--text-secondary)" />
-                            </marker>
-                        </defs>
-                        <rect class="node-rect" x="0" y="20" width="60" height="40" />
-                        <text x="30" y="44" text-anchor="middle" font-size="11">Mic</text>
-                        <line class="arrow-line" x1="62" y1="40" x2="82" y2="40" />
-                        <rect class="node-rect-accent" x="84" y="20" width="70" height="40" />
-                        <text class="text-accent" x="119" y="44" text-anchor="middle" font-size="11">3-Tier VAD</text>
-                        <line class="arrow-line" x1="156" y1="40" x2="176" y2="40" />
-                        <rect class="node-rect-accent" x="178" y="20" width="80" height="40" />
-                        <text class="text-accent" x="218" y="44" text-anchor="middle" font-size="11">4-Engine ASR</text>
-                        <line class="arrow-line" x1="260" y1="40" x2="280" y2="40" />
-                        <rect class="node-rect-accent" x="282" y="20" width="85" height="40" />
-                        <text class="text-accent" x="324" y="44" text-anchor="middle" font-size="11">NLU + VLM</text>
-                        <line class="arrow-line" x1="369" y1="40" x2="389" y2="40" />
-                        <rect class="node-rect-accent" x="391" y="20" width="80" height="40" />
-                        <text class="text-accent" x="431" y="44" text-anchor="middle" font-size="11">SAM3 + Track</text>
-                        <line class="arrow-line" x1="473" y1="40" x2="493" y2="40" />
-                        <rect class="node-rect-accent" x="495" y="20" width="90" height="40" />
-                        <text class="text-accent" x="540" y="44" text-anchor="middle" font-size="11">12-Mixin FSM</text>
-                        <line class="arrow-line" x1="587" y1="40" x2="607" y2="40" />
-                        <rect class="node-rect" x="609" y="20" width="70" height="40" />
-                        <text x="644" y="44" text-anchor="middle" font-size="11">Grasp</text>
-                        <line class="arrow-line" x1="681" y1="40" x2="701" y2="40" />
-                        <rect class="node-rect-accent" x="703" y="20" width="80" height="40" />
-                        <text class="text-accent" x="743" y="44" text-anchor="middle" font-size="11">3D Verify</text>
-                        <path d="M743,62 L743,72 L324,72 L324,62" fill="none" stroke="var(--accent)" stroke-width="1.2" stroke-dasharray="4,3" marker-end="url(#arrowhead)" />
-                        <text class="text-label" x="534" y="70" text-anchor="middle" font-size="10">retry on failure</text>
-                    </svg>
-                </div>
-            </section>
-
-            <!-- ============ DEMO VIDEO ============ -->
-            <section class="section-block" id="demo">
-                <h2><i class="fa-solid fa-video"></i> <span data-i18n="sd.title">Demo</span></h2>
-                <div class="video-slot">
-                    <div class="placeholder-text">
-                        <i class="fa-solid fa-film"></i>
-                        <span data-i18n="sd.placeholder">Robot grasping demo video &mdash; drop your video file at Pic/planb/demo.mp4</span>
-                    </div>
-                </div>
-            </section>
-
-            <!-- ============ S1: SYSTEM ARCHITECTURE ============ -->
-            <section class="section-block">
-                <h2><i class="fa-solid fa-diagram-project"></i> <span data-i18n="s1.title">System Architecture</span></h2>
-                <figure class="diagram">
-                    <img src="Pic/planb/system_overview.png" alt="PLAN-B system architecture" />
-                    <figcaption data-i18n="s1.cap">Full-stack pipeline on Jetson AGX Orin: voice frontend, semantic understanding, visual perception, closed-loop execution, and verification feedback.</figcaption>
-                </figure>
-                <div class="scope-callout">
-                    <i class="fa-solid fa-user"></i>
-                    <span data-i18n-html="s1.scope"><strong>My scope:</strong> I owned the entire perception &amp; integration layer &mdash; 3-tier VAD, 4-engine streaming ASR, dual-path NLU, VLM-SAM3 visual grounding, 12-mixin closed-loop state machine, and 3D grasp verification. Downstream execution (navigation, IK planning, motor control) was handled by collaborators.</span>
-                </div>
-            </section>
-
-            <!-- ============ S2: VOICE FRONTEND ============ -->
-            <section class="section-block">
+<!-- ============ S2: VOICE FRONTEND ============ -->
+            <section class="section-block" id="voice">
                 <h2><i class="fa-solid fa-microphone"></i> <span data-i18n="s2.title">Voice Frontend: Field-Calibrated 3-Tier VAD</span></h2>
                 <figure class="diagram">
                     <img src="Pic/planb/vad_funnel.png" alt="VAD 3-tier cascade" />
@@ -402,72 +365,76 @@
                     <span data-i18n-html="s2.result">Far-field Silero hit rate: <strong>0% &rarr; 92%</strong> &bull; VAD discrimination: noise &lt; 0.01, speech &gt; 0.99 &bull; Noise floor converges in &sim;15 s</span>
                 </div>
             </section>
+<!-- ============ S3: STREAMING ASR ============ -->
+<section class="section-block">
+    <h2><i class="fa-solid fa-tower-broadcast"></i> <span data-i18n="s3.title">Streaming ASR: Cloud-First 4-Engine Router</span></h2>
+    <p data-i18n-html="s3.p1">The <code>StreamingAsrNode</code> hosts a pluggable engine router (<code>build_engine()</code>) selecting one of 4 ASR backends at launch. Engine choice determines the audio path, endpointing ownership, and AGC strategy &mdash; the node auto-detects engine capabilities via <code>hasattr(engine, 'set_on_sentence_callback')</code> and adapts accordingly.</p>
 
-            <!-- ============ S3: STREAMING ASR ============ -->
-            <section class="section-block">
-                <h2><i class="fa-solid fa-tower-broadcast"></i> <span data-i18n="s3.title">Streaming ASR: 4-Engine Architecture</span></h2>
-                <p data-i18n-html="s3.p1">The <code>StreamingAsrNode</code> hosts a pluggable engine router (<code>build_engine()</code>) selecting one of 4 ASR backends at launch. Engine choice determines the audio path, endpointing ownership, and AGC strategy &mdash; the node auto-detects engine capabilities via <code>hasattr(engine, 'set_on_sentence_callback')</code> and adapts accordingly.</p>
+    <div class="table-wrapper">
+        <table class="param-table">
+            <thead>
+                <tr>
+                    <th data-i18n="s3.th.engine">Engine</th>
+                    <th data-i18n="s3.th.backend">Backend</th>
+                    <th data-i18n="s3.th.audio">Audio Path</th>
+                    <th data-i18n="s3.th.eou">Endpointing</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><code>cloud_qwen3</code></td>
+                    <td data-i18n="s3.e1.backend">DashScope qwen3-asr-flash-realtime (WebSocket)</td>
+                    <td data-i18n="s3.e1.audio">Raw passthrough + envelope AGC v5</td>
+                    <td data-i18n="s3.e1.eou">Server VAD (threshold=0.0, silence=1500ms)</td>
+                </tr>
+                <tr>
+                    <td><code>cloud_paraformer</code></td>
+                    <td data-i18n="s3.e2.backend">DashScope paraformer-realtime-v2 (hotword)</td>
+                    <td data-i18n="s3.e2.audio">RMS gate (280) + hangover (0.6s) + zero-fill</td>
+                    <td data-i18n="s3.e2.eou">Cloud endpointing (max_sentence_silence=800ms, heartbeat)</td>
+                </tr>
+                <tr>
+                    <td><code>qwen</code></td>
+                    <td data-i18n="s3.e3.backend">Local Qwen3-ASR TRT-LLM (~3 GB GPU)</td>
+                    <td data-i18n="s3.e3.audio">Local VAD gate + accumulated rerun</td>
+                    <td data-i18n="s3.e3.eou">Local EOU (silence &ge; 0.8s)</td>
+                </tr>
+                <tr>
+                    <td><code>funasr</code></td>
+                    <td data-i18n="s3.e4.backend">FunASR paraformer-zh-streaming (chunk)</td>
+                    <td data-i18n="s3.e4.audio">Local VAD gate + 600ms chunks</td>
+                    <td data-i18n="s3.e4.eou">Local EOU (silence &ge; 0.8s)</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
 
-                <div class="table-wrapper">
-                    <table class="param-table">
-                        <thead>
-                            <tr>
-                                <th data-i18n="s3.th.engine">Engine</th>
-                                <th data-i18n="s3.th.backend">Backend</th>
-                                <th data-i18n="s3.th.audio">Audio Path</th>
-                                <th data-i18n="s3.th.eou">Endpointing</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr>
-                                <td><code>cloud_qwen3</code></td>
-                                <td data-i18n="s3.e1.backend">WebSocket Realtime API (wss://dashscope)</td>
-                                <td data-i18n="s3.e1.audio">Raw passthrough + envelope AGC v5</td>
-                                <td data-i18n="s3.e1.eou">Server VAD (threshold=0.0, silence=1500ms)</td>
-                            </tr>
-                            <tr>
-                                <td><code>cloud_paraformer</code></td>
-                                <td data-i18n="s3.e2.backend">DashScope SDK (Recognition)</td>
-                                <td data-i18n="s3.e2.audio">RMS gate (280) + hangover (0.6s) + zero-fill</td>
-                                <td data-i18n="s3.e2.eou">VAD (max_sentence_silence=1800ms, heartbeat)</td>
-                            </tr>
-                            <tr>
-                                <td><code>qwen</code></td>
-                                <td data-i18n="s3.e3.backend">Local Qwen3-ASR TRT-LLM (~3 GB GPU)</td>
-                                <td data-i18n="s3.e3.audio">Local VAD gate + accumulated rerun</td>
-                                <td data-i18n="s3.e3.eou">Local EOU (silence &ge; 0.8s)</td>
-                            </tr>
-                            <tr>
-                                <td><code>funasr</code></td>
-                                <td data-i18n="s3.e4.backend">FunASR paraformer-zh-streaming (chunk)</td>
-                                <td data-i18n="s3.e4.audio">Local VAD gate + 600ms chunks</td>
-                                <td data-i18n="s3.e4.eou">Local EOU (silence &ge; 0.8s)</td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
+    <figure class="diagram">
+        <img src="Pic/planb/engine_quadrant.png" alt="ASR engine selection quadrant" />
+        <figcaption data-i18n="s3.cap1">Cloud-first engine matrix: cloud_qwen3 and cloud_paraformer own production routing, while local qwen and FunASR stay as fallback lanes.</figcaption>
+    </figure>
 
-                <h3 data-i18n="s3.h.agc">Envelope AGC v5: Silence-Creep + Fast Peak Ceiling</h3>
-                <p data-i18n-html="s3.p2">The <code>cloud_qwen3</code> path applies a 5-iteration envelope-following AGC (<code>_apply_envelope_agc</code>) before feeding raw audio to the cloud. Key design: (1) <strong>fast peak ceiling</strong> &mdash; if <code>peak &times; gain &gt; 0.85</code>, gain is instantly clamped to <code>0.85/peak</code> (no slow release, preventing hard clipping that freezes cloud ASR); (2) <strong>envelope follow</strong> &mdash; when <code>rms &gt; noise_floor (&minus;38 dBFS)</code>, gain tracks toward <code>target/rms</code> with attack=0.30 / release=0.30; (3) <strong>silence creep (v5)</strong> &mdash; when <code>rms &le; noise_floor</code>, gain slowly rises toward max_gain at <code>attack &times; 0.2 = 0.06</code> per chunk (~2.4 s to max), pre-staging for the next far-field utterance; (4) <strong>soft-clip</strong> &mdash; <code>tanh</code> compression above knee=0.9, eliminating harmonic distortion from any residual clipping.</p>
+    <h3 data-i18n="s3.h.agc">Envelope AGC v5: Silence-Creep + Fast Peak Ceiling</h3>
+    <p data-i18n-html="s3.p2">The <code>cloud_qwen3</code> path applies a 5-iteration envelope-following AGC (<code>_apply_envelope_agc</code>) before feeding raw audio to the cloud. Key design: (1) <strong>fast peak ceiling</strong> &mdash; if <code>peak &times; gain &gt; 0.85</code>, gain is instantly clamped to <code>0.85/peak</code> (no slow release, preventing hard clipping that freezes cloud ASR); (2) <strong>envelope follow</strong> &mdash; when <code>rms &gt; noise_floor (&minus;38 dBFS)</code>, gain tracks toward <code>target/rms</code> with attack=0.30 / release=0.30; (3) <strong>silence creep (v5)</strong> &mdash; when <code>rms &le; noise_floor</code>, gain slowly rises toward max_gain at <code>attack &times; 0.2 = 0.06</code> per chunk (~2.4 s to max), pre-staging for the next far-field utterance; (4) <strong>soft-clip</strong> &mdash; <code>tanh</code> compression above knee=0.9, eliminating harmonic distortion from any residual clipping.</p>
 
-                <h3 data-i18n="s3.h.endpointing">Cloud Endpointing Ownership Transfer</h3>
-                <p data-i18n-html="s3.p3">For cloud engines, the node transfers sentence boundary detection to the cloud: <code>engine_owns_endpointing = True</code>. The cloud's <code>sentence_end</code> callback (<code>_on_cloud_sentence</code>) directly drives <code>publish_final</code>. Local EOU is disabled except as a <code>max_utterance_sec=20s</code> timeout watchdog. This eliminates the destructive pattern where local EOU triggered <code>session.stop()+start()</code> on every silence gap, causing partial count freezes and race conditions between <code>feed()</code> and <code>stop()</code>.</p>
+    <h3 data-i18n="s3.h.endpointing">Cloud Endpointing Ownership Transfer</h3>
+    <p data-i18n-html="s3.p3">For cloud engines, the node transfers sentence boundary detection to the cloud: <code>engine_owns_endpointing = True</code>. The cloud's <code>sentence_end</code> callback (<code>_on_cloud_sentence</code>) directly drives <code>publish_final</code>. Local EOU is disabled except as a <code>max_utterance_sec=20s</code> timeout watchdog. This eliminates the destructive pattern where local EOU triggered <code>session.stop()+start()</code> on every silence gap, causing partial count freezes and race conditions between <code>feed()</code> and <code>stop()</code>.</p>
 
-                <h3 data-i18n="s3.h.stitch">Rapid-Stitch: Short Verb-Head Buffering</h3>
-                <p data-i18n-html="s3.p4">Cloud ASR sometimes splits a single command at word-boundary pauses (e.g., &ldquo;把&rdquo; + 0.8 s pause + &ldquo;棕色玩具熊放进白色篮子里&rdquo; &rarr; two finals). The <code>_handle_qwen_final</code> method detects short verb-head finals (&le;3 chars, prefix in {把,拿,放,抓,给,帮,请,...}) and buffers them for 1.5 s. If a continuation final arrives within the window, the two are stitched; otherwise the short head is published alone.</p>
+    <h3 data-i18n="s3.h.stitch">Rapid-Stitch: Short Verb-Head Buffering</h3>
+    <p data-i18n-html="s3.p4">Cloud ASR sometimes splits a single command at word-boundary pauses (e.g., &ldquo;把&rdquo; + 0.8 s pause + &ldquo;棕色玩具熊放进白色篮子里&rdquo; &rarr; two finals). The <code>_handle_qwen_final</code> method detects short verb-head finals (&le;3 chars, prefix in {把,拿,放,抓,给,帮,请,...}) and buffers them for 1.5 s. If a continuation final arrives within the window, the two are stitched; otherwise the short head is published alone.</p>
 
-                <div class="result-block">
-                    <i class="fa-solid fa-chart-line"></i>
-                    <span data-i18n-html="s3.result">ASR streaming partial: <strong>150&ndash;300 ms</strong> &bull; Session survival: heartbeat &rarr; no 23 s SDK timeout &bull; AGC v5 far-field recovery: <strong>~2.4 s</strong> silence-to-max-gain</span>
-                </div>
-            </section>
+    <div class="result-block">
+        <i class="fa-solid fa-chart-line"></i>
+        <span data-i18n-html="s3.result">ASR streaming partial: <strong>150&ndash;300 ms</strong> &bull; Session survival: heartbeat &rarr; no 23 s SDK timeout &bull; AGC v5 far-field recovery: <strong>~2.4 s</strong> silence-to-max-gain</span>
+    </div>
+</section>
 
-            <!-- ============ S4: NLU + VLM + SAM3 ============ -->
+<!-- ============ S4: NLU + VLM + SAM3 ============ -->
             <section class="section-block">
                 <h2><i class="fa-solid fa-brain"></i> <span data-i18n="s4.title">Dual-Path NLU &amp; VLM-SAM3 Grounding</span></h2>
 
                 <h3 data-i18n="s4.h.nlu">Dual-Path Intent Parsing</h3>
-                <p data-i18n-html="s4.p1">The <code>VoiceCommandParser</code> operates in <code>regex_then_llm</code> mode. <strong>Fast path</strong>: 7 regex templates extract intent (pick_up / pick_and_place / place_only / move_to / chat / unknown) and entities from clean commands in &lt;1 ms. <strong>LLM path</strong>: Qwen3-0.6B (TRT-LLM or OpenAI-compatible HTTP) with a structured system prompt defining 6 intent types, noise classification rules (garbled ASR, background speech, filler phrases), and entity fields (target_object, quantity, location, object_en, location_en). Generation: <code>temperature=0</code>, <code>max_new_tokens=28</code>. A <code>chat_fallback</code> regex catches clear questions that the LLM occasionally misclassifies as unknown.</p>
+                <p data-i18n-html="s4.p1">The <code>VoiceCommandParser</code> operates in <code>regex_then_llm</code> mode. <strong>Fast path</strong>: 7 regex templates extract intent (pick_up / pick_and_place / place_only / move_to / chat / unknown) and entities from clean commands in &lt;1 ms. <strong>LLM path</strong>: qwen3.5-flash (TRT-LLM or OpenAI-compatible HTTP) with a structured system prompt defining 6 intent types, noise classification rules (garbled ASR, background speech, filler phrases), and entity fields (target_object, quantity, location, object_en, location_en). Generation: <code>temperature=0</code>, <code>max_new_tokens=28</code>. A <code>chat_fallback</code> regex catches clear questions that the LLM occasionally misclassifies as unknown.</p>
 
                 <h3 data-i18n="s4.h.vlm">VLM Bbox + CLIP Text Joint Grounding</h3>
                 <p data-i18n-html="s4.p2">The perception pipeline feeds NLU output to VLM (Qwen2.5-VL via HTTP) for bounding-box extraction, then to SAM3 with <strong>joint box + CLIP English text prompts</strong>. The key geometric fix is <strong>letterbox alignment</strong>: VLM resizes the input image to fit its max resolution (e.g., 512 px) with padding, outputting bbox coordinates in letterboxed space. These must be inverse-transformed to original pixel coordinates before feeding SAM3 &mdash; naive resize produces 1.78&times; vertical distortion, collapsing small-object masks. A color-to-VLM routing fix moved color discrimination from SAM3&rsquo;s HSV heuristic to VLM&rsquo;s semantic understanding, eliminating false rejections (e.g., &ldquo;red bull&rdquo; rejected because the can is blue/silver).</p>
@@ -491,135 +458,139 @@
                     <span data-i18n-html="s4.result">SAM3 mask success (small targets): <strong>9% &rarr; &ge;90%</strong> &bull; Color/brand routing error: <strong>0</strong> &bull; NLU intent: 6 types + noise classification</span>
                 </div>
             </section>
+<!-- ============ S5: CLOSED-LOOP FSM ============ -->
+<section class="section-block">
+    <h2><i class="fa-solid fa-gears"></i> <span data-i18n="s5.title">Closed-Loop FSM &amp; 3D Grasp Verification</span></h2>
 
-            <!-- ============ S5: CLOSED-LOOP FSM ============ -->
-            <section class="section-block">
-                <h2><i class="fa-solid fa-gears"></i> <span data-i18n="s5.title">Closed-Loop FSM &amp; 3D Grasp Verification</span></h2>
+    <h3 data-i18n="s5.h.mixin">13-Mixin Pipeline Architecture</h3>
+    <p data-i18n-html="s5.p0">The <code>MultimodalPipelineNode</code> uses mixin-based separation of concerns: <code>WakeWordMixin</code>, <code>NavMixin</code>, <code>GraspFeedbackMixin</code>, <code>TtsMixin</code>, <code>LongWaitFeedbackMixin</code>, <code>PlaceVerifyMixin</code>, <code>AsrMixin</code>, <code>Sam3Mixin</code>, <code>ArmMixin</code>, <code>CameraMixin</code>, <code>RdkMixin</code>, <code>BypassMixin</code>, and <code>OrchestrationMixin</code>. Pipeline stages: IDLE &rarr; NAV_TRACK_HEAD &rarr; NAV_REACHED_FLUSH &rarr; GRASP_RESEG_HEAD &rarr; GRASP_TRACK_LEFT &rarr; PLACE_TRACK_HEAD. A <code>DialogManager</code> handles conversation follow-up windows (12 s) and clarification timeouts (12 s).</p>
 
-                <h3 data-i18n="s5.h.mixin">12-Mixin Pipeline Architecture</h3>
-                <p data-i18n-html="s5.p0">The <code>MultimodalPipelineNode</code> uses mixin-based separation of concerns: <code>WakeWordMixin</code>, <code>NavMixin</code>, <code>GraspFeedbackMixin</code>, <code>TtsMixin</code>, <code>LongWaitFeedbackMixin</code>, <code>PlaceVerifyMixin</code>, <code>AsrMixin</code>, <code>Sam3Mixin</code>, <code>ArmMixin</code>, <code>CameraMixin</code>, <code>RdkMixin</code>, <code>BypassMixin</code>, and <code>OrchestrationMixin</code>. Pipeline stages: IDLE &rarr; NAV_TRACK_HEAD &rarr; NAV_REACHED_FLUSH &rarr; GRASP_RESEG_HEAD &rarr; GRASP_TRACK_LEFT &rarr; PLACE_TRACK_HEAD. A <code>DialogManager</code> handles conversation follow-up windows (12 s) and clarification timeouts (12 s).</p>
+    <div class="two-col">
+        <figure class="diagram">
+            <img src="Pic/planb/fsm_closed_loop.png" alt="Closed-loop FSM" />
+            <figcaption data-i18n="s5.cap1">Pipeline FSM with verification feedback loop, &le;3 retry for pick, &le;10 retry for place, 4-class failure grading.</figcaption>
+        </figure>
+        <figure class="diagram">
+            <img src="Pic/planb/p0_causal_chain.png" alt="P0 causal chain" />
+            <figcaption data-i18n="s5.cap2">One missing flag triggered a 7-step cascade: stale frame &rarr; wrong bbox &rarr; degraded mask &rarr; retry deadlock.</figcaption>
+        </figure>
+    </div>
 
-                <figure class="diagram">
-                    <img src="Pic/planb/fsm_closed_loop.png" alt="Closed-loop FSM" />
-                    <figcaption data-i18n="s5.cap1">Pipeline FSM with verification feedback loop, &le;3 retry for pick, &le;10 retry for place, 4-class failure grading.</figcaption>
-                </figure>
+    <h3 data-i18n="s5.h.grasp">grasp_check v1.0.0: 3D Multi-Feature Voting</h3>
+    <p data-i18n-html="s5.p1">After each grasp attempt, the <code>GraspFeedbackMixin</code> transitions through states: <code>idle &rarr; executing &rarr; verifying &rarr; retrying/aborting</code>. Verification uses a 3D multi-feature voting system on hand+object point cloud proximity: <strong>median distance &lt; 55 mm</strong>, <strong>P25 &lt; 45 mm</strong>, <strong>frac within 3 cm &ge; 2%</strong>, <strong>frac within 5 cm &ge; 8%</strong>. Tactile verification supplements vision: post-gripper-close baseline capture (<code>ResetTactileSensor()</code> + 0.35 s sampling window), then delta comparison at grasp_check position &mdash; retained force indicates true hold, force decay indicates empty grasp. Failures are classified into <strong>infrastructure</strong> (IK unreachable), <strong>genuine</strong> (object missed), and <strong>displacement</strong> (object moved) with graded TTS feedback.</p>
 
-                <h3 data-i18n="s5.h.grasp">grasp_check v1.0.0: 3D Multi-Feature Voting</h3>
-                <p data-i18n-html="s5.p1">After each grasp attempt, the <code>GraspFeedbackMixin</code> transitions through states: <code>idle &rarr; executing &rarr; verifying &rarr; retrying/aborting</code>. Verification uses a 3D multi-feature voting system on hand+object point cloud proximity: <strong>median distance &lt; 55 mm</strong>, <strong>P25 &lt; 45 mm</strong>, <strong>frac within 3 cm &ge; 2%</strong>, <strong>frac within 5 cm &ge; 8%</strong>. Tactile verification supplements vision: post-gripper-close baseline capture (<code>ResetTactileSensor()</code> + 0.35 s sampling window), then delta comparison at grasp_check position &mdash; retained force indicates true hold, force decay indicates empty grasp. Failures are classified into <strong>infrastructure</strong> (IK unreachable), <strong>genuine</strong> (object missed), and <strong>displacement</strong> (object moved) with graded TTS feedback.</p>
+    <h3 data-i18n="s5.h.p0">P0 Cascading Failure: 7-Step Root-Cause Audit</h3>
+    <figure class="diagram">
+        <img src="Pic/planb/p0_fix_timeline.png" alt="P0 fix timeline" />
+        <figcaption data-i18n="s5.cap3">Fix timeline: stale frame, mask collapse, and retry deadlock were traced back to one missing write-complete flag.</figcaption>
+    </figure>
+    <div class="result-block">
+        <i class="fa-solid fa-bug"></i>
+        <span data-i18n-html="s5.result">A missing <code>ok=True</code> in <code>_bg_write_shm()</code> caused stale frame reads &rarr; degraded masks (&lt;93 px) &rarr; infinite retry. Audit traced: flag &rarr; stale cache &rarr; VLM old frame &rarr; SAM3 misalignment &rarr; mask collapse &rarr; depth failure &rarr; retry loop. <strong>One-line fix restored full grasping success.</strong></span>
+    </div>
+</section>
+<!-- ============ S6: RESULTS ============ -->
+<section class="section-block" id="results">
+    <h2><i class="fa-solid fa-table"></i> <span data-i18n="s6.title">Quantified Results</span></h2>
 
-                <h3 data-i18n="s5.h.p0">P0 Cascading Failure: 7-Step Root-Cause Audit</h3>
-                <figure class="diagram">
-                    <img src="Pic/planb/p0_causal_chain.png" alt="P0 causal chain" />
-                    <figcaption data-i18n="s5.cap2">One missing flag triggered a 7-step cascade: stale frame &rarr; wrong bbox &rarr; degraded mask &rarr; retry deadlock. Fix: one line.</figcaption>
-                </figure>
-                <div class="result-block">
-                    <i class="fa-solid fa-bug"></i>
-                    <span data-i18n-html="s5.result">A missing <code>ok=True</code> in <code>_bg_write_shm()</code> caused stale frame reads &rarr; degraded masks (&lt;93 px) &rarr; infinite retry. Audit traced: flag &rarr; stale cache &rarr; VLM old frame &rarr; SAM3 misalignment &rarr; mask collapse &rarr; depth failure &rarr; retry loop. <strong>One-line fix restored full grasping success.</strong></span>
-                </div>
-            </section>
+    <div class="table-wrapper">
+        <table class="results-table">
+            <thead>
+                <tr>
+                    <th data-i18n="s6.th.metric">Metric</th>
+                    <th data-i18n="s6.th.before">Before</th>
+                    <th data-i18n="s6.th.after">After</th>
+                    <th data-i18n="s6.th.method">Method</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td data-i18n="s6.r1.m">Far-field VAD hit rate</td>
+                    <td>0%</td>
+                    <td class="improved">92%</td>
+                    <td data-i18n="s6.r1.how">Stateful Silero h/c [2,1,64] + field calibration</td>
+                </tr>
+                <tr>
+                    <td data-i18n="s6.r2.m">SAM3 mask success (small obj)</td>
+                    <td>9%</td>
+                    <td class="improved">&ge;90%</td>
+                    <td data-i18n="s6.r2.how">Letterbox + VLM bbox + CLIP text joint grounding</td>
+                </tr>
+                <tr>
+                    <td data-i18n="s6.r3.m">ASR streaming partial</td>
+                    <td data-i18n="s6.r3.b">Session rebuild &rarr; no output</td>
+                    <td class="improved">150&ndash;300 ms</td>
+                    <td data-i18n="s6.r3.how">Cloud endpointing ownership + heartbeat</td>
+                </tr>
+                <tr>
+                    <td data-i18n="s6.r4.m">AGC far-field recovery</td>
+                    <td data-i18n="s6.r4.b">Gain frozen at +0 dB</td>
+                    <td class="improved" data-i18n="s6.r4.a">~2.4 s to max gain</td>
+                    <td data-i18n="s6.r4.how">Envelope AGC v5 silence-creep</td>
+                </tr>
+                <tr>
+                    <td data-i18n="s6.r5.m">P0 grasping success</td>
+                    <td data-i18n="s6.r5.b">4 retries, all failed</td>
+                    <td class="improved" data-i18n="s6.r5.a">Closed-loop success</td>
+                    <td data-i18n="s6.r5.how">7-step root-cause audit + 1-line fix</td>
+                </tr>
+                <tr>
+                    <td data-i18n="s6.r6.m">Color/brand routing error</td>
+                    <td data-i18n="s6.r6.b">HSV misclassification</td>
+                    <td class="improved">0</td>
+                    <td data-i18n="s6.r6.how">VLM-stage color routing (HSV rerank disabled)</td>
+                </tr>
+                <tr>
+                    <td data-i18n="s6.r7.m">Target-lost timeout</td>
+                    <td data-i18n="s6.r7.b">60 s</td>
+                    <td class="improved" data-i18n="s6.r7.a">3 s</td>
+                    <td data-i18n="s6.r7.how">sam3_lost_timeout_sec: 60 s &rarr; 3 s</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
 
-            <!-- ============ S6: RESULTS ============ -->
-            <section class="section-block">
-                <h2><i class="fa-solid fa-table"></i> <span data-i18n="s6.title">Quantified Results</span></h2>
-
-                <div class="table-wrapper">
-                    <table class="results-table">
-                        <thead>
-                            <tr>
-                                <th data-i18n="s6.th.metric">Metric</th>
-                                <th data-i18n="s6.th.before">Before</th>
-                                <th data-i18n="s6.th.after">After</th>
-                                <th data-i18n="s6.th.method">Method</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr>
-                                <td data-i18n="s6.r1.m">Far-field VAD hit rate</td>
-                                <td>0%</td>
-                                <td class="improved">92%</td>
-                                <td data-i18n="s6.r1.how">Stateful Silero h/c [2,1,64] + field calibration</td>
-                            </tr>
-                            <tr>
-                                <td data-i18n="s6.r2.m">SAM3 mask success (small obj)</td>
-                                <td>9%</td>
-                                <td class="improved">&ge;90%</td>
-                                <td data-i18n="s6.r2.how">Letterbox + VLM bbox + CLIP text joint grounding</td>
-                            </tr>
-                            <tr>
-                                <td data-i18n="s6.r3.m">ASR streaming partial</td>
-                                <td data-i18n="s6.r3.b">Session rebuild &rarr; no output</td>
-                                <td class="improved">150&ndash;300 ms</td>
-                                <td data-i18n="s6.r3.how">Cloud endpointing ownership + heartbeat</td>
-                            </tr>
-                            <tr>
-                                <td data-i18n="s6.r4.m">AGC far-field recovery</td>
-                                <td data-i18n="s6.r4.b">Gain frozen at +0 dB</td>
-                                <td class="improved" data-i18n="s6.r4.a">~2.4 s to max gain</td>
-                                <td data-i18n="s6.r4.how">Envelope AGC v5 silence-creep</td>
-                            </tr>
-                            <tr>
-                                <td data-i18n="s6.r5.m">P0 grasping success</td>
-                                <td data-i18n="s6.r5.b">4 retries, all failed</td>
-                                <td class="improved" data-i18n="s6.r5.a">Closed-loop success</td>
-                                <td data-i18n="s6.r5.how">7-step root-cause audit + 1-line fix</td>
-                            </tr>
-                            <tr>
-                                <td data-i18n="s6.r6.m">Color/brand routing error</td>
-                                <td data-i18n="s6.r6.b">HSV misclassification</td>
-                                <td class="improved">0</td>
-                                <td data-i18n="s6.r6.how">VLM-stage color routing (HSV rerank disabled)</td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-
-                <div class="two-col">
-                    <figure class="diagram">
-                        <img src="Pic/planb/latency_waterfall.png" alt="Latency waterfall" />
-                        <figcaption data-i18n="s6.cap1">End-to-end single-command latency on Jetson AGX Orin</figcaption>
-                    </figure>
-                    <figure class="diagram">
-                        <img src="Pic/planb/metrics_comparison.png" alt="Metrics comparison" />
-                        <figcaption data-i18n="s6.cap2">Key metrics: before vs after optimization</figcaption>
-                    </figure>
-                </div>
-            </section>
-
-            <!-- ============ S7: HIGHLIGHTS ============ -->
-            <section class="section-block">
-                <h2><i class="fa-solid fa-star"></i> <span data-i18n="s7.title">Technical Highlights</span></h2>
-                <div class="highlight-grid">
-                    <div class="hl-card">
-                        <div class="hl-icon"><i class="fa-solid fa-wave-square"></i></div>
-                        <h4 data-i18n="s7.h1.title">Envelope AGC v5</h4>
-                        <p data-i18n="s7.h1.desc">5-iteration design: fast peak ceiling (instant clamp at 0.85), envelope follow (attack/release=0.30), silence creep (slow rise to max gain in ~2.4 s), and tanh soft-clip. Solves the "near-to-far transition" where gain freezes at +0 dB after loud speech.</p>
-                    </div>
-                    <div class="hl-card">
-                        <div class="hl-icon"><i class="fa-solid fa-crop-simple"></i></div>
-                        <h4 data-i18n="s7.h2.title">Letterbox Alignment</h4>
-                        <p data-i18n="s7.h2.desc">Unified scale ratio preserves 16:9 aspect ratio for VLM-to-SAM3 coordinate transform, preventing 1.78x vertical distortion that collapsed small-object masks.</p>
-                    </div>
-                    <div class="hl-card">
-                        <div class="hl-icon"><i class="fa-solid fa-shield-halved"></i></div>
-                        <h4 data-i18n="s7.h3.title">5-Layer Semantic Defense</h4>
-                        <p data-i18n="s7.h3.desc">Cascaded error interception: whitelist recovery, color backfill, hallucination stripping, sentinel filtering, VLM-SAM3 contradiction. Each layer catches what the previous one missed.</p>
-                    </div>
-                    <div class="hl-card">
-                        <div class="hl-icon"><i class="fa-solid fa-hand"></i></div>
-                        <h4 data-i18n="s7.h4.title">3D Grasp Voting + Tactile</h4>
-                        <p data-i18n="s7.h4.desc">Multi-feature point cloud verification (median/P25/frac thresholds) + post-close tactile baseline with ResetTactileSensor(). Delta judgment: retained force = true hold, force decay = empty grasp.</p>
-                    </div>
-                </div>
-            </section>
-
+    <div class="two-col">
+        <figure class="diagram">
+            <img src="Pic/planb/latency_waterfall.png" alt="Latency waterfall" />
+            <figcaption data-i18n="s6.cap1">End-to-end single-command latency on Jetson AGX Orin</figcaption>
+        </figure>
+        <figure class="diagram">
+            <img src="Pic/planb/metrics_comparison.png" alt="Metrics comparison" />
+            <figcaption data-i18n="s6.cap2">Key metrics: before vs after optimization</figcaption>
+        </figure>
+    </div>
+    <figure class="diagram">
+        <img src="Pic/planb/radar_heatmap.png" alt="Planb radar heatmap" />
+        <figcaption data-i18n="s6.cap3">Radar summary of voice, vision, and verification metrics after optimization.</figcaption>
+    </figure>
+</section>
+    <!-- ============ S7: HIGHLIGHTS ============ -->
+    <section class="section-block">
+        <h2><i class="fa-solid fa-star"></i> <span data-i18n="s7.title">Technical Highlights</span></h2>
+        <div class="highlight-grid">
+            <div class="hl-card">
+                <div class="hl-icon"><i class="fa-solid fa-wave-square"></i></div>
+                <h4 data-i18n="s7.h1.title">Envelope AGC v5</h4>
+                <p data-i18n="s7.h1.desc">5-iteration design: fast peak ceiling (instant clamp at 0.85), envelope follow (attack/release=0.30), silence creep (slow rise to max gain in ~2.4 s), and tanh soft-clip. Solves the "near-to-far transition" where gain freezes at +0 dB after loud speech.</p>
+            </div>
+            <div class="hl-card">
+                <div class="hl-icon"><i class="fa-solid fa-bolt"></i></div>
+                <h4 data-i18n="s7.h2.title">Cloud Endpointing</h4>
+                <p data-i18n="s7.h2.desc">All PCM frames, including silence, stay in the cloud stream so the server-side endpointing timer can actually fire; local VAD keeps barge-in only.</p>
+            </div>
+            <div class="hl-card">
+                <div class="hl-icon"><i class="fa-solid fa-crop-simple"></i></div>
+                <h4 data-i18n="s7.h3.title">Letterbox Alignment</h4>
+                <p data-i18n="s7.h3.desc">Aspect-ratio-preserving preprocessing keeps VLM box coordinates and SAM3 masks in the same reference frame, avoiding the 1.78x vertical stretch from naive resize.</p>
+            </div>
+            <div class="hl-card">
+                <div class="hl-icon"><i class="fa-solid fa-shield-halved"></i></div>
+                <h4 data-i18n="s7.h4.title">5-Layer Semantic Defense</h4>
+                <p data-i18n="s7.h4.desc">Cascaded error interception: whitelist recovery, color backfill, hallucination stripping, sentinel filtering, and VLM-SAM3 contradiction checks. Each layer catches what the previous one missed.</p>
+            </div>
         </div>
-    </main>
-
-    <footer class="footer">
-        <div class="container">
-            <p data-i18n-html="footer">&copy; <span id="year">2026</span> Yueyi Chen. Powered by <a href="https://pages.github.com/" target="_blank" rel="noopener">GitHub Pages</a>.</p>
-        </div>
-    </footer>
+    </section>
 
     <script src="planb.js"></script>
 </body>
