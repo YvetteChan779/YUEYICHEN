@@ -1,0 +1,122 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 880" role="img" aria-labelledby="title desc">
+  <title id="title">PLAN-A Retargeting architecture</title>
+  <desc id="desc">VDMocap data is converted by calibrated geometry and a Teleop Transformer into 10 raw encoder commands sent over WebSocket.</desc>
+  <defs>
+    <marker id="arrow" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto" markerUnits="strokeWidth">
+      <path d="M2,2 L10,6 L2,10 Z" fill="#475569"/>
+    </marker>
+    <linearGradient id="hero" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0ea5a5"/>
+      <stop offset="0.55" stop-color="#2563eb"/>
+      <stop offset="1" stop-color="#7c3aed"/>
+    </linearGradient>
+    <style>
+      :root { color-scheme: light dark; }
+      .bg { fill: #f8fafc; }
+      .panel { fill: #ffffff; stroke: #cbd5e1; stroke-width: 1.4; }
+      .soft { fill: #ecfeff; stroke: #0891b2; }
+      .learn { fill: #f5f3ff; stroke: #7c3aed; }
+      .deploy { fill: #f0fdf4; stroke: #16a34a; }
+      .warn { fill: #fff7ed; stroke: #ea580c; }
+      .ink { fill: #0f172a; font-family: Inter, Arial, sans-serif; }
+      .muted { fill: #475569; font-family: Inter, Arial, sans-serif; }
+      .small { font-size: 18px; }
+      .xs { font-size: 15px; }
+      .label { font-size: 20px; font-weight: 700; }
+      .title { font-size: 32px; font-weight: 800; }
+      .mono { font-family: 'JetBrains Mono', Consolas, monospace; font-size: 15px; }
+      .arrow { stroke: #475569; stroke-width: 2.2; fill: none; marker-end: url(#arrow); }
+      .dash { stroke-dasharray: 8 8; }
+      .chip { fill: #e2e8f0; }
+      @media (prefers-color-scheme: dark) {
+        .bg { fill: #0b1020; }
+        .panel { fill: #111827; stroke: #334155; }
+        .soft { fill: #082f49; stroke: #22d3ee; }
+        .learn { fill: #2e1065; stroke: #a78bfa; }
+        .deploy { fill: #052e16; stroke: #4ade80; }
+        .warn { fill: #431407; stroke: #fb923c; }
+        .ink { fill: #e5e7eb; }
+        .muted { fill: #cbd5e1; }
+        .chip { fill: #1e293b; }
+        .arrow { stroke: #cbd5e1; }
+      }
+    </style>
+  </defs>
+
+  <rect class="bg" width="1440" height="880" rx="0"/>
+  <rect x="40" y="36" width="1360" height="96" rx="14" fill="url(#hero)" opacity="0.96"/>
+  <text class="ink title" x="70" y="78" fill="#fff">PLAN-A Retargeting: Mocap-to-10DOF Robot Motion Interface</text>
+  <text class="ink small" x="72" y="110" fill="#e0f2fe">Geometry calibration + 1.00M-param Teleop Transformer + WebSocket/Dynamixel execution contract</text>
+
+  <!-- VDMocap input -->
+  <rect class="panel soft" x="60" y="180" width="300" height="184" rx="10"/>
+  <text class="ink label" x="88" y="220">VDMocap SDK</text>
+  <text class="muted small" x="88" y="252">MocapData ctypes struct</text>
+  <text class="muted xs" x="88" y="284">23 body nodes, 20 hand nodes</text>
+  <text class="muted xs" x="88" y="312">position_body + quaternion_body</text>
+  <text class="muted xs" x="88" y="340">frameIndex, frequency, sensor state</text>
+
+  <!-- Geometry route -->
+  <rect class="panel" x="435" y="164" width="404" height="240" rx="10"/>
+  <text class="ink label" x="465" y="204">Geometry Retargeting Route</text>
+  <rect class="panel warn" x="465" y="230" width="344" height="70" rx="8"/>
+  <text class="ink small" x="486" y="258">Offline SOP</text>
+  <text class="muted xs" x="486" y="284">FK + scipy least_squares for J1/J2 T-pose offsets</text>
+  <rect class="panel soft" x="465" y="318" width="344" height="60" rx="8"/>
+  <text class="ink small" x="486" y="344">Runtime mapping</text>
+  <text class="muted xs" x="486" y="368">quaternion swing/twist + position projection + mirror</text>
+
+  <!-- Learning route -->
+  <rect class="panel learn" x="435" y="460" width="404" height="300" rx="10"/>
+  <text class="ink label" x="465" y="500">Learning Teleop Route</text>
+  <text class="muted xs" x="465" y="530">6 joints x 10 features = 60D</text>
+  <text class="mono muted" x="465" y="560">quat(4) + euler(3) + rel_pos(3)</text>
+  <rect class="chip" x="465" y="588" width="150" height="44" rx="8"/>
+  <text class="ink xs" x="488" y="616">StandardScaler</text>
+  <rect class="chip" x="640" y="588" width="150" height="44" rx="8"/>
+  <text class="ink xs" x="664" y="616">Linear 60->128</text>
+  <rect class="chip" x="465" y="650" width="325" height="44" rx="8"/>
+  <text class="ink xs" x="488" y="678">Transformer Encoder: 4L / 8H / FFN 512</text>
+  <rect class="chip" x="465" y="712" width="325" height="44" rx="8"/>
+  <text class="ink xs" x="488" y="740">MLP 128->512->256->10, MSE + Adam</text>
+
+  <!-- Contract -->
+  <rect class="panel" x="914" y="230" width="412" height="220" rx="10"/>
+  <text class="ink label" x="944" y="270">10D Encoder Contract</text>
+  <text class="mono muted" x="944" y="304">[LA J1,J2,J3,J4,J5, RA J1,J2,J3,J4,J5]</text>
+  <text class="muted xs" x="944" y="336">raw_encoders / angles JSON field, length = 10</text>
+  <text class="muted xs" x="944" y="366">range [0,4095], T-pose center = 2048</text>
+  <text class="muted xs" x="944" y="396">left/right mirror handling before quantization</text>
+  <text class="muted xs" x="944" y="426">clamped before WebSocket send</text>
+
+  <!-- Deployment -->
+  <rect class="panel deploy" x="914" y="514" width="412" height="180" rx="10"/>
+  <text class="ink label" x="944" y="554">Deployment Adapter</text>
+  <text class="mono muted" x="944" y="588">ws://robot:port/teleop</text>
+  <text class="muted xs" x="944" y="620">session_id, frame, total_frames metadata</text>
+  <text class="muted xs" x="944" y="650">configurable 10-30 FPS execution path</text>
+  <text class="muted xs" x="944" y="678">Dynamixel command stream boundary</text>
+
+  <!-- Metrics -->
+  <rect class="panel" x="60" y="500" width="300" height="210" rx="10"/>
+  <text class="ink label" x="88" y="538">Measured Scope</text>
+  <text class="muted xs" x="88" y="572">Teleop Transformer artifacts:</text>
+  <text class="mono muted" x="88" y="602">1,000,970 params</text>
+  <text class="mono muted" x="88" y="632">47 paired final-frame samples</text>
+  <text class="mono muted" x="88" y="662">overall MAE = 71.90 counts</text>
+  <text class="mono muted" x="88" y="692">max error = 823.73 counts</text>
+
+  <!-- Arrows -->
+  <path class="arrow" d="M360 270 C390 270 400 270 435 270"/>
+  <path class="arrow" d="M360 300 C390 410 400 610 435 610"/>
+  <path class="arrow" d="M839 295 C870 300 880 315 914 330"/>
+  <path class="arrow" d="M839 640 C875 612 890 600 914 594"/>
+  <path class="arrow" d="M1120 450 L1120 514"/>
+  <path class="arrow dash" d="M1120 694 C1060 760 270 780 210 710"/>
+
+  <text class="muted xs" x="395" y="250">global quats / positions</text>
+  <text class="muted xs" x="382" y="575">paired mocap + encoders</text>
+  <text class="muted xs" x="852" y="286">10D counts</text>
+  <text class="muted xs" x="840" y="622">predicted 10D counts</text>
+  <text class="muted xs" x="690" y="808">operator calibration and robot feedback close the retargeting loop</text>
+</svg>

@@ -1,0 +1,108 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1440" height="760" viewBox="0 0 1440 760" role="img" aria-labelledby="title desc">
+  <title id="title">PLAN-A runtime and evaluation visualization</title>
+  <desc id="desc">Visualization of PLAN-A dataset composition, CVAE training summary, runtime latency, Qwen cache speedup, and retargeting regression scope.</desc>
+  <defs>
+    <marker id="arrow" markerWidth="12" markerHeight="12" refX="9" refY="3" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L0,6 L9,3 z" fill="#334155"/>
+    </marker>
+    <style>
+      .bg { fill: #f8fafc; }
+      .panel { fill: #ffffff; stroke: #cbd5e1; stroke-width: 1.4; }
+      .muted { fill: #f1f5f9; stroke: #cbd5e1; stroke-width: 1.2; }
+      .teal { fill: #14b8a6; }
+      .blue { fill: #0ea5e9; }
+      .amber { fill: #f59e0b; }
+      .pink { fill: #ec4899; }
+      .purple { fill: #8b5cf6; }
+      .red { fill: #ef4444; }
+      .green-soft { fill: #dcfce7; stroke: #16a34a; }
+      .amber-soft { fill: #fef3c7; stroke: #d97706; }
+      .pink-soft { fill: #fce7f3; stroke: #db2777; }
+      .blue-soft { fill: #e0f2fe; stroke: #0284c7; }
+      .purple-soft { fill: #ede9fe; stroke: #7c3aed; }
+      .title { font: 700 30px Inter, Arial, sans-serif; fill: #0f172a; }
+      .section { font: 700 18px Inter, Arial, sans-serif; fill: #0f172a; }
+      .label { font: 700 14px Inter, Arial, sans-serif; fill: #0f172a; }
+      .small { font: 500 12.5px Inter, Arial, sans-serif; fill: #475569; }
+      .number { font: 800 34px Inter, Arial, sans-serif; fill: #0f172a; }
+      .metric { font: 800 24px Inter, Arial, sans-serif; fill: #0f172a; }
+      .mono { font: 500 12px "JetBrains Mono", Consolas, monospace; fill: #334155; }
+      .axis { stroke: #94a3b8; stroke-width: 1.2; }
+      .arrow { stroke: #334155; stroke-width: 2; fill: none; marker-end: url(#arrow); }
+    </style>
+  </defs>
+
+  <rect class="bg" width="1440" height="760"/>
+  <text class="title" x="54" y="58">PLAN-A Evidence Visualization</text>
+  <text class="small" x="54" y="84">A compact view of the defensible scope: 3-class data, CVAE validation, runtime latency, Qwen cache acceleration, and retargeting regression.</text>
+
+  <rect class="panel" x="54" y="122" width="406" height="270" rx="14"/>
+  <text class="section" x="82" y="158">Dataset Composition</text>
+  <text class="small" x="82" y="182">194 episodes from 3 core actions; each trajectory uses a 10D encoder action interface.</text>
+  <line class="axis" x1="108" y1="338" x2="410" y2="338"/>
+  <rect class="blue" x="120" y="258" width="56" height="80" rx="6"/>
+  <rect class="teal" x="220" y="174" width="56" height="164" rx="6"/>
+  <rect class="amber" x="320" y="296" width="56" height="42" rx="6"/>
+  <text class="metric" x="125" y="246">54</text>
+  <text class="small" x="112" y="362">Waving</text>
+  <text class="metric" x="217" y="162">112</text>
+  <text class="small" x="210" y="362">Reaching</text>
+  <text class="metric" x="326" y="284">28</text>
+  <text class="small" x="319" y="362">Sitting</text>
+
+  <rect class="panel" x="514" y="122" width="406" height="270" rx="14"/>
+  <text class="section" x="542" y="158">CVAE Validation Route</text>
+  <rect class="green-soft" x="542" y="194" width="150" height="78" rx="10"/>
+  <text class="number" x="566" y="236">535.95</text>
+  <text class="small" x="566" y="256">Best Val Loss @ ep 5</text>
+  <rect class="blue-soft" x="718" y="194" width="150" height="78" rx="10"/>
+  <text class="number" x="752" y="236">100%</text>
+  <text class="small" x="746" y="256">Cls sanity acc</text>
+  <rect class="amber-soft" x="542" y="294" width="326" height="66" rx="10"/>
+  <text class="label" x="566" y="320">Reconstruction check</text>
+  <text class="small" x="566" y="342">Sitting MAE 56.4; Waving/Reaching 235-455 encoder counts</text>
+
+  <rect class="panel" x="974" y="122" width="406" height="270" rx="14"/>
+  <text class="section" x="1002" y="158">Runtime Latency Budget</text>
+  <text class="small" x="1002" y="182">Measured as message receive + policy inference + frame playback.</text>
+  <rect class="muted" x="1002" y="218" width="322" height="62" rx="10"/>
+  <rect class="blue" x="1018" y="242" width="8" height="18" rx="4"/>
+  <rect class="amber" x="1034" y="242" width="70" height="18" rx="4"/>
+  <rect class="purple" x="1112" y="242" width="188" height="18" rx="4"/>
+  <text class="mono" x="1018" y="303">5 ms receive + ~500 ms infer + T x 100 ms playback</text>
+  <text class="number" x="1002" y="354">2.5-5.5 s</text>
+  <text class="small" x="1194" y="354">end-to-end range</text>
+
+  <rect class="panel" x="54" y="430" width="406" height="244" rx="14"/>
+  <text class="section" x="82" y="466">Qwen / DINO Compute Tradeoff</text>
+  <rect class="pink-soft" x="82" y="500" width="150" height="92" rx="10"/>
+  <text class="metric" x="108" y="542">3 h</text>
+  <text class="small" x="108" y="566">Qwen live / epoch</text>
+  <path class="arrow" d="M244 546 L294 546"/>
+  <rect class="green-soft" x="306" y="500" width="116" height="92" rx="10"/>
+  <text class="metric" x="330" y="542">20 m</text>
+  <text class="small" x="328" y="566">cached / epoch</text>
+  <text class="number" x="82" y="640">~9x</text>
+  <text class="small" x="164" y="632">speedup using per-frame Qwen hidden states saved as .npy condition tokens.</text>
+  <text class="small" x="164" y="652">DINOv2-S/B/L remain realtime visual encoder options.</text>
+
+  <rect class="panel" x="514" y="430" width="406" height="244" rx="14"/>
+  <text class="section" x="542" y="466">Retargeting Support Branch</text>
+  <rect class="purple-soft" x="542" y="500" width="150" height="92" rx="10"/>
+  <text class="number" x="576" y="542">47</text>
+  <text class="small" x="568" y="566">paired samples</text>
+  <rect class="amber-soft" x="718" y="500" width="150" height="92" rx="10"/>
+  <text class="number" x="744" y="542">71.90</text>
+  <text class="small" x="748" y="566">encoder-count MAE</text>
+  <text class="small" x="542" y="632">This is final-frame IMU-to-encoder regression, not task success.</text>
+  <text class="small" x="542" y="652">Max error reaches 823.73 counts; geometry route remains deployable baseline.</text>
+
+  <rect class="panel" x="974" y="430" width="406" height="244" rx="14"/>
+  <text class="section" x="1002" y="466">Data Failure Diagnosis</text>
+  <rect class="muted" x="1002" y="500" width="322" height="92" rx="10"/>
+  <text class="label" x="1024" y="526">Thinking vs Bothhandsup</text>
+  <text class="small" x="1024" y="550">14 short samples under 20 frames vs 0</text>
+  <text class="small" x="1024" y="572">motion 4981.7 vs 6852.5, down 27%</text>
+  <text class="metric" x="1002" y="640">len &lt; 20 or motion &lt; 2000</text>
+  <text class="small" x="1002" y="660">became the public cleaning rule for the early 8-class data issue.</text>
+</svg>

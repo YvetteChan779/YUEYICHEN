@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="PLAN-A Retargeting: mocap-to-10DOF robot motion interface by Yueyi Chen" />
+    <title>PLAN-A Retargeting | Yueyi Chen</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Lora:wght@400;500;600;700&family=JetBrains+Mono:wght@400&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+    <link rel="stylesheet" href="styles.css" />
+    <style>
+        .project-shell { max-width: 1040px; margin: 0 auto; padding: 0 24px 56px; }
+        .hero { padding: 54px 0 34px; border-bottom: 1px solid var(--border); margin-bottom: 38px; }
+        .hero-topline { color: var(--accent); font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0; margin-bottom: 10px; }
+        .hero h1 { font-family: var(--font-serif); font-size: 34px; line-height: 1.25; margin-bottom: 14px; }
+        .hero .tagline { max-width: 860px; font-size: 16px; color: var(--text-secondary); line-height: 1.8; }
+        .hero-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 24px; }
+        .hero-actions a, .hero-actions button { display: inline-flex; align-items: center; gap: 8px; min-height: 34px; padding: 7px 14px; border-radius: 6px; border: 1px solid var(--accent); color: var(--accent); background: transparent; font: 600 13px var(--font-sans); cursor: pointer; text-decoration: none; }
+        .hero-actions a:hover, .hero-actions button:hover { background: var(--accent); color: #fff; text-decoration: none; }
+        .metrics-strip { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin: 0 0 42px; }
+        .metric-card { min-height: 118px; padding: 20px 14px; background: var(--bg-alt); border: 1px solid var(--border); border-radius: 8px; }
+        .metric-card .number { font-size: 28px; font-weight: 800; color: var(--accent); line-height: 1.1; }
+        .metric-card .label { margin-top: 8px; font-size: 13px; color: var(--text-secondary); line-height: 1.45; }
+        .section-block { margin-bottom: 48px; }
+        .section-block h2 { font-family: var(--font-serif); font-size: 23px; font-weight: 650; margin-bottom: 15px; padding-bottom: 8px; border-bottom: 2px solid var(--border); }
+        .section-block h2 i { margin-right: 8px; color: var(--accent); font-size: 18px; }
+        .section-block h3 { font-size: 17px; margin: 24px 0 10px; }
+        .section-block p, .section-block li { font-size: 15px; line-height: 1.8; }
+        .diagram { margin: 20px 0 12px; border: 1px solid var(--border); border-radius: 8px; padding: 14px; overflow-x: auto; background: var(--bg-alt); }
+        .diagram img { min-width: 900px; width: 100%; height: auto; }
+        .fig-cap { margin: 8px 0 0; color: var(--text-secondary); font-size: 13px; text-align: center; }
+        .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+        .scope-callout, .result-block { border-radius: 6px; padding: 16px 18px; margin: 16px 0 22px; font-size: 14px; line-height: 1.75; }
+        .scope-callout { background: var(--highlight-bg); border-left: 4px solid var(--highlight-border); }
+        .result-block { background: var(--bg-alt); border-left: 4px solid var(--accent); }
+        .results-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+        .results-table th, .results-table td { border: 1px solid var(--border); padding: 10px 12px; text-align: left; vertical-align: top; }
+        .results-table th { background: var(--bg-alt); white-space: nowrap; }
+        .table-wrapper { overflow-x: auto; margin: 14px 0 22px; }
+        code { font-family: var(--font-mono); font-size: 0.92em; background: var(--bg-alt); border: 1px solid var(--border); border-radius: 4px; padding: 1px 4px; }
+        .compact-list { margin-left: 18px; }
+        @media (max-width: 768px) { .project-shell { padding: 0 18px 42px; } .hero h1 { font-size: 26px; } .metrics-strip { grid-template-columns: repeat(2, 1fr); } .two-col { grid-template-columns: 1fr; } .diagram img { min-width: 760px; } }
+        @media (max-width: 480px) { .metrics-strip { grid-template-columns: 1fr; } }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <a href="index.html" class="nav-brand">Yueyi Chen</a>
+            <div class="nav-right">
+                <ul class="nav-links">
+                    <li><a href="index.html#publications" class="nav-link" data-i18n="nav.projects">projects</a></li>
+                    <li><a href="#architecture" class="nav-link" data-i18n="nav.arch">architecture</a></li>
+                    <li><a href="#results" class="nav-link" data-i18n="nav.results">results</a></li>
+                </ul>
+                <button class="lang-toggle" id="langToggle" aria-label="Toggle language">中</button>
+                <button class="theme-toggle" id="themeToggle" aria-label="Toggle theme">
+                    <i class="fa-solid fa-sun icon-light"></i>
+                    <i class="fa-solid fa-moon icon-dark"></i>
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <main class="project-shell">
+        <section class="hero">
+            <div class="hero-topline" data-i18n="hero.kicker">Algorithm Intern Project · PLAN-A</div>
+            <h1 data-i18n="hero.title">PLAN-A Retargeting: Mocap-to-10DOF Robot Motion Interface</h1>
+            <p class="tagline" data-i18n-html="hero.tagline">A field-calibrated retargeting interface that converts VDMocap 23-node body pose into 10 raw Dynamixel encoder commands. The stack combines a documented FK / <code>scipy.optimize.least_squares</code> calibration path, low-latency quaternion/position runtime mapping, and a 1.00M-parameter Teleop Transformer prototype for 60D IMU-to-encoder regression.</p>
+            <div class="hero-actions">
+                <a href="index.html#publications"><i class="fa-solid fa-arrow-left"></i><span data-i18n="hero.back">Back to projects</span></a>
+                <a href="#architecture"><i class="fa-solid fa-diagram-project"></i><span data-i18n="hero.arch">Architecture</span></a>
+                <button type="button" id="langHero"><i class="fa-solid fa-language"></i><span data-i18n="hero.lang">Switch language</span></button>
+            </div>
+        </section>
+
+        <section class="metrics-strip" aria-label="Project metrics">
+            <div class="metric-card"><div class="number">23</div><div class="label" data-i18n="metric.nodes">VDMocap body nodes parsed from the SDK struct</div></div>
+            <div class="metric-card"><div class="number">10D</div><div class="label" data-i18n="metric.output">raw encoder contract for left/right 5-DOF arms</div></div>
+            <div class="metric-card"><div class="number">1.00M</div><div class="label" data-i18n="metric.params">Teleop Transformer parameters</div></div>
+            <div class="metric-card"><div class="number">47 / 71.90</div><div class="label" data-i18n="metric.eval">paired final-frame samples / encoder-count MAE</div></div>
+        </section>
+
+        <section class="section-block" id="overview">
+            <h2><i class="fa-solid fa-crosshairs"></i><span data-i18n="overview.title">System Boundary</span></h2>
+            <p data-i18n-html="overview.p1">This page covers the PLAN-A retargeting layer, not the full CVAE or Diffusion Policy stack. Its owned boundary is the motion interface between human mocap and robot actuation: SDK parsing, T-pose calibration, left/right arm mirroring, encoder quantization, paired data capture, model inference, and WebSocket delivery.</p>
+            <div class="scope-callout" data-i18n-html="overview.scope"><i class="fa-solid fa-triangle-exclamation"></i>Public wording should keep the distinction explicit: <strong>least_squares</strong> is the documented calibration/SOP route, while the main real-time scripts use quaternion swing/twist and position-projection mappings before sending 10 encoder counts.</div>
+        </section>
+
+        <section class="section-block" id="architecture">
+            <h2><i class="fa-solid fa-diagram-project"></i><span data-i18n="arch.title">Architecture</span></h2>
+            <figure class="diagram">
+                <img src="Pic/plana_retargeting/plana_retargeting_arch.svg" alt="PLAN-A retargeting architecture" />
+            </figure>
+            <p class="fig-cap" data-i18n="arch.cap">The diagram separates the documented geometry calibration route, runtime retargeting route, learning-based regression route, and the 10D WebSocket execution contract.</p>
+        </section>
+
+        <section class="section-block" id="interface">
+            <h2><i class="fa-solid fa-plug"></i><span data-i18n="interface.title">Interface And Data Contract</span></h2>
+            <div class="table-wrapper">
+                <table class="results-table">
+                    <thead><tr><th data-i18n="table.boundary">Boundary</th><th data-i18n="table.contract">Contract</th><th data-i18n="table.evidence">Evidence</th></tr></thead>
+                    <tbody>
+                        <tr><td>VDMocap SDK</td><td data-i18n-html="interface.row1">ctypes <code>MocapData</code> with 23 body nodes, 20 hand nodes per side, 52 ARKit face blendshapes, positions, quaternions, gyro, acceleration, velocity, and sensor states.</td><td><code>vd_mocap_listener_struct.py:28-130</code></td></tr>
+                        <tr><td>Geometry runtime</td><td data-i18n-html="interface.row2">Upper/lower arm quaternions are mapped into <code>[LA J1,J2,J3,J4,center, RA J1,J2,J3,J4,center]</code>, clipped to <code>[0,4095]</code>, and sent as <code>angles</code>.</td><td><code>calibrate_all_joints.py:215-298, 301-437, 522-667</code></td></tr>
+                        <tr><td>Learning route</td><td data-i18n-html="interface.row3">Six arm joints produce 60D features: quaternion(4), Euler radians(3), and hip-relative position(3), then regress to 10 raw encoder counts.</td><td><code>train_teleop_transformer.py:21-35, 143-243</code></td></tr>
+                        <tr><td>Robot adapter</td><td data-i18n-html="interface.row4">JSON files may contain <code>raw_encoders</code> or <code>angles</code>; every frame must contain exactly 10 values and is clamped before WebSocket send.</td><td><code>send_json_to_robot.py:19-34, 116-151, 231-306</code></td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <section class="section-block" id="calibration">
+            <h2><i class="fa-solid fa-ruler-combined"></i><span data-i18n="calib.title">Calibration And Runtime Mapping</span></h2>
+            <div class="two-col">
+                <div>
+                    <h3 data-i18n="calib.h1">FK / Least-Squares SOP</h3>
+                    <p data-i18n-html="calib.p1">The calibration note defines J1 as world-X rotation and J2 as local-Z rotation after J1. The documented solver builds <code>fk_upper_arm(J1,J2,L)=Rx(J1)Rz(J2)[L,0,0]</code>, solves the residual with <code>least_squares</code>, subtracts T-pose offsets, then maps degrees into encoder counts with <code>2048 + theta * 4096 / 360</code>.</p>
+                </div>
+                <div>
+                    <h3 data-i18n="calib.h2">Realtime Quaternion / Position Paths</h3>
+                    <p data-i18n-html="calib.p2"><code>calibrate_all_joints.py</code> extracts J1/J2 and J3/J4 through quaternion decomposition and parent-rotation removal. <code>calibrate_all_joints_position.py</code> adds a 10 cm shoulder offset, computes J2 from the arm-vector projection, and supports 30-frame current T-pose calibration.</p>
+                </div>
+            </div>
+            <div class="result-block" data-i18n-html="calib.result"><i class="fa-solid fa-circle-check"></i>The PLAN-A project document reports T-pose encoder stability at <strong>2048 ± 3</strong>, with a 90-degree arm lift corresponding to approximately 1024 encoder counts. Treat this as documented system evidence, not a separately reproduced benchmark.</div>
+        </section>
+
+        <section class="section-block" id="model">
+            <h2><i class="fa-solid fa-network-wired"></i><span data-i18n="model.title">Teleop Transformer Prototype</span></h2>
+            <p data-i18n-html="model.p1">The learning-based route is a compact regression model rather than a VLA policy. It standardizes 60D IMU features, projects them with <code>Linear(60 -> 128)</code>, adds a learnable <code>(1,1,128)</code> positional parameter, runs a 4-layer / 8-head Transformer Encoder with 512-wide FFN, then uses a 3-layer MLP to predict 10 encoder counts. Training uses MSE, Adam at <code>1e-4</code>, ReduceLROnPlateau, 200 epochs, and saved IMU/encoder scalers.</p>
+            <div class="table-wrapper">
+                <table class="results-table">
+                    <thead><tr><th data-i18n="model.col1">Component</th><th data-i18n="model.col2">Setting</th></tr></thead>
+                    <tbody>
+                        <tr><td>Input</td><td>60D = 6 arm joints x (quat 4 + euler 3 + position 3)</td></tr>
+                        <tr><td>Backbone</td><td>Linear 60->128 + Transformer Encoder, 4 layers, 8 heads, FFN 512, dropout 0.1</td></tr>
+                        <tr><td>Head</td><td>MLP 128->512->256->10</td></tr>
+                        <tr><td>Artifacts</td><td><code>best_teleop_transformer.pth</code>, <code>scaler_imu.pkl</code>, <code>scaler_encoder.pkl</code></td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <section class="section-block" id="deployment">
+            <h2><i class="fa-solid fa-tower-broadcast"></i><span data-i18n="deploy.title">Realtime Deployment</span></h2>
+            <p data-i18n-html="deploy.p1">Realtime inference uses the same 60D extraction from a live <code>MocapData</code> struct, inverse-transforms the predicted encoder counts, clamps every value to <code>[0,4095]</code>, then sends <code>{angles, session_id, frame, total_frames}</code> over <code>/teleop</code>. The learning controller defaults to 30 Hz, while the broader PLAN-A execution document reports a 10 FPS Dynamixel trajectory path for generated action sequences.</p>
+        </section>
+
+        <section class="section-block" id="results">
+            <h2><i class="fa-solid fa-chart-line"></i><span data-i18n="results.title">Results And Limits</span></h2>
+            <div class="table-wrapper">
+                <table class="results-table">
+                    <thead><tr><th data-i18n="results.metric">Metric</th><th data-i18n="results.value">Value</th><th data-i18n="results.scope">Scope</th></tr></thead>
+                    <tbody>
+                        <tr><td>Total samples</td><td>47</td><td data-i18n="results.r1">paired final-frame mocap/encoder evaluation</td></tr>
+                        <tr><td>Overall MAE</td><td>71.90 encoder counts</td><td data-i18n="results.r2">computed by batch test summary</td></tr>
+                        <tr><td>Max error</td><td>823.73 encoder counts</td><td data-i18n="results.r3">largest outlier in the sample set</td></tr>
+                        <tr><td>Per-joint MAE range</td><td>38.05 - 108.61 counts</td><td data-i18n="results.r4">best/worst joint mean absolute error</td></tr>
+                    </tbody>
+                </table>
+            </div>
+            <div class="scope-callout" data-i18n-html="results.limit"><i class="fa-solid fa-triangle-exclamation"></i>The defensible claim is interface engineering plus prototype regression accuracy. There is no task-level success rate, no large-scale cross-user evaluation, and no evidence that this branch replaces the geometry retargeting route.</div>
+        </section>
+
+        <section class="section-block" id="interview">
+            <h2><i class="fa-solid fa-comments"></i><span data-i18n="interview.title">Interview-Ready Technical Points</span></h2>
+            <ul class="compact-list">
+                <li data-i18n-html="interview.p1">Explain why global mocap quaternions cannot be sent directly to robot joints: T-pose offsets, mirror symmetry, encoder center, and left/right motor direction must be handled before actuation.</li>
+                <li data-i18n-html="interview.p2">Defend the model as a regression prototype: 60D feature contract, 1.00M parameters, StandardScaler on both domains, and 47-sample final-frame MAE with visible outliers.</li>
+                <li data-i18n-html="interview.p3">Separate policy, retargeting, and controller rates: generated PLAN-A trajectories use a documented 10 FPS execution path, while the live Teleop Transformer controller has a configurable 30 Hz loop.</li>
+            </ul>
+        </section>
+    </main>
+
+    <script>
+    (function () {
+        'use strict';
+        const root = document.documentElement;
+        const themeToggle = document.getElementById('themeToggle');
+        const savedTheme = localStorage.getItem('theme') || 'dark';
+        root.setAttribute('data-theme', savedTheme);
+        themeToggle?.addEventListener('click', () => {
+            const next = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+            root.setAttribute('data-theme', next);
+            localStorage.setItem('theme', next);
+        });
+
+        const i18n = {
+            en: {
+                'nav.projects': 'projects', 'nav.arch': 'architecture', 'nav.results': 'results',
+                'hero.kicker': 'Algorithm Intern Project · PLAN-A',
+                'hero.title': 'PLAN-A Retargeting: Mocap-to-10DOF Robot Motion Interface',
+                'hero.tagline': 'A field-calibrated retargeting interface that converts VDMocap 23-node body pose into 10 raw Dynamixel encoder commands. The stack combines a documented FK / <code>scipy.optimize.least_squares</code> calibration path, low-latency quaternion/position runtime mapping, and a 1.00M-parameter Teleop Transformer prototype for 60D IMU-to-encoder regression.',
+                'hero.back': 'Back to projects', 'hero.arch': 'Architecture', 'hero.lang': 'Switch language',
+                'metric.nodes': 'VDMocap body nodes parsed from the SDK struct',
+                'metric.output': 'raw encoder contract for left/right 5-DOF arms',
+                'metric.params': 'Teleop Transformer parameters',
+                'metric.eval': 'paired final-frame samples / encoder-count MAE',
+                'overview.title': 'System Boundary',
+                'overview.p1': 'This page covers the PLAN-A retargeting layer, not the full CVAE or Diffusion Policy stack. Its owned boundary is the motion interface between human mocap and robot actuation: SDK parsing, T-pose calibration, left/right arm mirroring, encoder quantization, paired data capture, model inference, and WebSocket delivery.',
+                'overview.scope': '<i class="fa-solid fa-triangle-exclamation"></i>Public wording should keep the distinction explicit: <strong>least_squares</strong> is the documented calibration/SOP route, while the main real-time scripts use quaternion swing/twist and position-projection mappings before sending 10 encoder counts.',
+                'arch.title': 'Architecture',
+                'arch.cap': 'The diagram separates the documented geometry calibration route, runtime retargeting route, learning-based regression route, and the 10D WebSocket execution contract.',
+                'interface.title': 'Interface And Data Contract', 'table.boundary': 'Boundary', 'table.contract': 'Contract', 'table.evidence': 'Evidence',
+                'interface.row1': 'ctypes <code>MocapData</code> with 23 body nodes, 20 hand nodes per side, 52 ARKit face blendshapes, positions, quaternions, gyro, acceleration, velocity, and sensor states.',
+                'interface.row2': 'Upper/lower arm quaternions are mapped into <code>[LA J1,J2,J3,J4,center, RA J1,J2,J3,J4,center]</code>, clipped to <code>[0,4095]</code>, and sent as <code>angles</code>.',
+                'interface.row3': 'Six arm joints produce 60D features: quaternion(4), Euler radians(3), and hip-relative position(3), then regress to 10 raw encoder counts.',
+                'interface.row4': 'JSON files may contain <code>raw_encoders</code> or <code>angles</code>; every frame must contain exactly 10 values and is clamped before WebSocket send.',
+                'calib.title': 'Calibration And Runtime Mapping', 'calib.h1': 'FK / Least-Squares SOP', 'calib.h2': 'Realtime Quaternion / Position Paths',
+                'calib.p1': 'The calibration note defines J1 as world-X rotation and J2 as local-Z rotation after J1. The documented solver builds <code>fk_upper_arm(J1,J2,L)=Rx(J1)Rz(J2)[L,0,0]</code>, solves the residual with <code>least_squares</code>, subtracts T-pose offsets, then maps degrees into encoder counts with <code>2048 + theta * 4096 / 360</code>.',
+                'calib.p2': '<code>calibrate_all_joints.py</code> extracts J1/J2 and J3/J4 through quaternion decomposition and parent-rotation removal. <code>calibrate_all_joints_position.py</code> adds a 10 cm shoulder offset, computes J2 from the arm-vector projection, and supports 30-frame current T-pose calibration.',
+                'calib.result': '<i class="fa-solid fa-circle-check"></i>The PLAN-A project document reports T-pose encoder stability at <strong>2048 ± 3</strong>, with a 90-degree arm lift corresponding to approximately 1024 encoder counts. Treat this as documented system evidence, not a separately reproduced benchmark.',
+                'model.title': 'Teleop Transformer Prototype', 'model.col1': 'Component', 'model.col2': 'Setting',
+                'model.p1': 'The learning-based route is a compact regression model rather than a VLA policy. It standardizes 60D IMU features, projects them with <code>Linear(60 -> 128)</code>, adds a learnable <code>(1,1,128)</code> positional parameter, runs a 4-layer / 8-head Transformer Encoder with 512-wide FFN, then uses a 3-layer MLP to predict 10 encoder counts. Training uses MSE, Adam at <code>1e-4</code>, ReduceLROnPlateau, 200 epochs, and saved IMU/encoder scalers.',
+                'deploy.title': 'Realtime Deployment',
+                'deploy.p1': 'Realtime inference uses the same 60D extraction from a live <code>MocapData</code> struct, inverse-transforms the predicted encoder counts, clamps every value to <code>[0,4095]</code>, then sends <code>{angles, session_id, frame, total_frames}</code> over <code>/teleop</code>. The learning controller defaults to 30 Hz, while the broader PLAN-A execution document reports a 10 FPS Dynamixel trajectory path for generated action sequences.',
+                'results.title': 'Results And Limits', 'results.metric': 'Metric', 'results.value': 'Value', 'results.scope': 'Scope',
+                'results.r1': 'paired final-frame mocap/encoder evaluation', 'results.r2': 'computed by batch test summary', 'results.r3': 'largest outlier in the sample set', 'results.r4': 'best/worst joint mean absolute error',
+                'results.limit': '<i class="fa-solid fa-triangle-exclamation"></i>The defensible claim is interface engineering plus prototype regression accuracy. There is no task-level success rate, no large-scale cross-user evaluation, and no evidence that this branch replaces the geometry retargeting route.',
+                'interview.title': 'Interview-Ready Technical Points',
+                'interview.p1': 'Explain why global mocap quaternions cannot be sent directly to robot joints: T-pose offsets, mirror symmetry, encoder center, and left/right motor direction must be handled before actuation.',
+                'interview.p2': 'Defend the model as a regression prototype: 60D feature contract, 1.00M parameters, StandardScaler on both domains, and 47-sample final-frame MAE with visible outliers.',
+                'interview.p3': 'Separate policy, retargeting, and controller rates: generated PLAN-A trajectories use a documented 10 FPS execution path, while the live Teleop Transformer controller has a configurable 30 Hz loop.'
+            },
+            zh: {
+                'nav.projects': '项目', 'nav.arch': '架构', 'nav.results': '结果',
+                'hero.kicker': '算法实习项目 · PLAN-A',
+                'hero.title': 'PLAN-A Retargeting：动捕到 10-DOF 机器人运动接口',
+                'hero.tagline': '一个经过现场标定的 retargeting 接口，把 VDMocap 23 节点人体姿态转换为 10 维 Dynamixel 原始编码器命令。系统包含文档化的 FK / <code>scipy.optimize.least_squares</code> 标定路线、低延迟 quaternion/position 运行时映射，以及一个 1.00M 参数 Teleop Transformer 原型，用于 60D IMU 到编码器的回归。',
+                'hero.back': '返回项目', 'hero.arch': '架构图', 'hero.lang': '切换语言',
+                'metric.nodes': '从 SDK 结构体解析的 VDMocap 身体节点',
+                'metric.output': '左右 5-DOF 机械臂的 raw encoder 合约',
+                'metric.params': 'Teleop Transformer 参数量',
+                'metric.eval': 'paired final-frame 样本 / 编码器 MAE',
+                'overview.title': '系统边界',
+                'overview.p1': '本页聚焦 PLAN-A 的 retargeting 层，而不是完整 CVAE 或 Diffusion Policy 系统。它负责人体动捕到机器人执行之间的运动接口：SDK 解析、T-pose 标定、左右臂镜像、编码器量化、paired 数据采集、模型推理和 WebSocket 下发。',
+                'overview.scope': '<i class="fa-solid fa-triangle-exclamation"></i>公开表述必须保持边界清楚：<strong>least_squares</strong> 是文档化的标定/SOP 路线，主实时脚本实际走 quaternion swing/twist 与 position projection 映射，再输出 10 个编码器值。',
+                'arch.title': '架构',
+                'arch.cap': '该图把文档化几何标定路线、运行时 retargeting 路线、学习式回归路线和 10D WebSocket 执行合约分开表达。',
+                'interface.title': '接口与数据合约', 'table.boundary': '边界', 'table.contract': '合约', 'table.evidence': '证据',
+                'interface.row1': 'ctypes <code>MocapData</code> 包含 23 个 body nodes、左右各 20 个 hand nodes、52 个 ARKit face blendshapes，以及位置、四元数、角速度、加速度、速度和传感器状态。',
+                'interface.row2': '上下臂四元数被映射成 <code>[LA J1,J2,J3,J4,center, RA J1,J2,J3,J4,center]</code>，限制到 <code>[0,4095]</code> 后以 <code>angles</code> 字段发送。',
+                'interface.row3': '6 个手臂关节生成 60D 特征：quaternion(4)、Euler radians(3)、相对髋部位置(3)，再回归为 10 个 raw encoder counts。',
+                'interface.row4': 'JSON 可以包含 <code>raw_encoders</code> 或 <code>angles</code>；每帧必须正好 10 个值，发送 WebSocket 前会限幅。',
+                'calib.title': '标定与运行时映射', 'calib.h1': 'FK / Least-Squares SOP', 'calib.h2': '实时 Quaternion / Position 路线',
+                'calib.p1': '校准文档定义 J1 为绕世界 X 轴旋转，J2 为经过 J1 后的局部 Z 轴旋转。文档化求解器构造 <code>fk_upper_arm(J1,J2,L)=Rx(J1)Rz(J2)[L,0,0]</code>，用 <code>least_squares</code> 解残差，减去 T-pose offset 后按 <code>2048 + theta * 4096 / 360</code> 映射成编码器。',
+                'calib.p2': '<code>calibrate_all_joints.py</code> 通过四元数分解和父关节旋转剥离得到 J1/J2 与 J3/J4。<code>calibrate_all_joints_position.py</code> 给 shoulder 加 10 cm offset，从上臂向量投影计算 J2，并支持当前姿态 30 帧 T-pose 标定。',
+                'calib.result': '<i class="fa-solid fa-circle-check"></i>PLAN-A 项目文档记录 T-pose 编码器稳定在 <strong>2048 ± 3</strong>，手臂抬起 90 度约对应 1024 个编码器 count。这里按文档证据使用，不把它写成重新复现实验。',
+                'model.title': 'Teleop Transformer 原型', 'model.col1': '组件', 'model.col2': '设置',
+                'model.p1': '学习式路线是一个紧凑的回归模型，不是 VLA policy。它对 60D IMU 特征做标准化，经 <code>Linear(60 -> 128)</code> 投影，加入可学习 <code>(1,1,128)</code> 位置参数，通过 4 层 / 8 头 Transformer Encoder（FFN 512），最后用 3 层 MLP 预测 10 个编码器 count。训练配置为 MSE、Adam <code>1e-4</code>、ReduceLROnPlateau、200 epochs，并保存 IMU/encoder 两套 scaler。',
+                'deploy.title': '实时部署',
+                'deploy.p1': '实时推理从 live <code>MocapData</code> 结构体提取同样的 60D 特征，反标准化预测编码器，将每个值限制到 <code>[0,4095]</code>，再通过 <code>/teleop</code> 发送 <code>{angles, session_id, frame, total_frames}</code>。学习式控制器默认 30 Hz；更大的 PLAN-A 执行文档中，生成轨迹的 Dynamixel 下发路径记录为 10 FPS。',
+                'results.title': '结果与限制', 'results.metric': '指标', 'results.value': '数值', 'results.scope': '范围',
+                'results.r1': 'paired final-frame mocap/encoder 评估', 'results.r2': '由 batch test summary 计算', 'results.r3': '样本集合里的最大离群误差', 'results.r4': '最好/最差关节的平均绝对误差',
+                'results.limit': '<i class="fa-solid fa-triangle-exclamation"></i>可防守的 claim 是接口工程与原型回归精度。当前没有任务级成功率、没有大规模跨用户评估，也没有证据证明学习式分支可以替代几何 retargeting 路线。',
+                'interview.title': '面试可追问技术点',
+                'interview.p1': '解释为什么不能把全局动捕四元数直接发给机器人关节：T-pose offset、左右镜像、编码器中心值和左右电机方向都必须先处理。',
+                'interview.p2': '把模型防守为回归原型：60D 特征合约、1.00M 参数、输入输出双 StandardScaler，以及 47 个 final-frame 样本 MAE 和明显 outlier。',
+                'interview.p3': '区分 policy、retargeting 和 controller 频率：PLAN-A 生成轨迹文档化下发为 10 FPS，live Teleop Transformer 控制器是可配置 30 Hz loop。'
+            }
+        };
+        const langBtn = document.getElementById('langToggle');
+        const langHero = document.getElementById('langHero');
+        let currentLang = localStorage.getItem('lang') || 'en';
+        function setLang(lang) {
+            currentLang = lang;
+            const dict = i18n[lang];
+            document.querySelectorAll('[data-i18n]').forEach(el => {
+                const key = el.getAttribute('data-i18n');
+                if (dict[key] != null) el.textContent = dict[key];
+            });
+            document.querySelectorAll('[data-i18n-html]').forEach(el => {
+                const key = el.getAttribute('data-i18n-html');
+                if (dict[key] != null) el.innerHTML = dict[key];
+            });
+            root.lang = lang === 'zh' ? 'zh-CN' : 'en';
+            if (langBtn) langBtn.textContent = lang === 'zh' ? 'EN' : '中';
+            localStorage.setItem('lang', lang);
+        }
+        function toggleLang() { setLang(currentLang === 'en' ? 'zh' : 'en'); }
+        setLang(currentLang);
+        langBtn?.addEventListener('click', toggleLang);
+        langHero?.addEventListener('click', toggleLang);
+    })();
+    </script>
+</body>
+</html>

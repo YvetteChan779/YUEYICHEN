@@ -1,0 +1,143 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1440" height="780" viewBox="0 0 1440 780" role="img" aria-labelledby="title desc">
+  <title id="title">PLAN-A model architecture</title>
+  <desc id="desc">End-to-end PLAN-A architecture showing perception, text CVAE, image-conditioned diffusion policy, retargeting, and WebSocket execution.</desc>
+  <defs>
+    <marker id="arrow" markerWidth="12" markerHeight="12" refX="9" refY="3" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L0,6 L9,3 z" fill="#334155"/>
+    </marker>
+    <marker id="arrow-accent" markerWidth="12" markerHeight="12" refX="9" refY="3" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L0,6 L9,3 z" fill="#0f766e"/>
+    </marker>
+    <style>
+      .bg { fill: #f8fafc; }
+      .panel { fill: #ffffff; stroke: #cbd5e1; stroke-width: 1.4; }
+      .panel-soft { fill: #f1f5f9; stroke: #cbd5e1; stroke-width: 1.2; }
+      .input { fill: #e0f2fe; stroke: #0284c7; }
+      .perception { fill: #dcfce7; stroke: #16a34a; }
+      .policy-a { fill: #fef3c7; stroke: #d97706; }
+      .policy-b { fill: #fce7f3; stroke: #db2777; }
+      .exec { fill: #ede9fe; stroke: #7c3aed; }
+      .guard { fill: #fee2e2; stroke: #dc2626; }
+      .title { font: 700 30px Inter, Arial, sans-serif; fill: #0f172a; }
+      .subtitle { font: 500 15px Inter, Arial, sans-serif; fill: #475569; }
+      .label { font: 700 16px Inter, Arial, sans-serif; fill: #0f172a; }
+      .small { font: 500 12.5px Inter, Arial, sans-serif; fill: #475569; }
+      .mono { font: 500 12px "JetBrains Mono", Consolas, monospace; fill: #334155; }
+      .chip { fill: #ffffff; stroke: #cbd5e1; stroke-width: 1; }
+      .arrow { stroke: #334155; stroke-width: 2; fill: none; marker-end: url(#arrow); }
+      .arrow-accent { stroke: #0f766e; stroke-width: 2.4; fill: none; marker-end: url(#arrow-accent); }
+      .dash { stroke-dasharray: 6 6; }
+    </style>
+  </defs>
+
+  <rect class="bg" x="0" y="0" width="1440" height="780" rx="0"/>
+  <text class="title" x="54" y="58">PLAN-A Multimodal Interaction System</text>
+  <text class="subtitle" x="54" y="86">Camera / VDMocap inputs -> perception and representation -> CVAE / Diffusion policy routes -> 10D WebSocket + Dynamixel execution.</text>
+
+  <rect class="panel-soft" x="38" y="120" width="206" height="568" rx="12"/>
+  <text class="label" x="64" y="154">Unified Inputs</text>
+
+  <rect class="input" x="64" y="188" width="154" height="86" rx="10"/>
+  <text class="label" x="84" y="219">RGB Camera</text>
+  <text class="small" x="84" y="243">single frame or</text>
+  <text class="small" x="84" y="261">image sequence</text>
+
+  <rect class="input" x="64" y="312" width="154" height="100" rx="10"/>
+  <text class="label" x="84" y="343">VDMocap SDK</text>
+  <text class="small" x="84" y="367">23 body nodes</text>
+  <text class="small" x="84" y="385">quaternion + pos</text>
+
+  <rect class="input" x="64" y="450" width="154" height="86" rx="10"/>
+  <text class="label" x="84" y="481">Text / ASR</text>
+  <text class="small" x="84" y="505">Chinese command</text>
+  <text class="small" x="84" y="523">or action label</text>
+
+  <rect class="panel-soft" x="276" y="120" width="254" height="568" rx="12"/>
+  <text class="label" x="304" y="154">Perception &amp; State</text>
+
+  <rect class="perception" x="304" y="188" width="198" height="116" rx="10"/>
+  <text class="label" x="326" y="220">Qwen2.5-VL / Haar</text>
+  <text class="small" x="326" y="244">face count + 9x9 grid</text>
+  <text class="small" x="326" y="264">7 human emotions</text>
+  <text class="mono" x="326" y="286">fallback -> sleep</text>
+
+  <rect class="perception" x="304" y="342" width="198" height="116" rx="10"/>
+  <text class="label" x="326" y="374">Retargeting</text>
+  <text class="small" x="326" y="398">T-pose offset</text>
+  <text class="small" x="326" y="418">FK + least_squares SOP</text>
+  <text class="mono" x="326" y="440">enc in [0,4095]</text>
+
+  <rect class="perception" x="304" y="496" width="198" height="116" rx="10"/>
+  <text class="label" x="326" y="528">Data Contract</text>
+  <text class="small" x="326" y="552">Normalized Actions</text>
+  <text class="mono" x="326" y="574">(T, 10)</text>
+  <text class="small" x="326" y="594">raw encoder layout</text>
+
+  <rect class="panel-soft" x="574" y="120" width="438" height="568" rx="12"/>
+  <text class="label" x="604" y="154">Policy Routes</text>
+
+  <rect class="policy-a" x="604" y="188" width="378" height="204" rx="12"/>
+  <text class="label" x="630" y="222">Text-to-Action CVAE</text>
+  <rect class="chip" x="630" y="246" width="144" height="34" rx="8"/>
+  <text class="mono" x="646" y="268">BERT CLS 768</text>
+  <rect class="chip" x="806" y="246" width="144" height="34" rx="8"/>
+  <text class="mono" x="824" y="268">text proj 128</text>
+  <path class="arrow" d="M774 263 L806 263"/>
+  <rect class="chip" x="630" y="298" width="144" height="34" rx="8"/>
+  <text class="mono" x="646" y="320">category 128</text>
+  <rect class="chip" x="806" y="298" width="144" height="34" rx="8"/>
+  <text class="mono" x="824" y="320">cond 256</text>
+  <path class="arrow" d="M774 315 L806 315"/>
+  <text class="small" x="630" y="356">latent 64, Transformer Decoder 2L / 4H</text>
+  <text class="small" x="630" y="376">MSE + beta KL + CE; autoregressive stop after 2 still frames</text>
+
+  <rect class="policy-b" x="604" y="430" width="378" height="204" rx="12"/>
+  <text class="label" x="630" y="464">Image-Conditioned Diffusion Policy</text>
+  <rect class="chip" x="630" y="488" width="156" height="34" rx="8"/>
+  <text class="mono" x="646" y="510">DINOv2-B/14</text>
+  <rect class="chip" x="812" y="488" width="144" height="34" rx="8"/>
+  <text class="mono" x="828" y="510">token 256</text>
+  <path class="arrow" d="M786 505 L812 505"/>
+  <rect class="chip" x="630" y="540" width="156" height="34" rx="8"/>
+  <text class="mono" x="646" y="562">Qwen .npy cache</text>
+  <rect class="chip" x="812" y="540" width="144" height="34" rx="8"/>
+  <text class="mono" x="828" y="562">cond_seq</text>
+  <path class="arrow" d="M786 557 L812 557"/>
+  <text class="small" x="630" y="598">6L Self + Cross Attention, horizon 150</text>
+  <text class="small" x="630" y="618">DDIM 1000, v-prediction, self-cond 0.9, min-SNR gamma=5</text>
+
+  <rect class="panel-soft" x="1056" y="120" width="336" height="568" rx="12"/>
+  <text class="label" x="1086" y="154">Execution Layer</text>
+
+  <rect class="exec" x="1086" y="188" width="270" height="116" rx="10"/>
+  <text class="label" x="1110" y="220">Trajectory Sender</text>
+  <text class="small" x="1110" y="244">10D angles / raw_encoders</text>
+  <text class="small" x="1110" y="264">10 FPS CVAE playback</text>
+  <text class="mono" x="1110" y="286">frame, total_frames</text>
+
+  <rect class="guard" x="1086" y="342" width="270" height="116" rx="10"/>
+  <text class="label" x="1110" y="374">Runtime Guard</text>
+  <text class="small" x="1110" y="398">execution_lock</text>
+  <text class="small" x="1110" y="418">busy messages skipped</text>
+  <text class="mono" x="1110" y="440">skipped_busy</text>
+
+  <rect class="exec" x="1086" y="496" width="270" height="116" rx="10"/>
+  <text class="label" x="1110" y="528">Robot Actuation</text>
+  <text class="small" x="1110" y="552">WebSocket /control or /teleop</text>
+  <text class="small" x="1110" y="572">Dynamixel 10-DOF arms</text>
+  <text class="mono" x="1110" y="594">clamp [0,4095]</text>
+
+  <path class="arrow-accent" d="M218 231 C248 231, 266 231, 304 231"/>
+  <path class="arrow-accent" d="M218 362 C248 362, 266 400, 304 400"/>
+  <path class="arrow-accent" d="M218 493 C248 493, 266 554, 304 554"/>
+  <path class="arrow" d="M502 246 C546 246, 560 266, 604 266"/>
+  <path class="arrow" d="M502 554 C546 554, 560 315, 604 315"/>
+  <path class="arrow" d="M502 246 C550 246, 558 505, 604 505"/>
+  <path class="arrow" d="M982 290 C1018 290, 1036 246, 1086 246"/>
+  <path class="arrow" d="M982 552 C1018 552, 1036 246, 1086 246"/>
+  <path class="arrow" d="M502 400 C724 402, 854 642, 1086 554"/>
+  <path class="arrow dash" d="M1221 496 C1221 474, 1221 472, 1221 458"/>
+
+  <rect class="panel" x="54" y="710" width="1332" height="42" rx="10"/>
+  <text class="small" x="76" y="736">Evidence scope: 3 core actions / 194 episodes for CVAE validation, retargeting WebSocket adapters for 10D encoders, and a heavier DP route with cached Qwen or DINO visual condition tokens.</text>
+</svg>

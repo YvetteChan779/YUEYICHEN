@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="PLAN-A multimodal human-robot interaction system project by Yueyi Chen" />
+    <title>PLAN-A Multimodal Interaction System | Yueyi Chen</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Lora:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+    <link rel="stylesheet" href="styles.css" />
+    <style>
+        .project-shell { max-width: 1080px; margin: 0 auto; padding: 0 24px 58px; }
+        .hero { padding: 54px 0 34px; border-bottom: 1px solid var(--border); margin-bottom: 38px; }
+        .hero-topline { color: var(--accent); font-size: 13px; font-weight: 800; text-transform: uppercase; letter-spacing: 0; margin-bottom: 10px; }
+        .hero h1 { max-width: 880px; font-family: var(--font-serif); font-size: 36px; line-height: 1.24; margin-bottom: 14px; }
+        .hero .tagline { max-width: 900px; font-size: 16px; color: var(--text-secondary); line-height: 1.8; }
+        .hero-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 24px; }
+        .hero-actions a, .hero-actions button { display: inline-flex; align-items: center; gap: 8px; min-height: 34px; padding: 7px 14px; border-radius: 6px; border: 1px solid var(--accent); color: var(--accent); background: transparent; font: 600 13px var(--font-sans); cursor: pointer; text-decoration: none; }
+        .hero-actions a:hover, .hero-actions button:hover { background: var(--accent); color: #fff; text-decoration: none; }
+        .metrics-strip { display: grid; grid-template-columns: repeat(5, 1fr); gap: 14px; margin: 0 0 42px; }
+        .metric-card { min-height: 124px; padding: 18px 13px; background: var(--bg-alt); border: 1px solid var(--border); border-radius: 8px; }
+        .metric-card .number { font-size: 28px; font-weight: 800; color: var(--accent); line-height: 1.1; }
+        .metric-card .label { margin-top: 8px; font-size: 13px; color: var(--text-secondary); line-height: 1.45; }
+        .section-block { margin-bottom: 48px; }
+        .section-block h2 { font-family: var(--font-serif); font-size: 23px; font-weight: 650; margin-bottom: 15px; padding-bottom: 8px; border-bottom: 2px solid var(--border); }
+        .section-block h2 i { margin-right: 8px; color: var(--accent); font-size: 18px; }
+        .section-block h3 { font-size: 17px; margin: 24px 0 10px; }
+        .section-block p, .section-block li { font-size: 15px; line-height: 1.8; }
+        .diagram { margin: 20px 0 12px; border: 1px solid var(--border); border-radius: 8px; padding: 14px; overflow-x: auto; background: var(--bg-alt); }
+        .diagram img { min-width: 980px; width: 100%; height: auto; }
+        .fig-cap { margin: 8px 0 0; color: var(--text-secondary); font-size: 13px; text-align: center; }
+        .scope-callout, .result-block { border-radius: 6px; padding: 16px 18px; margin: 16px 0 22px; font-size: 14px; line-height: 1.75; }
+        .scope-callout { background: var(--highlight-bg); border-left: 4px solid var(--highlight-border); }
+        .result-block { background: var(--bg-alt); border-left: 4px solid var(--accent); }
+        .route-grid, .failure-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; margin: 18px 0; }
+        .route-card, .failure-card { background: var(--bg-alt); border: 1px solid var(--border); border-radius: 8px; padding: 18px; }
+        .route-card h3, .failure-card h3 { display: flex; align-items: center; gap: 8px; margin-top: 0; }
+        .route-card h3 i, .failure-card h3 i { color: var(--accent); }
+        .route-card p, .failure-card p { font-size: 14px; color: var(--text-secondary); margin-bottom: 10px; }
+        .route-card ul, .failure-card ul { margin-left: 18px; color: var(--text-secondary); }
+        .route-card li, .failure-card li { font-size: 14px; line-height: 1.7; margin-bottom: 5px; }
+        .table-wrapper { overflow-x: auto; margin: 14px 0 22px; }
+        .results-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+        .results-table th, .results-table td { border: 1px solid var(--border); padding: 10px 12px; text-align: left; vertical-align: top; }
+        .results-table th { background: var(--bg-alt); white-space: nowrap; }
+        .results-table td:first-child { font-weight: 650; color: var(--text); }
+        .chip-row { display: flex; flex-wrap: wrap; gap: 8px; margin: 14px 0 4px; }
+        .chip-row span { display: inline-flex; align-items: center; min-height: 28px; padding: 4px 9px; border: 1px solid var(--border); border-radius: 4px; background: var(--bg); color: var(--text-secondary); font-family: var(--font-mono); font-size: 12px; }
+        code { font-family: var(--font-mono); font-size: 0.92em; background: var(--bg-alt); border: 1px solid var(--border); border-radius: 4px; padding: 1px 4px; }
+        .evidence-note { color: var(--text-secondary); font-size: 13px; margin-top: -6px; }
+        @media (max-width: 900px) { .metrics-strip { grid-template-columns: repeat(2, 1fr); } .route-grid, .failure-grid { grid-template-columns: 1fr; } }
+        @media (max-width: 768px) { .project-shell { padding: 0 18px 42px; } .hero h1 { font-size: 27px; } .diagram img { min-width: 820px; } }
+        @media (max-width: 480px) { .metrics-strip { grid-template-columns: 1fr; } }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <a href="index.html" class="nav-brand">Yueyi Chen</a>
+            <div class="nav-right">
+                <ul class="nav-links">
+                    <li><a href="index.html#publications" class="nav-link" data-i18n="nav.projects">projects</a></li>
+                    <li><a href="#architecture" class="nav-link" data-i18n="nav.arch">architecture</a></li>
+                    <li><a href="#results" class="nav-link" data-i18n="nav.results">results</a></li>
+                </ul>
+                <button class="lang-toggle" id="langToggle" aria-label="Toggle language">中</button>
+                <button class="theme-toggle" id="themeToggle" aria-label="Toggle theme">
+                    <i class="fa-solid fa-sun icon-light"></i>
+                    <i class="fa-solid fa-moon icon-dark"></i>
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <main class="project-shell">
+        <section class="hero">
+            <div class="hero-topline" data-i18n="hero.kicker">Algorithm Intern Project · PLAN-A</div>
+            <h1 data-i18n="hero.title">PLAN-A: Multimodal Human-Robot Interaction System</h1>
+            <p class="tagline" data-i18n-html="hero.tagline">An end-to-end social-robot interaction stack that routes camera and VDMocap inputs through Qwen2.5-VL / OpenCV perception, Text-to-Action CVAE and image-conditioned Diffusion Policy branches, then sends 10D encoder trajectories through WebSocket + Dynamixel execution.</p>
+            <div class="hero-actions">
+                <a href="index.html#publications"><i class="fa-solid fa-arrow-left"></i><span data-i18n="hero.back">Back to projects</span></a>
+                <a href="#architecture"><i class="fa-solid fa-diagram-project"></i><span data-i18n="hero.arch">Model architecture</span></a>
+                <a href="plana_retargeting.html"><i class="fa-solid fa-route"></i><span data-i18n="hero.retarget">Retargeting layer</span></a>
+                <button type="button" id="langHero"><i class="fa-solid fa-language"></i><span data-i18n="hero.lang">Switch language</span></button>
+            </div>
+        </section>
+
+        <section class="metrics-strip" aria-label="Project metrics">
+            <div class="metric-card"><div class="number">194</div><div class="label" data-i18n="metric.episodes">3-class robot-reaction episodes for CVAE validation</div></div>
+            <div class="metric-card"><div class="number">10D</div><div class="label" data-i18n="metric.action">shared encoder/action trajectory contract</div></div>
+            <div class="metric-card"><div class="number">2.5-5.5s</div><div class="label" data-i18n="metric.latency">documented end-to-end closed-loop latency</div></div>
+            <div class="metric-card"><div class="number">1000</div><div class="label" data-i18n="metric.ddim">DDIM steps in the image-conditioned DP route</div></div>
+            <div class="metric-card"><div class="number">~9x</div><div class="label" data-i18n="metric.cache">Qwen embedding cache acceleration for DP training</div></div>
+        </section>
+
+        <section class="section-block" id="overview">
+            <h2><i class="fa-solid fa-crosshairs"></i><span data-i18n="overview.title">System Boundary</span></h2>
+            <p data-i18n-html="overview.p1">PLAN-A owns the interaction path from <strong>camera / VDMocap input</strong> to robot reaction execution. The perception layer extracts face position, human emotion, and mocap pose; the policy layer compares a text-driven CVAE route with an image-conditioned Diffusion Policy route; the execution layer normalizes everything into a 10D encoder trajectory for WebSocket + Dynamixel playback.</p>
+            <p data-i18n-html="overview.p2">The public evaluation scope is precise: the report validates the 3 core actions <code>举手 / 伸手 / 坐着</code> with 194 episodes and about 60 frames per episode, while the codebase keeps an 8-category CVAE training entry for broader interaction coverage. Retargeting is treated as the actuator-facing motion adapter, not as the task-success metric for the full system.</p>
+            <div class="scope-callout" data-i18n-html="overview.scope"><i class="fa-solid fa-triangle-exclamation"></i> This is not a VLA or Flow-Matching policy page. The defensible framing is <strong>multimodal perception + generative trajectory policies + calibrated 10D execution</strong>; Diffusion Policy remains a heavier route without a matched task-success benchmark in the available evidence.</div>
+        </section>
+
+        <section class="section-block" id="architecture">
+            <h2><i class="fa-solid fa-diagram-project"></i><span data-i18n="arch.title">Model Architecture</span></h2>
+            <figure class="diagram">
+                <img src="Pic/plana/plana-model_architechture.svg" alt="PLAN-A model architecture" />
+            </figure>
+            <p class="fig-cap" data-i18n="arch.cap">The redrawn architecture separates unified inputs, Qwen/OpenCV + mocap state extraction, Text-to-Action CVAE, image-conditioned DP, and the WebSocket/Dynamixel execution contract.</p>
+        </section>
+
+        <section class="section-block" id="interface">
+            <h2><i class="fa-solid fa-plug"></i><span data-i18n="interface.title">Interface Contracts</span></h2>
+            <div class="table-wrapper">
+                <table class="results-table">
+                    <thead>
+                        <tr><th data-i18n="interface.boundary">Boundary</th><th data-i18n="interface.contract">Contract</th><th data-i18n="interface.evidence">Evidence</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr><td data-i18n="interface.b1">Perception</td><td data-i18n-html="interface.r1">OpenCV Haar counts faces and returns 9x9 grid coordinates; Qwen2.5-VL handles position fallback and 7-class facial-expression parsing, then maps to 6 robot emotions with <code>熟睡</code> as low-interference fallback.</td><td><code>detect_face_complete.py:18-54,111-173,235-331,352-520</code></td></tr>
+                        <tr><td data-i18n="interface.b2">VDMocap</td><td data-i18n-html="interface.r2">The SDK struct exposes 23 body nodes, positions, quaternions, gyro, acceleration, velocity, hand nodes, and face blendshape fields.</td><td><code>vd_mocap_listener_struct.py:28-130</code></td></tr>
+                        <tr><td data-i18n="interface.b3">CVAE route</td><td data-i18n-html="interface.r3">BERT tokens plus one-hot action category feed a conditional VAE; the report script uses <code>action_dim=10</code>, <code>latent_dim=64</code>, <code>hidden_dim=128</code>, 2 decoder layers, 4 heads, and <code>max_seq_len=64</code>.</td><td><code>docs/scripts/01_train_cvae.py:29-44</code></td></tr>
+                        <tr><td data-i18n="interface.b4">DP route</td><td data-i18n-html="interface.r4">DINOv2-B/14 or cached Qwen hidden states become 256D condition tokens for a 6-layer action Transformer with self-attention and cross-attention over dynamic image/action lengths.</td><td><code>image_conditioned_dp_dynamic.py:49-156,188-248,287-459</code></td></tr>
+                        <tr><td data-i18n="interface.b5">Execution</td><td data-i18n-html="interface.r5">Generated trajectories are sent frame-by-frame as 10 encoder counts through WebSocket adapters; CVAE playback defaults to 10 FPS and protects robot execution with a non-blocking lock.</td><td><code>websocket_text_to_action.py:30-75,138-157,339-421,489-505</code></td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <section class="section-block" id="routes">
+            <h2><i class="fa-solid fa-code-branch"></i><span data-i18n="routes.title">Policy Routes</span></h2>
+            <div class="route-grid">
+                <article class="route-card">
+                    <h3><i class="fa-solid fa-comment-dots"></i><span data-i18n="routes.cvae.title">Text-to-Action CVAE</span></h3>
+                    <p data-i18n-html="routes.cvae.p">The report route uses BERT-base-chinese CLS features projected to 128D, a 128D category embedding, a 64D latent variable, and a 2-layer / 4-head Transformer Decoder to generate 10D action trajectories. Training is parallel over padded sequences; inference switches to autoregressive decoding and stops after two consecutive low-motion frames.</p>
+                    <ul>
+                        <li data-i18n-html="routes.cvae.l1">Loss: <code>MSE_recon + beta * KL + CE_cls</code>, with beta annealed from <code>0.01</code> to <code>0.10</code>.</li>
+                        <li data-i18n-html="routes.cvae.l2">Experiment script: 50 epochs, batch 16, BERT LR <code>2e-5</code>, other layers <code>2e-4</code>.</li>
+                        <li data-i18n-html="routes.cvae.l3">Main training entry also keeps an 8-condition, latent-128, 4L/8H configuration; the headline metrics come from the 3-condition report script.</li>
+                    </ul>
+                    <div class="chip-row"><span>BERT-base-chinese</span><span>latent 64</span><span>2L / 4H</span><span>(T,10)</span></div>
+                </article>
+                <article class="route-card">
+                    <h3><i class="fa-solid fa-image"></i><span data-i18n="routes.dp.title">Image-Conditioned Diffusion Policy</span></h3>
+                    <p data-i18n-html="routes.dp.p">The heavier route conditions action diffusion on visual tokens. DINOv2-ViT-B/14 provides a 768D frame feature path, while Qwen-VL hidden states can be precomputed to 256D <code>.npy</code> condition sequences so training bypasses live VL inference.</p>
+                    <ul>
+                        <li data-i18n-html="routes.dp.l1">Backbone: 2-layer image temporal encoder plus 6 interleaved self-attention / cross-attention action blocks.</li>
+                        <li data-i18n-html="routes.dp.l2">Diffusion wrapper: DDIM sampling, 1000 steps, cosine schedule, v-prediction objective, self-conditioning probability 0.9, min-SNR gamma 5.</li>
+                        <li data-i18n-html="routes.dp.l3">Dynamic masks preserve variable action and image lengths during training.</li>
+                    </ul>
+                    <div class="chip-row"><span>DINOv2-B/14</span><span>Qwen cond_seq</span><span>token 256</span><span>horizon 150</span></div>
+                </article>
+            </div>
+        </section>
+
+        <section class="section-block" id="runtime">
+            <h2><i class="fa-solid fa-gauge-high"></i><span data-i18n="runtime.title">Runtime And Visualization</span></h2>
+            <figure class="diagram">
+                <img src="Pic/plana/plana-runtime_visualization.svg" alt="PLAN-A runtime visualization" />
+            </figure>
+            <p class="fig-cap" data-i18n="runtime.cap">The runtime visualization keeps dataset, CVAE training, latency, Qwen caching, retargeting regression, and data-quality diagnosis in separate evidence boxes.</p>
+            <div class="result-block" data-i18n-html="runtime.block"><i class="fa-solid fa-circle-check"></i> The execution path is intentionally conservative: receive a valid text message, acquire a non-blocking execution lock, run policy inference in a background thread, clamp each 10D frame, stream at 10 FPS, and increment <code>skipped_busy</code> when a new request arrives during playback.</div>
+        </section>
+
+        <section class="section-block" id="results">
+            <h2><i class="fa-solid fa-chart-line"></i><span data-i18n="results.title">Measured Results And Limits</span></h2>
+            <div class="table-wrapper">
+                <table class="results-table">
+                    <thead>
+                        <tr><th data-i18n="results.item">Item</th><th data-i18n="results.value">Value</th><th data-i18n="results.scope">Scope</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr><td data-i18n="results.r1.item">Dataset</td><td data-i18n="results.r1.value">194 episodes = 54 waving / 112 reaching / 28 sitting</td><td data-i18n-html="results.r1.scope">3 core actions, mostly 60 frames per episode; 10D encoder trajectories.</td></tr>
+                        <tr><td data-i18n="results.r2.item">CVAE training</td><td data-i18n="results.r2.value">Best Val Loss 535.95 @ epoch 5; final Val Cls Acc 100%</td><td data-i18n-html="results.r2.scope">50-epoch RTX 4090 report run; category accuracy is a sanity check because text equals class label.</td></tr>
+                        <tr><td data-i18n="results.r3.item">Reconstruction</td><td data-i18n="results.r3.value">Sitting MAE 56.4; Waving/Reaching 235-455 counts</td><td data-i18n-html="results.r3.scope">Validation-set qualitative reconstruction; larger-motion classes still need more data.</td></tr>
+                        <tr><td data-i18n="results.r4.item">Runtime</td><td data-i18n="results.r4.value">5 ms receive + ~500 ms inference + T x 100 ms playback; total 2.5-5.5 s</td><td data-i18n-html="results.r4.scope">Documented WebSocket + Dynamixel execution path at 10 FPS.</td></tr>
+                        <tr><td data-i18n="results.r5.item">Qwen cache</td><td data-i18n="results.r5.value">~3 h/epoch live Qwen -> ~20 min/epoch precomputed Qwen</td><td data-i18n-html="results.r5.scope">DP training acceleration through cached 256D visual condition tokens.</td></tr>
+                        <tr><td data-i18n="results.r6.item">Retargeting support</td><td data-i18n="results.r6.value">T-pose 2048 +/- 3; Teleop Transformer 71.90-count MAE on 47 final-frame pairs</td><td data-i18n-html="results.r6.scope">Motion-interface evidence, not full PLAN-A task success rate.</td></tr>
+                    </tbody>
+                </table>
+            </div>
+            <div class="scope-callout" data-i18n-html="results.limit"><i class="fa-solid fa-triangle-exclamation"></i> The strongest public claim is system integration with measured internal modules. The available files do not provide a controlled task-success benchmark comparing CVAE vs DP on real-robot rollouts, so the page reports training, reconstruction, runtime, and interface measurements separately.</div>
+        </section>
+
+        <section class="section-block" id="diagnosis">
+            <h2><i class="fa-solid fa-screwdriver-wrench"></i><span data-i18n="diag.title">Engineering Failures And Fixes</span></h2>
+            <div class="failure-grid">
+                <article class="failure-card">
+                    <h3><i class="fa-solid fa-ruler-combined"></i><span data-i18n="diag.tpose.title">T-pose Calibration</span></h3>
+                    <p data-i18n-html="diag.tpose.p">Global mocap quaternions are not robot joint commands. The retargeting SOP records a T-pose offset, solves J1/J2 with FK residuals and <code>least_squares</code>, mirrors the left arm, and maps relative angles to encoder center 2048.</p>
+                </article>
+                <article class="failure-card">
+                    <h3><i class="fa-solid fa-filter"></i><span data-i18n="diag.data.title">Thinking Data Diagnosis</span></h3>
+                    <p data-i18n-html="diag.data.p">The early 8-class data showed thinking trajectories that were shorter and lower-motion than bothhandsup: 14 samples under 20 frames, average motion 4981.7 vs 6852.5, and 27% lower motion. The fix became a repeatable cleaning rule over length and motion.</p>
+                </article>
+                <article class="failure-card">
+                    <h3><i class="fa-solid fa-microchip"></i><span data-i18n="diag.qwen.title">Qwen Compute Path</span></h3>
+                    <p data-i18n-html="diag.qwen.p">Live Qwen-VL features made DP training too slow. The solution extracts per-frame hidden states once, projects them to 256D, stores <code>.npy</code> condition tokens, and lets the DP model use the same forward interface with <code>image_sequence=None</code>.</p>
+                </article>
+                <article class="failure-card">
+                    <h3><i class="fa-solid fa-lock"></i><span data-i18n="diag.lock.title">Execution Isolation</span></h3>
+                    <p data-i18n-html="diag.lock.p">Robot playback is serialized with a non-blocking execution lock. New messages that arrive during motion execution are dropped into <code>skipped_busy</code>, which prevents overlapping 10D trajectories from racing the same Dynamixel chain.</p>
+                </article>
+            </div>
+        </section>
+
+        <section class="section-block" id="interview">
+            <h2><i class="fa-solid fa-comments"></i><span data-i18n="interview.title">Interview-Ready Technical Points</span></h2>
+            <div class="table-wrapper">
+                <table class="results-table">
+                    <thead>
+                        <tr><th data-i18n="interview.topic">Topic</th><th data-i18n="interview.answer">Defensible Answer</th><th data-i18n="interview.boundary">Boundary</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr><td data-i18n="interview.t1">System identity</td><td data-i18n-html="interview.a1">PLAN-A is a social-robot interaction stack, not a VLA: Qwen/OpenCV handles perception, CVAE/DP generate trajectories, and WebSocket/Dynamixel executes <code>angles[10]</code>.</td><td data-i18n="interview.b1">No Flow Matching claim.</td></tr>
+                        <tr><td data-i18n="interview.t2">CVAE route</td><td data-i18n-html="interview.a2">The report CVAE uses BERT-base-chinese CLS, a 64D latent, a 2-layer / 4-head Transformer Decoder, and MSE + KL + CE loss over 194 three-class episodes.</td><td data-i18n="interview.b2">8-class main code path is separate.</td></tr>
+                        <tr><td data-i18n="interview.t3">DP route</td><td data-i18n-html="interview.a3">The DP route conditions a 6-layer action transformer on DINOv2 or cached Qwen <code>cond_seq (T,256)</code>, trained with DDIM 1000-step v-prediction, self-cond 0.9, and min-SNR gamma 5.</td><td data-i18n="interview.b3">No real-robot DP success benchmark found.</td></tr>
+                        <tr><td data-i18n="interview.t4">Robot safety contract</td><td data-i18n-html="interview.a4">Runtime serializes playback with a non-blocking execution lock, clamps every count to <code>[0,4095]</code>, and drops overlapping requests into <code>skipped_busy</code>.</td><td data-i18n="interview.b4">Execution isolation, not formal safety proof.</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <section class="section-block" id="evidence">
+            <h2><i class="fa-solid fa-folder-open"></i><span data-i18n="evidence.title">Evidence Index</span></h2>
+            <p class="evidence-note" data-i18n="evidence.note">Key local files used to redraw the architecture and write this page.</p>
+            <div class="table-wrapper">
+                <table class="results-table">
+                    <thead><tr><th data-i18n="evidence.claim">Claim</th><th data-i18n="evidence.source">Source</th></tr></thead>
+                    <tbody>
+                        <tr><td data-i18n="evidence.c1">Full PLAN-A boundary, 194 episodes, latency, and CVAE/DP split</td><td><code>docs/PLAN-A_云文档.md:8-30,228-332</code>; <code>PlanA-情感陪伴场景的多模态交互系统.pdf</code></td></tr>
+                        <tr><td data-i18n="evidence.c2">CVAE report architecture and training config</td><td><code>docs/scripts/01_train_cvae.py:29-54</code>; <code>docs/assets/tables/t5_training_summary.csv</code></td></tr>
+                        <tr><td data-i18n="evidence.c3">DP architecture, v-prediction, self-conditioning, and Qwen cache</td><td><code>image_conditioned_dp_dynamic.py:188-459</code>; <code>diffusion_wrapper.py:307-391</code>; <code>dataset_qwen_episode.py:23-257</code></td></tr>
+                        <tr><td data-i18n="evidence.c4">Perception fallback and emotion mapping</td><td><code>qwen_multimodal/detect_face_complete.py:18-54,352-520</code></td></tr>
+                        <tr><td data-i18n="evidence.c5">Retargeting and WebSocket execution contracts</td><td><code>retargeting/校准流程说明.md:9-104,191-213</code>; <code>websocket_text_to_action.py:138-157,339-421</code></td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </main>
+
+    <script>
+    (function () {
+        'use strict';
+        const root = document.documentElement;
+        const themeToggle = document.getElementById('themeToggle');
+        const savedTheme = localStorage.getItem('theme') || 'dark';
+        root.setAttribute('data-theme', savedTheme);
+        themeToggle?.addEventListener('click', () => {
+            const next = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+            root.setAttribute('data-theme', next);
+            localStorage.setItem('theme', next);
+        });
+
+        const i18n = {
+            en: {
+                'nav.projects': 'projects',
+                'nav.arch': 'architecture',
+                'nav.results': 'results',
+                'hero.kicker': 'Algorithm Intern Project · PLAN-A',
+                'hero.title': 'PLAN-A: Multimodal Human-Robot Interaction System',
+                'hero.tagline': 'An end-to-end social-robot interaction stack that routes camera and VDMocap inputs through Qwen2.5-VL / OpenCV perception, Text-to-Action CVAE and image-conditioned Diffusion Policy branches, then sends 10D encoder trajectories through WebSocket + Dynamixel execution.',
+                'hero.back': 'Back to projects',
+                'hero.arch': 'Model architecture',
+                'hero.retarget': 'Retargeting layer',
+                'hero.lang': 'Switch language',
+                'metric.episodes': '3-class robot-reaction episodes for CVAE validation',
+                'metric.action': 'shared encoder/action trajectory contract',
+                'metric.latency': 'documented end-to-end closed-loop latency',
+                'metric.ddim': 'DDIM steps in the image-conditioned DP route',
+                'metric.cache': 'Qwen embedding cache acceleration for DP training',
+                'overview.title': 'System Boundary',
+                'overview.p1': 'PLAN-A owns the interaction path from <strong>camera / VDMocap input</strong> to robot reaction execution. The perception layer extracts face position, human emotion, and mocap pose; the policy layer compares a text-driven CVAE route with an image-conditioned Diffusion Policy route; the execution layer normalizes everything into a 10D encoder trajectory for WebSocket + Dynamixel playback.',
+                'overview.p2': 'The public evaluation scope is precise: the report validates the 3 core actions <code>举手 / 伸手 / 坐着</code> with 194 episodes and about 60 frames per episode, while the codebase keeps an 8-category CVAE training entry for broader interaction coverage. Retargeting is treated as the actuator-facing motion adapter, not as the task-success metric for the full system.',
+                'overview.scope': '<i class="fa-solid fa-triangle-exclamation"></i> This is not a VLA or Flow-Matching policy page. The defensible framing is <strong>multimodal perception + generative trajectory policies + calibrated 10D execution</strong>; Diffusion Policy remains a heavier route without a matched task-success benchmark in the available evidence.',
+                'arch.title': 'Model Architecture',
+                'arch.cap': 'The redrawn architecture separates unified inputs, Qwen/OpenCV + mocap state extraction, Text-to-Action CVAE, image-conditioned DP, and the WebSocket/Dynamixel execution contract.',
+                'interface.title': 'Interface Contracts',
+                'interface.boundary': 'Boundary',
+                'interface.contract': 'Contract',
+                'interface.evidence': 'Evidence',
+                'interface.b1': 'Perception',
+                'interface.b2': 'VDMocap',
+                'interface.b3': 'CVAE route',
+                'interface.b4': 'DP route',
+                'interface.b5': 'Execution',
+                'interface.r1': 'OpenCV Haar counts faces and returns 9x9 grid coordinates; Qwen2.5-VL handles position fallback and 7-class facial-expression parsing, then maps to 6 robot emotions with <code>熟睡</code> as low-interference fallback.',
+                'interface.r2': 'The SDK struct exposes 23 body nodes, positions, quaternions, gyro, acceleration, velocity, hand nodes, and face blendshape fields.',
+                'interface.r3': 'BERT tokens plus one-hot action category feed a conditional VAE; the report script uses <code>action_dim=10</code>, <code>latent_dim=64</code>, <code>hidden_dim=128</code>, 2 decoder layers, 4 heads, and <code>max_seq_len=64</code>.',
+                'interface.r4': 'DINOv2-B/14 or cached Qwen hidden states become 256D condition tokens for a 6-layer action Transformer with self-attention and cross-attention over dynamic image/action lengths.',
+                'interface.r5': 'Generated trajectories are sent frame-by-frame as 10 encoder counts through WebSocket adapters; CVAE playback defaults to 10 FPS and protects robot execution with a non-blocking lock.',
+                'routes.title': 'Policy Routes',
+                'routes.cvae.title': 'Text-to-Action CVAE',
+                'routes.cvae.p': 'The report route uses BERT-base-chinese CLS features projected to 128D, a 128D category embedding, a 64D latent variable, and a 2-layer / 4-head Transformer Decoder to generate 10D action trajectories. Training is parallel over padded sequences; inference switches to autoregressive decoding and stops after two consecutive low-motion frames.',
+                'routes.cvae.l1': 'Loss: <code>MSE_recon + beta * KL + CE_cls</code>, with beta annealed from <code>0.01</code> to <code>0.10</code>.',
+                'routes.cvae.l2': 'Experiment script: 50 epochs, batch 16, BERT LR <code>2e-5</code>, other layers <code>2e-4</code>.',
+                'routes.cvae.l3': 'Main training entry also keeps an 8-condition, latent-128, 4L/8H configuration; the headline metrics come from the 3-condition report script.',
+                'routes.dp.title': 'Image-Conditioned Diffusion Policy',
+                'routes.dp.p': 'The heavier route conditions action diffusion on visual tokens. DINOv2-ViT-B/14 provides a 768D frame feature path, while Qwen-VL hidden states can be precomputed to 256D <code>.npy</code> condition sequences so training bypasses live VL inference.',
+                'routes.dp.l1': 'Backbone: 2-layer image temporal encoder plus 6 interleaved self-attention / cross-attention action blocks.',
+                'routes.dp.l2': 'Diffusion wrapper: DDIM sampling, 1000 steps, cosine schedule, v-prediction objective, self-conditioning probability 0.9, min-SNR gamma 5.',
+                'routes.dp.l3': 'Dynamic masks preserve variable action and image lengths during training.',
+                'runtime.title': 'Runtime And Visualization',
+                'runtime.cap': 'The runtime visualization keeps dataset, CVAE training, latency, Qwen caching, retargeting regression, and data-quality diagnosis in separate evidence boxes.',
+                'runtime.block': '<i class="fa-solid fa-circle-check"></i> The execution path is intentionally conservative: receive a valid text message, acquire a non-blocking execution lock, run policy inference in a background thread, clamp each 10D frame, stream at 10 FPS, and increment <code>skipped_busy</code> when a new request arrives during playback.',
+                'results.title': 'Measured Results And Limits',
+                'results.item': 'Item',
+                'results.value': 'Value',
+                'results.scope': 'Scope',
+                'results.r1.item': 'Dataset',
+                'results.r1.value': '194 episodes = 54 waving / 112 reaching / 28 sitting',
+                'results.r1.scope': '3 core actions, mostly 60 frames per episode; 10D encoder trajectories.',
+                'results.r2.item': 'CVAE training',
+                'results.r2.value': 'Best Val Loss 535.95 @ epoch 5; final Val Cls Acc 100%',
+                'results.r2.scope': '50-epoch RTX 4090 report run; category accuracy is a sanity check because text equals class label.',
+                'results.r3.item': 'Reconstruction',
+                'results.r3.value': 'Sitting MAE 56.4; Waving/Reaching 235-455 counts',
+                'results.r3.scope': 'Validation-set qualitative reconstruction; larger-motion classes still need more data.',
+                'results.r4.item': 'Runtime',
+                'results.r4.value': '5 ms receive + ~500 ms inference + T x 100 ms playback; total 2.5-5.5 s',
+                'results.r4.scope': 'Documented WebSocket + Dynamixel execution path at 10 FPS.',
+                'results.r5.item': 'Qwen cache',
+                'results.r5.value': '~3 h/epoch live Qwen -> ~20 min/epoch precomputed Qwen',
+                'results.r5.scope': 'DP training acceleration through cached 256D visual condition tokens.',
+                'results.r6.item': 'Retargeting support',
+                'results.r6.value': 'T-pose 2048 +/- 3; Teleop Transformer 71.90-count MAE on 47 final-frame pairs',
+                'results.r6.scope': 'Motion-interface evidence, not full PLAN-A task success rate.',
+                'results.limit': '<i class="fa-solid fa-triangle-exclamation"></i> The strongest public claim is system integration with measured internal modules. The available files do not provide a controlled task-success benchmark comparing CVAE vs DP on real-robot rollouts, so the page reports training, reconstruction, runtime, and interface measurements separately.',
+                'diag.title': 'Engineering Failures And Fixes',
+                'diag.tpose.title': 'T-pose Calibration',
+                'diag.tpose.p': 'Global mocap quaternions are not robot joint commands. The retargeting SOP records a T-pose offset, solves J1/J2 with FK residuals and <code>least_squares</code>, mirrors the left arm, and maps relative angles to encoder center 2048.',
+                'diag.data.title': 'Thinking Data Diagnosis',
+                'diag.data.p': 'The early 8-class data showed thinking trajectories that were shorter and lower-motion than bothhandsup: 14 samples under 20 frames, average motion 4981.7 vs 6852.5, and 27% lower motion. The fix became a repeatable cleaning rule over length and motion.',
+                'diag.qwen.title': 'Qwen Compute Path',
+                'diag.qwen.p': 'Live Qwen-VL features made DP training too slow. The solution extracts per-frame hidden states once, projects them to 256D, stores <code>.npy</code> condition tokens, and lets the DP model use the same forward interface with <code>image_sequence=None</code>.',
+                'diag.lock.title': 'Execution Isolation',
+                'diag.lock.p': 'Robot playback is serialized with a non-blocking execution lock. New messages that arrive during motion execution are dropped into <code>skipped_busy</code>, which prevents overlapping 10D trajectories from racing the same Dynamixel chain.',
+                'interview.title': 'Interview-Ready Technical Points',
+                'interview.topic': 'Topic',
+                'interview.answer': 'Defensible Answer',
+                'interview.boundary': 'Boundary',
+                'interview.t1': 'System identity',
+                'interview.a1': 'PLAN-A is a social-robot interaction stack, not a VLA: Qwen/OpenCV handles perception, CVAE/DP generate trajectories, and WebSocket/Dynamixel executes <code>angles[10]</code>.',
+                'interview.b1': 'No Flow Matching claim.',
+                'interview.t2': 'CVAE route',
+                'interview.a2': 'The report CVAE uses BERT-base-chinese CLS, a 64D latent, a 2-layer / 4-head Transformer Decoder, and MSE + KL + CE loss over 194 three-class episodes.',
+                'interview.b2': '8-class main code path is separate.',
+                'interview.t3': 'DP route',
+                'interview.a3': 'The DP route conditions a 6-layer action transformer on DINOv2 or cached Qwen <code>cond_seq (T,256)</code>, trained with DDIM 1000-step v-prediction, self-cond 0.9, and min-SNR gamma 5.',
+                'interview.b3': 'No real-robot DP success benchmark found.',
+                'interview.t4': 'Robot safety contract',
+                'interview.a4': 'Runtime serializes playback with a non-blocking execution lock, clamps every count to <code>[0,4095]</code>, and drops overlapping requests into <code>skipped_busy</code>.',
+                'interview.b4': 'Execution isolation, not formal safety proof.',
+                'evidence.title': 'Evidence Index',
+                'evidence.note': 'Key local files used to redraw the architecture and write this page.',
+                'evidence.claim': 'Claim',
+                'evidence.source': 'Source',
+                'evidence.c1': 'Full PLAN-A boundary, 194 episodes, latency, and CVAE/DP split',
+                'evidence.c2': 'CVAE report architecture and training config',
+                'evidence.c3': 'DP architecture, v-prediction, self-conditioning, and Qwen cache',
+                'evidence.c4': 'Perception fallback and emotion mapping',
+                'evidence.c5': 'Retargeting and WebSocket execution contracts'
+            },
+            zh: {
+                'nav.projects': '项目',
+                'nav.arch': '架构',
+                'nav.results': '结果',
+                'hero.kicker': '算法实习项目 · PLAN-A',
+                'hero.title': 'PLAN-A：多模态人机交互系统',
+                'hero.tagline': '一套面向社交机器人的端到端交互栈：摄像头与 VDMocap 输入先进入 Qwen2.5-VL / OpenCV 感知层，再走 Text-to-Action CVAE 与图像条件 Diffusion Policy 两条策略分支，最后通过 WebSocket + Dynamixel 下发 10D 编码器轨迹。',
+                'hero.back': '返回项目',
+                'hero.arch': '模型架构',
+                'hero.retarget': 'Retargeting 层',
+                'hero.lang': '切换语言',
+                'metric.episodes': '用于 CVAE 验证的 3 类机器人反应 episode',
+                'metric.action': '共享的编码器 / 动作轨迹合约',
+                'metric.latency': '文档记录的端到端闭环延迟',
+                'metric.ddim': '图像条件 DP 路线的 DDIM 步数',
+                'metric.cache': 'Qwen embedding cache 带来的 DP 训练加速',
+                'overview.title': '系统边界',
+                'overview.p1': 'PLAN-A 负责从 <strong>camera / VDMocap 输入</strong>到机器人反应执行的交互链路。感知层抽取人脸位置、人类情绪和动捕姿态；策略层比较文本驱动 CVAE 与图像条件 Diffusion Policy 两条路线；执行层把输出统一成 10D 编码器轨迹，通过 WebSocket + Dynamixel 播放。',
+                'overview.p2': '公开评估范围要写清楚：报告验证的是 <code>举手 / 伸手 / 坐着</code> 3 个核心动作，共 194 个 episode、每个约 60 帧；代码库同时保留 8 类 CVAE 训练入口，用于更大范围的交互扩展。Retargeting 在这里是面向执行器的运动适配层，不是全系统任务成功率。',
+                'overview.scope': '<i class="fa-solid fa-triangle-exclamation"></i> 本页不是 VLA 或 Flow-Matching policy 页面。可防守表述是 <strong>多模态感知 + 生成式轨迹策略 + 标定后的 10D 执行</strong>；Diffusion Policy 是更重的候选路线，现有证据里没有和 CVAE 对齐的真机任务成功率基准。',
+                'arch.title': '模型架构',
+                'arch.cap': '重画后的架构图区分统一输入、Qwen/OpenCV + 动捕状态抽取、Text-to-Action CVAE、图像条件 DP，以及 WebSocket/Dynamixel 执行合约。',
+                'interface.title': '接口合约',
+                'interface.boundary': '边界',
+                'interface.contract': '合约',
+                'interface.evidence': '证据',
+                'interface.b1': '感知',
+                'interface.b2': 'VDMocap',
+                'interface.b3': 'CVAE 路线',
+                'interface.b4': 'DP 路线',
+                'interface.b5': '执行',
+                'interface.r1': 'OpenCV Haar 负责人脸计数并返回 9x9 网格坐标；Qwen2.5-VL 负责人脸位置兜底与 7 类表情解析，再映射到 6 类机器人情绪，无法解析时以 <code>熟睡</code> 做低干扰兜底。',
+                'interface.r2': 'SDK 结构体暴露 23 个 body nodes、位置、四元数、角速度、加速度、速度、手部节点和 face blendshape 字段。',
+                'interface.r3': 'BERT token 与 one-hot 动作类别输入 conditional VAE；报告脚本使用 <code>action_dim=10</code>、<code>latent_dim=64</code>、<code>hidden_dim=128</code>、2 层 decoder、4 个 heads、<code>max_seq_len=64</code>。',
+                'interface.r4': 'DINOv2-B/14 或缓存后的 Qwen hidden states 变成 256D 条件 token，供 6 层 action Transformer 在动态图像 / 动作长度上做 self-attention 与 cross-attention。',
+                'interface.r5': '生成轨迹以每帧 10 个编码器值通过 WebSocket 适配器发送；CVAE 播放默认 10 FPS，并用非阻塞执行锁保护机器人执行链路。',
+                'routes.title': '策略路线',
+                'routes.cvae.title': 'Text-to-Action CVAE',
+                'routes.cvae.p': '报告路线使用 BERT-base-chinese CLS 特征投影到 128D，和 128D 类别 embedding 融合，经过 64D latent 与 2 层 / 4 头 Transformer Decoder 生成 10D 动作轨迹。训练时对 padding 序列并行解码；推理时切到自回归解码，并在连续两帧低运动量后停止。',
+                'routes.cvae.l1': '损失：<code>MSE_recon + beta * KL + CE_cls</code>，beta 从 <code>0.01</code> 退火到 <code>0.10</code>。',
+                'routes.cvae.l2': '实验脚本：50 epochs、batch 16、BERT LR <code>2e-5</code>、其他层 <code>2e-4</code>。',
+                'routes.cvae.l3': '主训练入口还保留 8-condition、latent-128、4L/8H 配置；headline 指标来自 3-condition 报告脚本。',
+                'routes.dp.title': 'Image-Conditioned Diffusion Policy',
+                'routes.dp.p': '更重的路线用视觉 token 条件化 action diffusion。DINOv2-ViT-B/14 提供 768D 逐帧特征；Qwen-VL hidden states 可以预计算成 256D <code>.npy</code> 条件序列，训练时跳过实时 VL 推理。',
+                'routes.dp.l1': '骨干：2 层图像时序 encoder，加 6 层交错 self-attention / cross-attention action blocks。',
+                'routes.dp.l2': 'Diffusion wrapper：DDIM 采样、1000 steps、cosine schedule、v-prediction objective、self-conditioning 概率 0.9、min-SNR gamma 5。',
+                'routes.dp.l3': '动态 mask 保留 batch 内不同 action/image 长度的有效区域。',
+                'runtime.title': '运行时与可视化',
+                'runtime.cap': '运行可视化把数据集、CVAE 训练、延迟、Qwen 缓存、retargeting 回归与数据质量诊断拆成独立证据块。',
+                'runtime.block': '<i class="fa-solid fa-circle-check"></i> 执行路径有明确的并发保护：接收有效文本消息、获取非阻塞执行锁、后台线程做策略推理、每个 10D frame 限幅、按 10 FPS 流式发送；动作播放期间的新请求会计入 <code>skipped_busy</code>。',
+                'results.title': '实测结果与边界',
+                'results.item': '项目',
+                'results.value': '数值',
+                'results.scope': '范围',
+                'results.r1.item': '数据集',
+                'results.r1.value': '194 episodes = 54 举手 / 112 伸手 / 28 坐着',
+                'results.r1.scope': '3 个核心动作，多数 episode 为 60 帧；输出为 10D 编码器轨迹。',
+                'results.r2.item': 'CVAE 训练',
+                'results.r2.value': '最佳验证损失 535.95 @ epoch 5；最终验证分类准确率 100%',
+                'results.r2.scope': 'RTX 4090 上 50 epoch 报告实验；分类准确率是 sanity check，因为输入文本本身就是类别名。',
+                'results.r3.item': '重建质量',
+                'results.r3.value': '坐着 MAE 56.4；举手/伸手 235-455 counts',
+                'results.r3.scope': '验证集定性重建；大动作类别仍需要更多数据提升绝对精度。',
+                'results.r4.item': '运行时',
+                'results.r4.value': '5 ms 接收 + ~500 ms 推理 + T x 100 ms 播放；总计 2.5-5.5 s',
+                'results.r4.scope': '文档记录的 WebSocket + Dynamixel 10 FPS 执行链路。',
+                'results.r5.item': 'Qwen 缓存',
+                'results.r5.value': '实时 Qwen ~3 h/epoch -> 预计算 Qwen ~20 min/epoch',
+                'results.r5.scope': '通过缓存 256D 视觉条件 token 加速 DP 训练。',
+                'results.r6.item': 'Retargeting 支撑',
+                'results.r6.value': 'T-pose 2048 +/- 3；Teleop Transformer 在 47 对 final-frame 样本上 MAE 71.90 counts',
+                'results.r6.scope': '运动接口证据，不是 PLAN-A 全系统任务成功率。',
+                'results.limit': '<i class="fa-solid fa-triangle-exclamation"></i> 最强的公开 claim 是系统集成与模块级测量。现有文件没有提供 CVAE 与 DP 在真机 rollout 上的受控任务成功率对比，所以本页把训练、重建、运行时和接口测量分开报告。',
+                'diag.title': '工程失败与修复',
+                'diag.tpose.title': 'T-pose 标定',
+                'diag.tpose.p': '全局动捕四元数不能直接作为机器人关节命令。Retargeting SOP 记录 T-pose offset，用 FK residual 和 <code>least_squares</code> 求 J1/J2，处理左臂镜像，再把相对角映射到编码器中心 2048。',
+                'diag.data.title': 'Thinking 数据诊断',
+                'diag.data.p': '早期 8 类数据中，thinking 轨迹比 bothhandsup 更短且运动量更低：14 条样本少于 20 帧，平均运动量 4981.7 vs 6852.5，低 27%。修复方式沉淀为按长度与运动量执行的可复用清洗规则。',
+                'diag.qwen.title': 'Qwen 计算路线',
+                'diag.qwen.p': '实时 Qwen-VL 特征让 DP 训练过慢。解决方案是预先抽取逐帧 hidden states，投影到 256D，保存为 <code>.npy</code> 条件 token，并让 DP 模型在 <code>image_sequence=None</code> 下复用同一 forward 接口。',
+                'diag.lock.title': '执行隔离',
+                'diag.lock.p': '机器人播放通过非阻塞 execution lock 串行化。动作执行期间到来的新消息会计入 <code>skipped_busy</code>，避免多条 10D 轨迹同时竞争同一条 Dynamixel 链路。',
+                'interview.title': '面试可追问技术点',
+                'interview.topic': '主题',
+                'interview.answer': '可防守回答',
+                'interview.boundary': '边界',
+                'interview.t1': '系统身份',
+                'interview.a1': 'PLAN-A 是社交机器人交互栈，不是 VLA：Qwen/OpenCV 负责感知，CVAE/DP 生成轨迹，WebSocket/Dynamixel 执行 <code>angles[10]</code>。',
+                'interview.b1': '不声称 Flow Matching。',
+                'interview.t2': 'CVAE 路线',
+                'interview.a2': '报告版 CVAE 使用 BERT-base-chinese CLS、64D latent、2 层 / 4 头 Transformer Decoder，并在 194 个三类 episode 上用 MSE + KL + CE 训练。',
+                'interview.b2': '8 类主代码路径要单独说明。',
+                'interview.t3': 'DP 路线',
+                'interview.a3': 'DP 路线用 DINOv2 或缓存 Qwen <code>cond_seq (T,256)</code> 条件化 6 层 action transformer，训练配置为 DDIM 1000-step、v-prediction、self-cond 0.9、min-SNR gamma 5。',
+                'interview.b3': '没有发现 DP 真机成功率基准。',
+                'interview.t4': '机器人安全合约',
+                'interview.a4': '运行时通过非阻塞 execution lock 串行播放，每个 count 限幅到 <code>[0,4095]</code>，重叠请求计入 <code>skipped_busy</code>。',
+                'interview.b4': '这是执行隔离，不是形式化安全证明。',
+                'evidence.title': '证据索引',
+                'evidence.note': '用于重画架构和撰写本页的关键本地文件。',
+                'evidence.claim': 'Claim',
+                'evidence.source': '来源',
+                'evidence.c1': 'PLAN-A 全系统边界、194 episodes、延迟与 CVAE/DP 双路线',
+                'evidence.c2': 'CVAE 报告架构与训练配置',
+                'evidence.c3': 'DP 架构、v-prediction、self-conditioning 与 Qwen cache',
+                'evidence.c4': '感知兜底与情绪映射',
+                'evidence.c5': 'Retargeting 与 WebSocket 执行合约'
+            }
+        };
+
+        const langBtn = document.getElementById('langToggle');
+        const langHero = document.getElementById('langHero');
+        let currentLang = localStorage.getItem('lang') || 'en';
+
+        function setLang(lang) {
+            currentLang = lang;
+            const dict = i18n[lang];
+            if (!dict) return;
+            document.querySelectorAll('[data-i18n]').forEach(el => {
+                const key = el.getAttribute('data-i18n');
+                if (dict[key] != null) el.textContent = dict[key];
+            });
+            document.querySelectorAll('[data-i18n-html]').forEach(el => {
+                const key = el.getAttribute('data-i18n-html');
+                if (dict[key] != null) el.innerHTML = dict[key];
+            });
+            document.documentElement.lang = lang === 'zh' ? 'zh-CN' : 'en';
+            if (langBtn) langBtn.textContent = lang === 'zh' ? 'EN' : '中';
+            localStorage.setItem('lang', lang);
+        }
+
+        function toggleLang() {
+            setLang(currentLang === 'en' ? 'zh' : 'en');
+        }
+
+        setLang(currentLang);
+        langBtn?.addEventListener('click', toggleLang);
+        langHero?.addEventListener('click', toggleLang);
+    })();
+    </script>
+</body>
+</html>
