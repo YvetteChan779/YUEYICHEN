@@ -1,12 +1,12 @@
-# Chen Yueyi CV Bullets - PLAN-A
+# Chen Yueyi CV Bullets - Affective Robot Interaction: A Multimodal System for Companion Robots
 
-Source gate: `Project Mining Protocol.md`, `personnel page technical content KB.md`, PLAN-A source files, result tables, and readable excellent CV references were inspected before writing these bullets.
+Source gate: `Project Mining Protocol.md`, `personnel page technical content KB.md`, Affective Robot Interaction source files, result tables, and readable excellent CV references were inspected before writing these bullets.
 
 ## Excellent CV Grammar Extracted
 
 Reference pattern from `excellent cv/gl_cv_bullet_version.txt`, `excellent cv/lfy_cv_bullet.txt`, and `excellent cv/分层碰撞机制_末端姿态对.txt`:
 
-| Grammar rule | Migration rule for PLAN-A |
+| Grammar rule | Migration rule for Affective Robot Interaction |
 | --- | --- |
 | Start with ownership verbs such as `Led`, `Architected`, `Engineered`, `Calibrated`, `Optimized`, or `Validated`. | Use `Architected`, `Engineered`, and `Calibrated` because source evidence shows integration, model implementation, and calibration work. |
 | Name the model stack early, not as a vague domain label. | Say `Qwen2.5-VL/OpenCV`, `Text-to-Action CVAE`, `image-conditioned Diffusion Policy`, `VDMocap`, `WebSocket + Dynamixel`. |
@@ -16,9 +16,9 @@ Reference pattern from `excellent cv/gl_cv_bullet_version.txt`, `excellent cv/lf
 
 ## Final English Resume Bullets
 
-1. Architected PLAN-A, a social-robot multimodal interaction stack that routes Qwen2.5-VL/OpenCV perception and VDMocap inputs into Text-to-Action CVAE / image-conditioned Diffusion Policy branches, then streams 10D WebSocket + Dynamixel encoder trajectories at 10 FPS with a non-blocking execution lock over 194 three-class reaction episodes.
+1. Architected Affective Robot Interaction, a social-robot multimodal interaction stack that routes Qwen2.5-VL/OpenCV perception and VDMocap inputs into Text-to-Action CVAE / image-conditioned Diffusion Policy branches, then streams 10D WebSocket + Dynamixel encoder trajectories at 10 FPS with a non-blocking execution lock over 194 three-class reaction episodes.
 
-中文解释：这条是系统架构 ownership bullet，先定义 PLAN-A 的边界，再把 perception、policy、execution 三层接口串起来，最后用 194 episodes、10D、10 FPS 和 execution lock 做证据锚点。`Architected` 是轻微 overclaim，但可以防守，因为证据覆盖了多模块集成、执行链路和页面级架构重画。
+中文解释：这条是系统架构 ownership bullet，先定义 Affective Robot Interaction 的边界，再把 perception、policy、execution 三层接口串起来，最后用 194 episodes、10D、10 FPS 和 execution lock 做证据锚点。`Architected` 是轻微 overclaim，但可以防守，因为证据覆盖了多模块集成、执行链路和页面级架构重画。
 
 Predicted interviewer follow-up: What exactly crosses the boundary between the policy and robot runtime, and how do you prevent overlapping robot commands?
 

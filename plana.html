@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="PLAN-A multimodal human-robot interaction system project by Yueyi Chen" />
-    <title>PLAN-A Multimodal Interaction System | Yueyi Chen</title>
+    <meta name="description" content="Affective Robot Interaction: a multimodal interaction system for companion robots by Yueyi Chen" />
+    <title>Affective Robot Interaction: A Multimodal System for Companion Robots | Yueyi Chen</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Lora:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
@@ -76,8 +76,8 @@
 
     <main class="project-shell">
         <section class="hero">
-            <div class="hero-topline" data-i18n="hero.kicker">Algorithm Intern Project · PLAN-A</div>
-            <h1 data-i18n="hero.title">PLAN-A: Multimodal Human-Robot Interaction System</h1>
+            <div class="hero-topline" data-i18n="hero.kicker">Algorithm Intern Project · Affective Robot Interaction</div>
+            <h1 data-i18n="hero.title">Affective Robot Interaction: A Multimodal System for Companion Robots</h1>
             <p class="tagline" data-i18n-html="hero.tagline">An end-to-end social-robot interaction stack that routes camera and VDMocap inputs through Qwen2.5-VL / OpenCV perception, Text-to-Action CVAE and image-conditioned Diffusion Policy branches, then sends 10D encoder trajectories through WebSocket + Dynamixel execution.</p>
             <div class="hero-actions">
                 <a href="index.html#publications"><i class="fa-solid fa-arrow-left"></i><span data-i18n="hero.back">Back to projects</span></a>
@@ -97,7 +97,7 @@
 
         <section class="section-block" id="overview">
             <h2><i class="fa-solid fa-crosshairs"></i><span data-i18n="overview.title">System Boundary</span></h2>
-            <p data-i18n-html="overview.p1">PLAN-A owns the interaction path from <strong>camera / VDMocap input</strong> to robot reaction execution. The perception layer extracts face position, human emotion, and mocap pose; the policy layer compares a text-driven CVAE route with an image-conditioned Diffusion Policy route; the execution layer normalizes everything into a 10D encoder trajectory for WebSocket + Dynamixel playback.</p>
+            <p data-i18n-html="overview.p1">Affective Robot Interaction owns the interaction path from <strong>camera / VDMocap input</strong> to robot reaction execution. The perception layer extracts face position, human emotion, and mocap pose; the policy layer compares a text-driven CVAE route with an image-conditioned Diffusion Policy route; the execution layer normalizes everything into a 10D encoder trajectory for WebSocket + Dynamixel playback.</p>
             <p data-i18n-html="overview.p2">The public evaluation scope is precise: the report validates the 3 core actions <code>举手 / 伸手 / 坐着</code> with 194 episodes and about 60 frames per episode, while the codebase keeps an 8-category CVAE training entry for broader interaction coverage. Retargeting is treated as the actuator-facing motion adapter, not as the task-success metric for the full system.</p>
             <div class="scope-callout" data-i18n-html="overview.scope"><i class="fa-solid fa-triangle-exclamation"></i> This is not a VLA or Flow-Matching policy page. The defensible framing is <strong>multimodal perception + generative trajectory policies + calibrated 10D execution</strong>; Diffusion Policy remains a heavier route without a matched task-success benchmark in the available evidence.</div>
         </section>
@@ -105,7 +105,7 @@
         <section class="section-block" id="architecture">
             <h2><i class="fa-solid fa-diagram-project"></i><span data-i18n="arch.title">Model Architecture</span></h2>
             <figure class="diagram">
-                <img src="Pic/plana/plana-model_architechture.svg" alt="PLAN-A model architecture" />
+                <img src="Pic/plana/plana-model_architechture.svg" alt="Affective Robot Interaction model architecture" />
             </figure>
             <p class="fig-cap" data-i18n="arch.cap">The redrawn architecture separates unified inputs, Qwen/OpenCV + mocap state extraction, Text-to-Action CVAE, image-conditioned DP, and the WebSocket/Dynamixel execution contract.</p>
         </section>
@@ -157,7 +157,7 @@
         <section class="section-block" id="runtime">
             <h2><i class="fa-solid fa-gauge-high"></i><span data-i18n="runtime.title">Runtime And Visualization</span></h2>
             <figure class="diagram">
-                <img src="Pic/plana/plana-runtime_visualization.svg" alt="PLAN-A runtime visualization" />
+                <img src="Pic/plana/plana-runtime_visualization.svg" alt="Affective Robot Interaction runtime visualization" />
             </figure>
             <p class="fig-cap" data-i18n="runtime.cap">The runtime visualization keeps dataset, CVAE training, latency, Qwen caching, retargeting regression, and data-quality diagnosis in separate evidence boxes.</p>
             <div class="result-block" data-i18n-html="runtime.block"><i class="fa-solid fa-circle-check"></i> The execution path is intentionally conservative: receive a valid text message, acquire a non-blocking execution lock, run policy inference in a background thread, clamp each 10D frame, stream at 10 FPS, and increment <code>skipped_busy</code> when a new request arrives during playback.</div>
@@ -176,7 +176,7 @@
                         <tr><td data-i18n="results.r3.item">Reconstruction</td><td data-i18n="results.r3.value">Sitting MAE 56.4; Waving/Reaching 235-455 counts</td><td data-i18n-html="results.r3.scope">Validation-set qualitative reconstruction; larger-motion classes still need more data.</td></tr>
                         <tr><td data-i18n="results.r4.item">Runtime</td><td data-i18n="results.r4.value">5 ms receive + ~500 ms inference + T x 100 ms playback; total 2.5-5.5 s</td><td data-i18n-html="results.r4.scope">Documented WebSocket + Dynamixel execution path at 10 FPS.</td></tr>
                         <tr><td data-i18n="results.r5.item">Qwen cache</td><td data-i18n="results.r5.value">~3 h/epoch live Qwen -> ~20 min/epoch precomputed Qwen</td><td data-i18n-html="results.r5.scope">DP training acceleration through cached 256D visual condition tokens.</td></tr>
-                        <tr><td data-i18n="results.r6.item">Retargeting support</td><td data-i18n="results.r6.value">T-pose 2048 +/- 3; Teleop Transformer 71.90-count MAE on 47 final-frame pairs</td><td data-i18n-html="results.r6.scope">Motion-interface evidence, not full PLAN-A task success rate.</td></tr>
+                        <tr><td data-i18n="results.r6.item">Retargeting support</td><td data-i18n="results.r6.value">T-pose 2048 +/- 3; Teleop Transformer 71.90-count MAE on 47 final-frame pairs</td><td data-i18n-html="results.r6.scope">Motion-interface evidence, not full Affective Robot Interaction task success rate.</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -213,7 +213,7 @@
                         <tr><th data-i18n="interview.topic">Topic</th><th data-i18n="interview.answer">Defensible Answer</th><th data-i18n="interview.boundary">Boundary</th></tr>
                     </thead>
                     <tbody>
-                        <tr><td data-i18n="interview.t1">System identity</td><td data-i18n-html="interview.a1">PLAN-A is a social-robot interaction stack, not a VLA: Qwen/OpenCV handles perception, CVAE/DP generate trajectories, and WebSocket/Dynamixel executes <code>angles[10]</code>.</td><td data-i18n="interview.b1">No Flow Matching claim.</td></tr>
+                        <tr><td data-i18n="interview.t1">System identity</td><td data-i18n-html="interview.a1">Affective Robot Interaction is a social-robot interaction stack, not a VLA: Qwen/OpenCV handles perception, CVAE/DP generate trajectories, and WebSocket/Dynamixel executes <code>angles[10]</code>.</td><td data-i18n="interview.b1">No Flow Matching claim.</td></tr>
                         <tr><td data-i18n="interview.t2">CVAE route</td><td data-i18n-html="interview.a2">The report CVAE uses BERT-base-chinese CLS, a 64D latent, a 2-layer / 4-head Transformer Decoder, and MSE + KL + CE loss over 194 three-class episodes.</td><td data-i18n="interview.b2">8-class main code path is separate.</td></tr>
                         <tr><td data-i18n="interview.t3">DP route</td><td data-i18n-html="interview.a3">The DP route conditions a 6-layer action transformer on DINOv2 or cached Qwen <code>cond_seq (T,256)</code>, trained with DDIM 1000-step v-prediction, self-cond 0.9, and min-SNR gamma 5.</td><td data-i18n="interview.b3">No real-robot DP success benchmark found.</td></tr>
                         <tr><td data-i18n="interview.t4">Robot safety contract</td><td data-i18n-html="interview.a4">Runtime serializes playback with a non-blocking execution lock, clamps every count to <code>[0,4095]</code>, and drops overlapping requests into <code>skipped_busy</code>.</td><td data-i18n="interview.b4">Execution isolation, not formal safety proof.</td></tr>
@@ -229,7 +229,7 @@
                 <table class="results-table">
                     <thead><tr><th data-i18n="evidence.claim">Claim</th><th data-i18n="evidence.source">Source</th></tr></thead>
                     <tbody>
-                        <tr><td data-i18n="evidence.c1">Full PLAN-A boundary, 194 episodes, latency, and CVAE/DP split</td><td><code>docs/PLAN-A_云文档.md:8-30,228-332</code>; <code>PlanA-情感陪伴场景的多模态交互系统.pdf</code></td></tr>
+                        <tr><td data-i18n="evidence.c1">Full Affective Robot Interaction boundary, 194 episodes, latency, and CVAE/DP split</td><td><code>docs/PLAN-A_云文档.md:8-30,228-332</code>; <code>PlanA-情感陪伴场景的多模态交互系统.pdf</code></td></tr>
                         <tr><td data-i18n="evidence.c2">CVAE report architecture and training config</td><td><code>docs/scripts/01_train_cvae.py:29-54</code>; <code>docs/assets/tables/t5_training_summary.csv</code></td></tr>
                         <tr><td data-i18n="evidence.c3">DP architecture, v-prediction, self-conditioning, and Qwen cache</td><td><code>image_conditioned_dp_dynamic.py:188-459</code>; <code>diffusion_wrapper.py:307-391</code>; <code>dataset_qwen_episode.py:23-257</code></td></tr>
                         <tr><td data-i18n="evidence.c4">Perception fallback and emotion mapping</td><td><code>qwen_multimodal/detect_face_complete.py:18-54,352-520</code></td></tr>
@@ -258,8 +258,8 @@
                 'nav.projects': 'projects',
                 'nav.arch': 'architecture',
                 'nav.results': 'results',
-                'hero.kicker': 'Algorithm Intern Project · PLAN-A',
-                'hero.title': 'PLAN-A: Multimodal Human-Robot Interaction System',
+                'hero.kicker': 'Algorithm Intern Project · Affective Robot Interaction',
+                'hero.title': 'Affective Robot Interaction: A Multimodal System for Companion Robots',
                 'hero.tagline': 'An end-to-end social-robot interaction stack that routes camera and VDMocap inputs through Qwen2.5-VL / OpenCV perception, Text-to-Action CVAE and image-conditioned Diffusion Policy branches, then sends 10D encoder trajectories through WebSocket + Dynamixel execution.',
                 'hero.back': 'Back to projects',
                 'hero.arch': 'Model architecture',
@@ -271,7 +271,7 @@
                 'metric.ddim': 'DDIM steps in the image-conditioned DP route',
                 'metric.cache': 'Qwen embedding cache acceleration for DP training',
                 'overview.title': 'System Boundary',
-                'overview.p1': 'PLAN-A owns the interaction path from <strong>camera / VDMocap input</strong> to robot reaction execution. The perception layer extracts face position, human emotion, and mocap pose; the policy layer compares a text-driven CVAE route with an image-conditioned Diffusion Policy route; the execution layer normalizes everything into a 10D encoder trajectory for WebSocket + Dynamixel playback.',
+                'overview.p1': 'Affective Robot Interaction owns the interaction path from <strong>camera / VDMocap input</strong> to robot reaction execution. The perception layer extracts face position, human emotion, and mocap pose; the policy layer compares a text-driven CVAE route with an image-conditioned Diffusion Policy route; the execution layer normalizes everything into a 10D encoder trajectory for WebSocket + Dynamixel playback.',
                 'overview.p2': 'The public evaluation scope is precise: the report validates the 3 core actions <code>举手 / 伸手 / 坐着</code> with 194 episodes and about 60 frames per episode, while the codebase keeps an 8-category CVAE training entry for broader interaction coverage. Retargeting is treated as the actuator-facing motion adapter, not as the task-success metric for the full system.',
                 'overview.scope': '<i class="fa-solid fa-triangle-exclamation"></i> This is not a VLA or Flow-Matching policy page. The defensible framing is <strong>multimodal perception + generative trajectory policies + calibrated 10D execution</strong>; Diffusion Policy remains a heavier route without a matched task-success benchmark in the available evidence.',
                 'arch.title': 'Model Architecture',
@@ -325,7 +325,7 @@
                 'results.r5.scope': 'DP training acceleration through cached 256D visual condition tokens.',
                 'results.r6.item': 'Retargeting support',
                 'results.r6.value': 'T-pose 2048 +/- 3; Teleop Transformer 71.90-count MAE on 47 final-frame pairs',
-                'results.r6.scope': 'Motion-interface evidence, not full PLAN-A task success rate.',
+                'results.r6.scope': 'Motion-interface evidence, not full Affective Robot Interaction task success rate.',
                 'results.limit': '<i class="fa-solid fa-triangle-exclamation"></i> The strongest public claim is system integration with measured internal modules. The available files do not provide a controlled task-success benchmark comparing CVAE vs DP on real-robot rollouts, so the page reports training, reconstruction, runtime, and interface measurements separately.',
                 'diag.title': 'Engineering Failures And Fixes',
                 'diag.tpose.title': 'T-pose Calibration',
@@ -341,7 +341,7 @@
                 'interview.answer': 'Defensible Answer',
                 'interview.boundary': 'Boundary',
                 'interview.t1': 'System identity',
-                'interview.a1': 'PLAN-A is a social-robot interaction stack, not a VLA: Qwen/OpenCV handles perception, CVAE/DP generate trajectories, and WebSocket/Dynamixel executes <code>angles[10]</code>.',
+                'interview.a1': 'Affective Robot Interaction is a social-robot interaction stack, not a VLA: Qwen/OpenCV handles perception, CVAE/DP generate trajectories, and WebSocket/Dynamixel executes <code>angles[10]</code>.',
                 'interview.b1': 'No Flow Matching claim.',
                 'interview.t2': 'CVAE route',
                 'interview.a2': 'The report CVAE uses BERT-base-chinese CLS, a 64D latent, a 2-layer / 4-head Transformer Decoder, and MSE + KL + CE loss over 194 three-class episodes.',
@@ -356,7 +356,7 @@
                 'evidence.note': 'Key local files used to redraw the architecture and write this page.',
                 'evidence.claim': 'Claim',
                 'evidence.source': 'Source',
-                'evidence.c1': 'Full PLAN-A boundary, 194 episodes, latency, and CVAE/DP split',
+                'evidence.c1': 'Full Affective Robot Interaction boundary, 194 episodes, latency, and CVAE/DP split',
                 'evidence.c2': 'CVAE report architecture and training config',
                 'evidence.c3': 'DP architecture, v-prediction, self-conditioning, and Qwen cache',
                 'evidence.c4': 'Perception fallback and emotion mapping',
@@ -366,8 +366,8 @@
                 'nav.projects': '项目',
                 'nav.arch': '架构',
                 'nav.results': '结果',
-                'hero.kicker': '算法实习项目 · PLAN-A',
-                'hero.title': 'PLAN-A：多模态人机交互系统',
+                'hero.kicker': '算法实习项目 · 情感陪伴场景的多模态交互系统',
+                'hero.title': '情感陪伴机器人的多模态交互系统',
                 'hero.tagline': '一套面向社交机器人的端到端交互栈：摄像头与 VDMocap 输入先进入 Qwen2.5-VL / OpenCV 感知层，再走 Text-to-Action CVAE 与图像条件 Diffusion Policy 两条策略分支，最后通过 WebSocket + Dynamixel 下发 10D 编码器轨迹。',
                 'hero.back': '返回项目',
                 'hero.arch': '模型架构',
@@ -379,7 +379,7 @@
                 'metric.ddim': '图像条件 DP 路线的 DDIM 步数',
                 'metric.cache': 'Qwen embedding cache 带来的 DP 训练加速',
                 'overview.title': '系统边界',
-                'overview.p1': 'PLAN-A 负责从 <strong>camera / VDMocap 输入</strong>到机器人反应执行的交互链路。感知层抽取人脸位置、人类情绪和动捕姿态；策略层比较文本驱动 CVAE 与图像条件 Diffusion Policy 两条路线；执行层把输出统一成 10D 编码器轨迹，通过 WebSocket + Dynamixel 播放。',
+                'overview.p1': '情感陪伴场景的多模态交互系统负责从 <strong>camera / VDMocap 输入</strong>到机器人反应执行的交互链路。感知层抽取人脸位置、人类情绪和动捕姿态；策略层比较文本驱动 CVAE 与图像条件 Diffusion Policy 两条路线；执行层把输出统一成 10D 编码器轨迹，通过 WebSocket + Dynamixel 播放。',
                 'overview.p2': '公开评估范围要写清楚：报告验证的是 <code>举手 / 伸手 / 坐着</code> 3 个核心动作，共 194 个 episode、每个约 60 帧；代码库同时保留 8 类 CVAE 训练入口，用于更大范围的交互扩展。Retargeting 在这里是面向执行器的运动适配层，不是全系统任务成功率。',
                 'overview.scope': '<i class="fa-solid fa-triangle-exclamation"></i> 本页不是 VLA 或 Flow-Matching policy 页面。可防守表述是 <strong>多模态感知 + 生成式轨迹策略 + 标定后的 10D 执行</strong>；Diffusion Policy 是更重的候选路线，现有证据里没有和 CVAE 对齐的真机任务成功率基准。',
                 'arch.title': '模型架构',
@@ -433,7 +433,7 @@
                 'results.r5.scope': '通过缓存 256D 视觉条件 token 加速 DP 训练。',
                 'results.r6.item': 'Retargeting 支撑',
                 'results.r6.value': 'T-pose 2048 +/- 3；Teleop Transformer 在 47 对 final-frame 样本上 MAE 71.90 counts',
-                'results.r6.scope': '运动接口证据，不是 PLAN-A 全系统任务成功率。',
+                'results.r6.scope': '运动接口证据，不是情感陪伴场景的多模态交互系统全系统任务成功率。',
                 'results.limit': '<i class="fa-solid fa-triangle-exclamation"></i> 最强的公开 claim 是系统集成与模块级测量。现有文件没有提供 CVAE 与 DP 在真机 rollout 上的受控任务成功率对比，所以本页把训练、重建、运行时和接口测量分开报告。',
                 'diag.title': '工程失败与修复',
                 'diag.tpose.title': 'T-pose 标定',
@@ -449,7 +449,7 @@
                 'interview.answer': '可防守回答',
                 'interview.boundary': '边界',
                 'interview.t1': '系统身份',
-                'interview.a1': 'PLAN-A 是社交机器人交互栈，不是 VLA：Qwen/OpenCV 负责感知，CVAE/DP 生成轨迹，WebSocket/Dynamixel 执行 <code>angles[10]</code>。',
+                'interview.a1': '情感陪伴场景的多模态交互系统是社交机器人交互栈，不是 VLA：Qwen/OpenCV 负责感知，CVAE/DP 生成轨迹，WebSocket/Dynamixel 执行 <code>angles[10]</code>。',
                 'interview.b1': '不声称 Flow Matching。',
                 'interview.t2': 'CVAE 路线',
                 'interview.a2': '报告版 CVAE 使用 BERT-base-chinese CLS、64D latent、2 层 / 4 头 Transformer Decoder，并在 194 个三类 episode 上用 MSE + KL + CE 训练。',
@@ -464,7 +464,7 @@
                 'evidence.note': '用于重画架构和撰写本页的关键本地文件。',
                 'evidence.claim': 'Claim',
                 'evidence.source': '来源',
-                'evidence.c1': 'PLAN-A 全系统边界、194 episodes、延迟与 CVAE/DP 双路线',
+                'evidence.c1': '情感陪伴场景的多模态交互系统全系统边界、194 episodes、延迟与 CVAE/DP 双路线',
                 'evidence.c2': 'CVAE 报告架构与训练配置',
                 'evidence.c3': 'DP 架构、v-prediction、self-conditioning 与 Qwen cache',
                 'evidence.c4': '感知兜底与情绪映射',

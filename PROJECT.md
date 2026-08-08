@@ -1,4 +1,4 @@
-# PLAN-A PROJECT.md
+# Affective Robot Interaction: A Multimodal System for Companion Robots
 
 Generated for `/home/CNS2026391745/Documents/YUEYICHEN`.
 
@@ -7,7 +7,7 @@ Target project:
 
 Target outputs:
 - `PROJECT.md`
-- PLAN-A homepage project page: `plana.html` plus homepage card in `index.html` / `script.js`
+- Affective Robot Interaction homepage project page: `plana.html` plus homepage card in `index.html` / `script.js`
 - 3 English resume bullets in `chenyy_cv.md`
 
 ## 0. Protocol Gates
