@@ -71,9 +71,6 @@
             'proj.planb.title': 'PLAN-B: Multimodal Perception & Closed-Loop Grasping for Humanoid Robot',
             'proj.planb.venue': '<em>Algorithm Intern Project</em> · Jetson AGX Orin, 2026',
             'proj.planb.desc': 'Built a full-stack multimodal perception & grasping pipeline for a humanoid robot on Jetson AGX Orin: 3-tier cascaded VAD boosting far-field Silero hit rate from <strong>0% → 92%</strong>; dual-path NLU + VLM-guided SAM3 segmentation raising mask success from <strong>9% → ≥90%</strong>; 8-state closed-loop FSM with 7 guard mechanisms and 3D multi-feature grasp verification (median/P25/frac voting). Diagnosed and fixed a P0 cascading bug via 7-step root-cause audit.',
-            'proj.tro.title': 'TRO-1B: Large-Scale Robot Manipulation Model',
-            'proj.tro.venue': '<em>Research Project</em>, 2026',
-            'proj.tro.desc': 'Contributed to a 1B-parameter robot manipulation model with multi-level evaluation. Implemented IK retargeting via Pyroki, multi-machine distributed training, and simulation-based validation pipeline using Isaac Gym.',
             'footer': '&copy; <span id="year">' + new Date().getFullYear() + '</span> Yueyi Chen. Powered by <a href="https://pages.github.com/" target="_blank" rel="noopener">GitHub Pages</a>.'
         },
         zh: {
@@ -106,9 +103,6 @@
             'proj.planb.title': 'PLAN-B：多模态感知与闭环抓取系统（人形机器人）',
             'proj.planb.venue': '<em>算法实习项目</em> · Jetson AGX Orin, 2026',
             'proj.planb.desc': '在 Jetson AGX Orin 上构建人形机器人全栈多模态感知与抓取管线：3 级级联 VAD 将远场 Silero 命中率从 <strong>0% 提升至 92%</strong>；双路 NLU + VLM 引导的 SAM3 分割将掩码成功率从 <strong>9% 提升至 ≥90%</strong>；8 态闭环状态机配合 7 条守卫机制与 3D 多特征抓取验证（median/P25/frac 票决）。通过 7 步根因审计定位并修复了一个 P0 级联 bug。',
-            'proj.tro.title': 'TRO-1B：大规模机器人操作模型',
-            'proj.tro.venue': '<em>科研项目</em>, 2026',
-            'proj.tro.desc': '参与了一个 10 亿参数的机器人操作模型的研发，包含多级评估体系。负责基于 Pyroki 的 IK 重定向、多机分布式训练，以及基于 Isaac Gym 的仿真验证管线。',
             'footer': '&copy; <span id="year">' + new Date().getFullYear() + '</span> 陈悦怡. 基于 <a href="https://pages.github.com/" target="_blank" rel="noopener">GitHub Pages</a> 搭建。'
         }
     };
