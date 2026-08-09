@@ -1,0 +1,742 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Isaac-GR00T N1.5 - Robotics Knowledge Base</title>
+    <link rel="icon" href="favicon.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="assets/vendor/katex/katex.min.css">
+    <script>
+        // Applied before first paint so the saved theme doesn't flash.
+        (function () {
+            try {
+                var t = localStorage.getItem('theme');
+                if (t === 'dark' || t === 'light') {
+                    document.documentElement.setAttribute('data-theme', t);
+                }
+            } catch (e) {}
+        })();
+    </script>
+</head>
+<body>
+    <button class="menu-toggle" onclick="document.querySelector('.sidebar').classList.toggle('open')">&#9776;</button>
+    <button class="theme-toggle" id="theme-toggle" title="切换日夜模式" aria-label="切换日夜模式">
+        <span class="icon-light">&#9790;</span><span class="icon-dark">&#9728;</span>
+    </button>
+
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <h2>Robotics Knowledge Base</h2>
+            <p>机器人模型架构知识库</p>
+        </div>
+        <nav>
+            <a href="index.html">Overview</a>
+            <div class="nav-group">VLA 模型</div>
+            <a href="01.Pi0_Architecture.html">Pi0</a>
+            <a href="02.Pi0.5_Architecture.html">Pi0.5</a>
+            <a href="03.Pi0-FAST_Architecture.html">Pi0-FAST</a>
+            <a href="04.Pi-Star-0.6_Architecture.html">π*₀.₆ (Pi-Star-0.6)</a>
+            <a href="05.Pi0.7_Architecture.html">π₀.₇ (Pi-0.7)</a>
+            <a href="06.Isaac-GR00T-N1.6_Architecture.html">Isaac-GR00T N1.6</a>
+            <a href="07.Isaac-GR00T-N1.5_Architecture.html" class="active">Isaac-GR00T N1.5</a>
+            <a href="08.ACT_Architecture.html">ACT</a>
+            <a href="09.SmolVLA_Architecture.html">SmolVLA</a>
+            <a href="10.WALL-OSS_Architecture.html">WALL-OSS / WALL-X</a>
+            <a href="11.X-VLA_Architecture.html">X-VLA</a>
+            <a href="12.Psi0_Architecture.html">Psi0 (ψ₀)</a>
+            <a href="13.DreamZero_Architecture.html">DreamZero</a>
+            <a href="14.FastWAM_Architecture.html">Fast-WAM</a>
+            <div class="nav-group">全身控制 (WBC)</div>
+            <a href="15.GR00T-WBC_Overview.html">GR00T-WBC 总览</a>
+            <a href="16.Decoupled-WBC_Architecture.html" class="nav-child">Decoupled WBC</a>
+            <a href="17.GEAR-SONIC_Architecture.html" class="nav-child">GEAR-SONIC</a>
+            <a href="18.MotionBricks_Architecture.html" class="nav-child">MotionBricks</a>
+            <div class="nav-group">3D 视觉与 VLM</div>
+            <a href="19.VLM3_Architecture.html">VLM³</a>
+        </nav>
+    </aside>
+
+    <main class="content">
+      <div class="content-inner">
+        <h1 id="isaac-gr00t-n15-模型架构">Isaac GR00T N1.5 模型架构<a class="headerlink" href="07.Isaac-GR00T-N1.5_Architecture.html#isaac-gr00t-n15-模型架构" title="Permanent link">#</a></h1>
+<h2 id="1-整体架构概览">1. 整体架构概览<a class="headerlink" href="07.Isaac-GR00T-N1.5_Architecture.html#1-整体架构概览" title="Permanent link">#</a></h2>
+<p>Isaac GR00T N1.5 是 NVIDIA 发布的首个公开 VLA 基座模型（3B 参数）。架构由两段组成：<strong>Eagle 2 VLM Backbone</strong>（冻结）→ 4 层 transformer adapter → <strong>16 层 DiT</strong> + Flow Matching 出动作 chunk。多 embodiment 支持通过 <code>CategorySpecificMLP</code> 实现，最多 32 种形态。N1.5 训练时把 VLM 主体完全冻结，靠 4 层 adapter 把 VLM 表征"翻译"到 action head 需要的维度。</p>
+<blockquote>
+<p><strong>版本说明：</strong> 本文档对应 NVIDIA Isaac-GR00T 仓库的 <a href="https://github.com/NVIDIA/Isaac-GR00T/tree/n1.5-release"><code>n1.5-release</code></a> 分支。当前 <code>main</code> 分支已升级为 N1.6（见 <a href="06.Isaac-GR00T-N1.6_Architecture.html">Isaac-GR00T N1.6 架构</a>）。两者整体架构思路相同——上游 VLM backbone 出特征、下游 DiT + Flow Matching 出动作 chunk、CategorySpecificMLP 做 embodiment 条件化——但在 backbone 选择、DiT 容量、训练策略和动作目标上有 4 处关键差异（见末尾对照表）。</p>
+</blockquote>
+<div class="mermaid">
+graph TB
+    subgraph Input["输入"]
+        IMG["多视角图像"]
+        TXT["语言指令"]
+        STATE["机器人状态&lt;br/&gt;[B, state_dim]"]
+        EID["embodiment_id&lt;br/&gt;[B] ∈ [0, 32)"]
+    end
+
+    subgraph Backbone["Eagle 2 VLM Backbone (完全冻结)"]
+        EAGLE["Eagle 2 VLM&lt;br/&gt;(vision + LLM)"]
+    end
+
+    subgraph Adapter["post-VLM Adapter (N1.5 特有)"]
+        ADAP["4 层 Transformer Adapter&lt;br/&gt;(把冻结 VLM 表征投影至 action head)"]
+    end
+
+    subgraph Encoders["Embodiment 条件化编码"]
+        SE["state_encoder&lt;br/&gt;CategorySpecificMLP"]
+        AE["action_encoder&lt;br/&gt;MultiEmbodimentActionEncoder"]
+    end
+
+    subgraph FlowMatch["Flow Matching"]
+        NOISE["x_t = (1 - t) * noise + t * actions&lt;br/&gt;velocity = actions - noise"]
+    end
+
+    subgraph DiT["16 层 DiT (N1.5)"]
+        DITCORE["sa_embs = concat(state, action)&lt;br/&gt;cross-attention 到 adapter 输出&lt;br/&gt;AdaLN 注入时间步"]
+    end
+
+    subgraph Decoder["动作解码"]
+        AD["action_decoder&lt;br/&gt;CategorySpecificMLP"]
+        EULER["欧拉积分&lt;br/&gt;x_{t+dt} = x_t + dt * v_t&lt;br/&gt;(4 步)"]
+    end
+
+    subgraph Output["输出"]
+        ACT["动作 chunk&lt;br/&gt;[B, action_horizon, action_dim]&lt;br/&gt;(绝对关节角 / EEF 位姿)"]
+    end
+
+    IMG --&gt; EAGLE
+    TXT --&gt; EAGLE
+    EAGLE --&gt; ADAP
+    ADAP --&gt;|"backbone_features"| DITCORE
+
+    STATE --&gt; SE
+    EID --&gt; SE
+    EID --&gt; AE
+    EID --&gt; AD
+
+    NOISE --&gt;|"x_t"| AE
+    AE --&gt; DITCORE
+    SE --&gt; DITCORE
+
+    DITCORE --&gt; AD --&gt; EULER --&gt; ACT
+
+    style Input fill:#e8f4fd,stroke:#2196F3
+    style Backbone fill:#fff3e0,stroke:#FF9800
+    style Adapter fill:#ffebee,stroke:#E53935
+    style Encoders fill:#f3e5f5,stroke:#9C27B0
+    style FlowMatch fill:#fff9c4,stroke:#FFC107
+    style DiT fill:#e8f5e9,stroke:#4CAF50
+    style Decoder fill:#e0f2f1,stroke:#009688
+    style Output fill:#fce4ec,stroke:#E91E63
+</div>
+<hr />
+<h2 id="2-核心组件详解">2. 核心组件详解<a class="headerlink" href="07.Isaac-GR00T-N1.5_Architecture.html#2-核心组件详解" title="Permanent link">#</a></h2>
+<h3 id="21-eagle-2-vlm-backbone-完全冻结">2.1 Eagle 2 VLM Backbone (完全冻结)<a class="headerlink" href="07.Isaac-GR00T-N1.5_Architecture.html#21-eagle-2-vlm-backbone-完全冻结" title="Permanent link">#</a></h3>
+<p>N1.5 使用的 backbone 是 <strong>Eagle 2 VLM</strong>（<a href="https://arxiv.org/abs/2501.14818">NVIDIA Eagle 2 论文</a>），与 N1.6 的 Cosmos-Reason-2B 变体不同：</p>
+<ul>
+<li>Eagle 2 是早期版本，<strong>不支持</strong> native 任意分辨率输入——图像需要 resize/pad 到固定尺寸</li>
+<li>N1.5 训练时 <strong>完全冻结</strong> VLM（<code>tune_llm=False</code>, <code>tune_visual=False</code>, <code>tune_top_llm_layers=0</code>），即整个 VLM 不参与梯度更新</li>
+<li>由于 VLM 表征是为通用 VL 任务训练的，需要一个"翻译层"把它对齐到 action 任务——这就是 post-VLM adapter 的角色</li>
+</ul>
+<hr />
+<h3 id="22-post-vlm-4-层-transformer-adapter-n15-特有">2.2 Post-VLM 4 层 Transformer Adapter (N1.5 特有)<a class="headerlink" href="07.Isaac-GR00T-N1.5_Architecture.html#22-post-vlm-4-层-transformer-adapter-n15-特有" title="Permanent link">#</a></h3>
+<p>N1.5 在 backbone 和 action head 之间插入 <strong>4 层独立的 transformer adapter</strong>，作用是：</p>
+<ul>
+<li>把冻结 Eagle 2 的高层表征做任务特化映射</li>
+<li>弥补 VLM 主体不更新带来的表征损失</li>
+<li>提供可学的 token-级信息聚合（注意力机制可以挑出对动作有用的视觉/语言 token）</li>
+</ul>
+<p>在 N1.6 中这一层被 <strong>完全移除</strong>，改为直接解冻 Eagle (Cosmos) 顶部 4 层 LLM 层 (<code>tune_top_llm_layers=4</code>)。NVIDIA 的解释（见 README）是：直接让 VLM 顶层参与训练比外挂 adapter 更高效，参数利用更好。</p>
+<div class="mermaid">
+graph LR
+    VLM_OUT["Eagle 2 输出&lt;br/&gt;(冻结)"] --&gt; A1["Adapter Layer 1&lt;br/&gt;(可训练)"]
+    A1 --&gt; A2["Adapter Layer 2"]
+    A2 --&gt; A3["Adapter Layer 3"]
+    A3 --&gt; A4["Adapter Layer 4"]
+    A4 --&gt; DITFEED["供 DiT cross-attention 使用"]
+
+    style VLM_OUT fill:#fff3e0,stroke:#FF9800
+    style A1 fill:#ffebee,stroke:#E53935
+    style A2 fill:#ffebee,stroke:#E53935
+    style A3 fill:#ffebee,stroke:#E53935
+    style A4 fill:#ffebee,stroke:#E53935
+</div>
+<hr />
+<h3 id="23-embodiment-条件化的状态动作编码">2.3 Embodiment 条件化的状态/动作编码<a class="headerlink" href="07.Isaac-GR00T-N1.5_Architecture.html#23-embodiment-条件化的状态动作编码" title="Permanent link">#</a></h3>
+<p>与 N1.6 相同，采用 <code>CategorySpecificLinear</code> 和 <code>MultiEmbodimentActionEncoder</code> 在每个 embodiment id 处选独立 (W, b)，最多支持 32 种形态。这套机制贯穿 GR00T 整个系列，从 N1 → N1.5 → N1.6 没有结构性改动。</p>
+<div class="mermaid">
+graph TB
+    subgraph CSL["CategorySpecificLinear"]
+        IN["x: [B, T, input_dim]"] --&gt; SELECT["W[cat_ids] / b[cat_ids]&lt;br/&gt;bmm(x, W) + b"]
+        EID["cat_ids: [B]"] --&gt; SELECT
+        SELECT --&gt; OUT["[B, T, hidden_dim]"]
+    end
+
+    subgraph StateEnc["state_encoder = CategorySpecificMLP"]
+        ST["state [B, state_dim]"] --&gt; SL1["CSL → ReLU"]
+        SL1 --&gt; SL2["CSL"]
+        SL2 --&gt; SF["state_features"]
+    end
+
+    subgraph ActionEnc["action_encoder = MultiEmbodimentActionEncoder"]
+        NA["noisy actions"] --&gt; W1["W1 (CSL)"]
+        TS["timestep"] --&gt; SIN["正弦位置编码"]
+        W1 --&gt; CAT2["concat"]
+        SIN --&gt; CAT2
+        CAT2 --&gt; W2["W2 (CSL) + Swish"]
+        W2 --&gt; W3["W3 (CSL)"]
+        W3 --&gt; AF["action_features"]
+    end
+
+    style CSL fill:#e3f2fd,stroke:#2196F3
+    style StateEnc fill:#f3e5f5,stroke:#9C27B0
+    style ActionEnc fill:#fff3e0,stroke:#FF9800
+</div>
+<p>详细细节参见 <a href="06.Isaac-GR00T-N1.6_Architecture.html#22-embodiment-条件化的状态动作编码">N1.6 文档第 2.2 节</a>，两者实现一致。</p>
+<hr />
+<h3 id="24-dit-16-层-action-head-主干">2.4 DiT (16 层, Action Head 主干)<a class="headerlink" href="07.Isaac-GR00T-N1.5_Architecture.html#24-dit-16-层-action-head-主干" title="Permanent link">#</a></h3>
+<p>N1.5 的 Action Head 由 <strong>16 层 DiT 或 AlternateVLDiT</strong> 组成，是 N1.6 (32 层) 的一半深度。同样使用：</p>
+<ul>
+<li>AdaLayerNorm 在每层注入时间步（不进入 token 序列）</li>
+<li>奇数层 self-attention，偶数层 cross-attention 到 backbone（在 AlternateVLDiT 中进一步切分图像/非图像 token，同样以 <code>attend_text_every_n_blocks</code> 控制周期）</li>
+<li>inner_dim 由 <code>num_attention_heads × attention_head_dim</code> 决定，N1.5 默认与 N1.6 同款（32×48=1536），仅深度对半</li>
+</ul>
+<div class="mermaid">
+graph TB
+    subgraph DiTLoop["16 个 Transformer Block (interleave)"]
+        IDX["block idx ∈ [0, 16)"]
+        IDX --&gt; COND{"idx % 2 == 1 ?"}
+        COND --&gt;|"奇数层"| SA["Self-Attention"]
+        COND --&gt;|"偶数层 (cross)"| ALT["Cross-Attention&lt;br/&gt;到 adapter 输出"]
+    end
+
+    style DiTLoop fill:#e8f5e9,stroke:#4CAF50
+</div>
+<p>容量差异的直观影响：</p>
+<ul>
+<li><strong>训练时</strong>：16 层 DiT 参数量约为 N1.6 的一半，单步前向更快，但表达能力受限</li>
+<li><strong>推理时</strong>：仍是 4 步 Flow Matching 去噪，单步成本更低</li>
+<li><strong>finetune 时</strong>：N1.5 通常能用更小的 GPU 完成 finetune（A6000 / 40GB 显存即可），N1.6 则更倾向于 H100 / L40 节点</li>
+</ul>
+<hr />
+<h3 id="25-flow-matching-扩散机制">2.5 Flow Matching 扩散机制<a class="headerlink" href="07.Isaac-GR00T-N1.5_Architecture.html#25-flow-matching-扩散机制" title="Permanent link">#</a></h3>
+<p>与 N1.6 一致，方向约定相同：</p>
+<div class="highlight"><pre><span></span><code>x_t = (1 - t) * noise + t * actions
+velocity = actions - noise
+t: 0.0 → 1.0,  dt = 1/4 = 0.25 (4 步推理)
+</code></pre></div>
+
+<p>时间步采样、Beta 分布、离散化桶数 (<code>num_timestep_buckets=1000</code>) 等参数与 N1.6 基本一致。详细推导见 <a href="06.Isaac-GR00T-N1.6_Architecture.html#24-flow-matching-扩散机制">N1.6 文档第 2.4 节</a>。</p>
+<hr />
+<h3 id="26-动作目标绝对值-n15-默认">2.6 动作目标：绝对值 (N1.5 默认)<a class="headerlink" href="07.Isaac-GR00T-N1.5_Architecture.html#26-动作目标绝对值-n15-默认" title="Permanent link">#</a></h3>
+<p>N1.5 对大多数 embodiment <strong>直接预测绝对关节角 / EEF 位姿</strong>，而非 N1.6 的 state-relative 增量。意味着：</p>
+<ul>
+<li>不同 embodiment 之间动作数值范围差异大（关节角 vs 末端位姿、不同自由度数）</li>
+<li>跨形态泛化更难——同一任务在不同机器人上的"动作空间"看起来差别极大</li>
+<li>数据预处理只做标准的 mean/std 归一化，无需 state 减法</li>
+</ul>
+<p>N1.6 改预测 state-relative 后，这部分跨 embodiment 泛化变好，这是论文报告的关键改进之一。</p>
+<hr />
+<h2 id="3-训练流水线">3. 训练流水线<a class="headerlink" href="07.Isaac-GR00T-N1.5_Architecture.html#3-训练流水线" title="Permanent link">#</a></h2>
+<p>整体与 <a href="06.Isaac-GR00T-N1.6_Architecture.html#3-训练流水线">N1.6 训练流水线</a> 相同：</p>
+<ol>
+<li>数据走 LeRobot v2 schema，<code>StateActionProcessor</code> + Collator 构建输入</li>
+<li>Backbone（<strong>Eagle 2，完全冻结</strong>）→ Adapter（4 层，<strong>可训练</strong>）→ DiT (16 层，可训练) → action_decoder</li>
+<li>Flow Matching 噪声采样 + MSE 损失</li>
+<li>HuggingFace <code>Trainer</code> + DeepSpeed 多卡</li>
+</ol>
+<p><strong>与 N1.6 的训练设置差异：</strong></p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>项目</th>
+<th>N1.5</th>
+<th>N1.6</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>VLM 顶层是否解冻</td>
+<td>❌（全冻）</td>
+<td>✅ 顶部 4 层（<code>tune_top_llm_layers=4</code>）</td>
+</tr>
+<tr>
+<td>是否有 post-VLM adapter</td>
+<td>✅ 4 层 transformer</td>
+<td>❌</td>
+</tr>
+<tr>
+<td>DiT 深度</td>
+<td>16</td>
+<td>32</td>
+</tr>
+<tr>
+<td>数据加载</td>
+<td>标准 LeRobot dataloader</td>
+<td><strong>sharded iterable dataset</strong>（更快）</td>
+</tr>
+<tr>
+<td>动作目标</td>
+<td>绝对（多数 embodiment）</td>
+<td>state-relative（多数 embodiment）</td>
+</tr>
+<tr>
+<td>数据 mixture</td>
+<td>基础组合</td>
+<td><strong>+ 数千小时新增遥操</strong>（YAM、AGIBot Genie1、Galaxea R1 Pro on BEHAVIOR、Unitree G1 WB）</td>
+</tr>
+</tbody>
+</table></div>
+<hr />
+<h2 id="4-推理流水线">4. 推理流水线<a class="headerlink" href="07.Isaac-GR00T-N1.5_Architecture.html#4-推理流水线" title="Permanent link">#</a></h2>
+<p>整体与 <a href="06.Isaac-GR00T-N1.6_Architecture.html#4-推理流水线">N1.6 推理流水线</a> 相同：</p>
+<div class="highlight"><pre><span></span><code>Eagle 2 (单次) → Adapter (单次) → state_encoder (单次) →
+  loop 4 步:
+    action_encoder(x_t, t, eid)
+    DiT 16 层 cross-attend 到 adapter 输出
+    action_decoder → v_t
+    x_{t+dt} = x_t + dt * v_t
+→ 反归一化 → 输出绝对动作 chunk
+</code></pre></div>
+
+<ul>
+<li>Backbone + Adapter 计算 <strong>一次</strong> 缓存，4 步去噪复用</li>
+<li>部署同样支持 TensorRT / ONNX 与 Server-Client 模式</li>
+<li>由于 DiT 仅 16 层，单步去噪比 N1.6 快，但 backbone 部分两者相当</li>
+</ul>
+<hr />
+<h2 id="5-关键超参数对照表n15-vs-n16">5. 关键超参数对照表（N1.5 vs N1.6）<a class="headerlink" href="07.Isaac-GR00T-N1.5_Architecture.html#5-关键超参数对照表n15-vs-n16" title="Permanent link">#</a></h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>类别</th>
+<th>参数</th>
+<th>N1.5</th>
+<th>N1.6</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Backbone</strong></td>
+<td>模型</td>
+<td>Eagle 2 VLM</td>
+<td>Eagle-Block2A-2B-v2 (Cosmos-Reason-2B 变体)</td>
+</tr>
+<tr>
+<td></td>
+<td>可变分辨率</td>
+<td>❌</td>
+<td>✅ (native 宽高比)</td>
+</tr>
+<tr>
+<td></td>
+<td>VLM 是否参与训练</td>
+<td>❌ 全冻</td>
+<td>✅ 顶 4 层解冻</td>
+</tr>
+<tr>
+<td></td>
+<td>post-VLM adapter</td>
+<td>✅ 4 层 transformer</td>
+<td>❌</td>
+</tr>
+<tr>
+<td><strong>DiT</strong></td>
+<td><code>num_layers</code></td>
+<td>16</td>
+<td><strong>32</strong></td>
+</tr>
+<tr>
+<td></td>
+<td><code>interleave_self_attention</code></td>
+<td>True</td>
+<td>True</td>
+</tr>
+<tr>
+<td></td>
+<td>AlternateVLDiT (图/文交替)</td>
+<td>可选</td>
+<td>默认开启</td>
+</tr>
+<tr>
+<td><strong>动作目标</strong></td>
+<td>默认目标</td>
+<td>绝对关节角 / EEF 位姿</td>
+<td><strong>state-relative</strong> (多数 embodiment)</td>
+</tr>
+<tr>
+<td><strong>Flow Matching</strong></td>
+<td><code>num_inference_timesteps</code></td>
+<td>4</td>
+<td>4</td>
+</tr>
+<tr>
+<td></td>
+<td>Beta 采样</td>
+<td><code>Beta(1.5, 1.0)</code></td>
+<td><code>Beta(1.5, 1.0)</code></td>
+</tr>
+<tr>
+<td></td>
+<td>时间方向</td>
+<td>t: 0→1</td>
+<td>t: 0→1</td>
+</tr>
+<tr>
+<td><strong>数据</strong></td>
+<td>dataloader</td>
+<td>标准</td>
+<td><strong>sharded iterable</strong></td>
+</tr>
+<tr>
+<td></td>
+<td>预训练数据</td>
+<td>基础组合</td>
+<td><strong>+ YAM / AGIBot / Galaxea / G1 WB</strong></td>
+</tr>
+<tr>
+<td><strong>形态</strong></td>
+<td><code>max_num_embodiments</code></td>
+<td>32</td>
+<td>32</td>
+</tr>
+<tr>
+<td><strong>HF 模型</strong></td>
+<td>checkpoint</td>
+<td><a href="https://huggingface.co/nvidia/GR00T-N1.5-3B">nvidia/GR00T-N1.5-3B</a></td>
+<td><a href="https://huggingface.co/nvidia/GR00T-N1.6-3B">nvidia/GR00T-N1.6-3B</a></td>
+</tr>
+<tr>
+<td></td>
+<td>分支</td>
+<td><a href="https://github.com/NVIDIA/Isaac-GR00T/tree/n1.5-release"><code>n1.5-release</code></a></td>
+<td><a href="https://github.com/NVIDIA/Isaac-GR00T"><code>main</code></a></td>
+</tr>
+</tbody>
+</table></div>
+<hr />
+<h2 id="6-何时选-n15-vs-n16">6. 何时选 N1.5 vs N1.6<a class="headerlink" href="07.Isaac-GR00T-N1.5_Architecture.html#6-何时选-n15-vs-n16" title="Permanent link">#</a></h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>场景</th>
+<th>推荐版本</th>
+<th>原因</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>复现/参考 GR00T N1 论文设定</td>
+<td>N1.5</td>
+<td>N1.5 与原论文设定最接近</td>
+</tr>
+<tr>
+<td>显存/算力有限（≤ 40GB）</td>
+<td>N1.5</td>
+<td>16 层 DiT 训练/finetune 更轻</td>
+</tr>
+<tr>
+<td>追求最佳跨形态泛化</td>
+<td>N1.6</td>
+<td>state-relative + 更大 DiT + 顶层 VLM 解冻</td>
+</tr>
+<tr>
+<td>部署到边缘端（Jetson）需高频</td>
+<td>N1.5</td>
+<td>DiT 更轻，单步去噪更快（但 backbone 部分相当）</td>
+</tr>
+<tr>
+<td>新项目，无历史包袱</td>
+<td>N1.6</td>
+<td>直接用最新 main 分支即可</td>
+</tr>
+</tbody>
+</table></div>
+<hr />
+<h2 id="7-参考文献与资源">7. 参考文献与资源<a class="headerlink" href="07.Isaac-GR00T-N1.5_Architecture.html#7-参考文献与资源" title="Permanent link">#</a></h2>
+<ul>
+<li>论文：<a href="https://arxiv.org/abs/2503.14734">GR00T N1: An Open Foundation Model for Generalist Humanoid Robots</a></li>
+<li>N1.5 Research Blog：<a href="https://research.nvidia.com/labs/gear/gr00t-n1_5/">research.nvidia.com/labs/gear/gr00t-n1_5</a></li>
+<li>N1.5 代码：<a href="https://github.com/NVIDIA/Isaac-GR00T/tree/n1.5-release">github.com/NVIDIA/Isaac-GR00T/tree/n1.5-release</a></li>
+<li>N1.5 checkpoint：<a href="https://huggingface.co/nvidia/GR00T-N1.5-3B">huggingface.co/nvidia/GR00T-N1.5-3B</a></li>
+<li>Eagle 2 VLM：<a href="https://arxiv.org/abs/2501.14818">arxiv.org/abs/2501.14818</a></li>
+</ul>
+      </div>
+    </main>
+        <aside class="toc">
+            <div class="toc-title">本页目录</div>
+            <ul>
+                <li><a href="07.Isaac-GR00T-N1.5_Architecture.html#1-整体架构概览" class="toc-h2">1. 整体架构概览</a></li>
+                <li><a href="07.Isaac-GR00T-N1.5_Architecture.html#2-核心组件详解" class="toc-h2">2. 核心组件详解</a></li>
+                <li><a href="07.Isaac-GR00T-N1.5_Architecture.html#21-eagle-2-vlm-backbone-完全冻结" class="toc-h3">2.1 Eagle 2 VLM Backbone (完全冻结)</a></li>
+                <li><a href="07.Isaac-GR00T-N1.5_Architecture.html#22-post-vlm-4-层-transformer-adapter-n15-特有" class="toc-h3">2.2 Post-VLM 4 层 Transformer Adapter (N1.5 特有)</a></li>
+                <li><a href="07.Isaac-GR00T-N1.5_Architecture.html#23-embodiment-条件化的状态动作编码" class="toc-h3">2.3 Embodiment 条件化的状态/动作编码</a></li>
+                <li><a href="07.Isaac-GR00T-N1.5_Architecture.html#24-dit-16-层-action-head-主干" class="toc-h3">2.4 DiT (16 层, Action Head 主干)</a></li>
+                <li><a href="07.Isaac-GR00T-N1.5_Architecture.html#25-flow-matching-扩散机制" class="toc-h3">2.5 Flow Matching 扩散机制</a></li>
+                <li><a href="07.Isaac-GR00T-N1.5_Architecture.html#26-动作目标绝对值-n15-默认" class="toc-h3">2.6 动作目标：绝对值 (N1.5 默认)</a></li>
+                <li><a href="07.Isaac-GR00T-N1.5_Architecture.html#3-训练流水线" class="toc-h2">3. 训练流水线</a></li>
+                <li><a href="07.Isaac-GR00T-N1.5_Architecture.html#4-推理流水线" class="toc-h2">4. 推理流水线</a></li>
+                <li><a href="07.Isaac-GR00T-N1.5_Architecture.html#5-关键超参数对照表n15-vs-n16" class="toc-h2">5. 关键超参数对照表（N1.5 vs N1.6）</a></li>
+                <li><a href="07.Isaac-GR00T-N1.5_Architecture.html#6-何时选-n15-vs-n16" class="toc-h2">6. 何时选 N1.5 vs N1.6</a></li>
+                <li><a href="07.Isaac-GR00T-N1.5_Architecture.html#7-参考文献与资源" class="toc-h2">7. 参考文献与资源</a></li>
+            </ul>
+        </aside>
+
+    <button class="back-to-top" onclick="window.scrollTo({top:0,behavior:'smooth'})">&#8593;</button>
+
+    <script src="assets/vendor/mermaid/mermaid.min.js"></script>
+    <script defer src="assets/vendor/katex/katex.min.js"></script>
+    <script defer src="assets/vendor/katex/auto-render.min.js"
+            onload="renderMathInElement(document.querySelector('.content-inner'), {
+                delimiters: [
+                    { left: '$$', right: '$$', display: true },
+                    { left: '$', right: '$', display: false }
+                ],
+                ignoredTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code', 'option'],
+                ignoredClasses: ['mermaid', 'diagram'],
+                throwOnError: false
+            });"></script>
+    <script>
+        // Mermaid destroys the source text when it renders, so keep a copy in
+        // order to re-render on theme change.
+        document.querySelectorAll('.mermaid').forEach(el => {
+            el.dataset.src = el.textContent;
+        });
+
+        const prefersDark = window.matchMedia('(prefers-color-scheme: dark)');
+        function currentTheme() {
+            const forced = document.documentElement.getAttribute('data-theme');
+            if (forced) return forced;
+            return prefersDark.matches ? 'dark' : 'light';
+        }
+
+        function initMermaid() {
+            mermaid.initialize({
+                startOnLoad: false,
+                theme: currentTheme() === 'dark' ? 'dark' : 'default',
+                flowchart: { useMaxWidth: true, htmlLabels: true },
+                securityLevel: 'loose'
+            });
+        }
+
+        function renderMermaid() {
+            const nodes = document.querySelectorAll('.mermaid');
+            nodes.forEach(el => {
+                el.removeAttribute('data-processed');
+                el.textContent = el.dataset.src;
+            });
+            // mermaid.run rejects on its internal font probe in some browsers;
+            // the diagrams still render, so swallow it rather than surfacing an
+            // unhandled rejection.
+            if (!nodes.length) return;
+            Promise.resolve(mermaid.run({ nodes: nodes }))
+                .catch(() => {})
+                .then(() => nodes.forEach(applyZoom));
+        }
+
+        /* ---------- Diagram zoom ----------
+           Scale is tracked as a factor of the diagram's NATURAL size (its
+           viewBox), so 100% means 1:1 and one font size looks identical in
+           every diagram on the site. Left to itself mermaid's useMaxWidth
+           stretches each svg to the container, which blows a 3-node diagram
+           up to 3.4x and shrinks a wide one to 0.34x — a 10x spread in
+           apparent font size. FIT_MAX caps the auto-fit at 1:1 (never
+           upscale) and FIT_MIN stops wide diagrams from shrinking to
+           unreadable; anything past that overflows and scrolls/pans. */
+        const MIN_Z = 0.3, MAX_Z = 6, STEP = 1.25;
+        const FIT_MIN = 0.55, FIT_MAX = 1;
+        const PAD = 40;               // .mermaid horizontal padding (20px each side)
+        const zoom = new WeakMap();   // .mermaid -> explicit scale; absent = auto-fit
+
+        function naturalSize(svg) {
+            const vb = svg.viewBox && svg.viewBox.baseVal;
+            if (vb && vb.width) return { w: vb.width, h: vb.height };
+            const r = svg.getBoundingClientRect();
+            return { w: r.width, h: r.height };
+        }
+
+        function fitScale(el, nat) {
+            const avail = el.clientWidth - PAD;
+            if (!nat.w || avail <= 0) return 1;
+            return Math.min(FIT_MAX, Math.max(FIT_MIN, avail / nat.w));
+        }
+
+        function scaleOf(el, nat) {
+            const k = zoom.get(el);
+            return k === undefined ? fitScale(el, nat) : k;
+        }
+
+        function applyZoom(el) {
+            const svg = el.querySelector('svg');
+            if (!svg) return;
+            const nat = naturalSize(svg);
+            if (!nat.w) return;
+            const k = scaleOf(el, nat);
+
+            const label = el.closest('.diagram')?.querySelector('.diagram-zoom');
+            if (label) label.textContent = Math.round(k * 100) + '%';
+
+            // Size the svg explicitly instead of leaving it to useMaxWidth,
+            // so the container gets real scrollbars when the diagram overflows.
+            svg.style.maxWidth = 'none';
+            svg.style.width = (nat.w * k) + 'px';
+            svg.style.height = (nat.h * k) + 'px';
+
+            const overflows = nat.w * k > el.clientWidth - PAD + 1;
+            el.classList.toggle('is-zoomed', overflows);
+            if (!overflows) el.scrollLeft = el.scrollTop = 0;
+        }
+
+        function setZoom(el, k, anchor) {
+            const svg = el.querySelector('svg');
+            if (!svg) return;
+            const nat = naturalSize(svg);
+            const prev = scaleOf(el, nat);
+            if (k !== null) k = Math.min(MAX_Z, Math.max(MIN_Z, k));
+            const next = k === null ? fitScale(el, nat) : k;
+            if (next === prev) return;
+            // Keep the point under the cursor (or the viewport centre) put.
+            const ax = anchor ? anchor.x : el.clientWidth / 2;
+            const ay = anchor ? anchor.y : el.clientHeight / 2;
+            const rx = (el.scrollLeft + ax) / prev;
+            const ry = (el.scrollTop + ay) / prev;
+            if (k === null) zoom.delete(el); else zoom.set(el, k);
+            applyZoom(el);
+            el.scrollLeft = rx * next - ax;
+            el.scrollTop = ry * next - ay;
+        }
+
+        function currentScale(el) {
+            const svg = el.querySelector('svg');
+            return svg ? scaleOf(el, naturalSize(svg)) : 1;
+        }
+
+        function setupDiagrams() {
+            document.querySelectorAll('.mermaid').forEach(el => {
+                const wrap = document.createElement('div');
+                wrap.className = 'diagram';
+                el.parentNode.insertBefore(wrap, el);
+                wrap.appendChild(el);
+
+                const tools = document.createElement('div');
+                tools.className = 'diagram-tools';
+                tools.innerHTML =
+                    '<button type="button" data-act="out" title="缩小">&minus;</button>' +
+                    '<span class="diagram-zoom">100%</span>' +
+                    '<button type="button" data-act="in" title="放大">+</button>' +
+                    '<button type="button" data-act="reset" title="适应宽度">&#9633;</button>' +
+                    '<button type="button" data-act="full" title="全屏">&#10530;</button>';
+                wrap.appendChild(tools);
+
+                tools.addEventListener('click', e => {
+                    const act = e.target.closest('button')?.dataset.act;
+                    if (!act) return;
+                    const k = currentScale(el);
+                    if (act === 'in') setZoom(el, k * STEP);
+                    else if (act === 'out') setZoom(el, k / STEP);
+                    else if (act === 'reset') setZoom(el, null);
+                    else if (act === 'full') {
+                        if (document.fullscreenElement === wrap) document.exitFullscreen();
+                        else wrap.requestFullscreen?.();
+                    }
+                });
+
+                // Ctrl/⌘ + wheel zooms; a plain wheel keeps scrolling the page.
+                el.addEventListener('wheel', e => {
+                    if (!e.ctrlKey && !e.metaKey) return;
+                    e.preventDefault();
+                    const r = el.getBoundingClientRect();
+                    setZoom(el, currentScale(el) * (e.deltaY < 0 ? STEP : 1 / STEP),
+                            { x: e.clientX - r.left, y: e.clientY - r.top });
+                }, { passive: false });
+
+                // Drag to pan once zoomed in.
+                let drag = null;
+                el.addEventListener('pointerdown', e => {
+                    // Pan only matters once the diagram actually overflows.
+                    if (e.button !== 0 || !el.classList.contains('is-zoomed')) return;
+                    drag = { x: e.clientX, y: e.clientY, l: el.scrollLeft, t: el.scrollTop };
+                    el.setPointerCapture(e.pointerId);
+                    el.classList.add('is-panning');
+                });
+                el.addEventListener('pointermove', e => {
+                    if (!drag) return;
+                    el.scrollLeft = drag.l - (e.clientX - drag.x);
+                    el.scrollTop = drag.t - (e.clientY - drag.y);
+                });
+                const endDrag = () => { drag = null; el.classList.remove('is-panning'); };
+                el.addEventListener('pointerup', endDrag);
+                el.addEventListener('pointercancel', endDrag);
+
+                // Double click toggles between auto-fit and true 1:1.
+                el.addEventListener('dblclick', () => setZoom(el, zoom.has(el) ? null : 1));
+            });
+        }
+
+        setupDiagrams();
+        initMermaid();
+        renderMermaid();
+
+        const remeasure = () => document.querySelectorAll('.mermaid').forEach(applyZoom);
+        document.addEventListener('fullscreenchange', remeasure);
+        window.addEventListener('resize', remeasure);
+
+        // Theme toggle
+        const toggle = document.getElementById('theme-toggle');
+        toggle.addEventListener('click', () => {
+            const next = currentTheme() === 'dark' ? 'light' : 'dark';
+            document.documentElement.setAttribute('data-theme', next);
+            try { localStorage.setItem('theme', next); } catch (e) {}
+            initMermaid();
+            renderMermaid();
+        });
+
+        // Follow the OS while the user hasn't made an explicit choice
+        prefersDark.addEventListener('change', () => {
+            if (!document.documentElement.getAttribute('data-theme')) {
+                initMermaid();
+                renderMermaid();
+            }
+        });
+
+        // Back to top button
+        const btn = document.querySelector('.back-to-top');
+        window.addEventListener('scroll', () => {
+            btn.classList.toggle('visible', window.scrollY > 300);
+        });
+
+        // Close sidebar on mobile when clicking a link
+        document.querySelectorAll('.sidebar nav a').forEach(a => {
+            a.addEventListener('click', () => {
+                document.querySelector('.sidebar').classList.remove('open');
+            });
+        });
+
+        // Highlight the TOC entry for the heading currently in view
+        const tocLinks = Array.from(document.querySelectorAll('.toc a'));
+        if (tocLinks.length) {
+            const targets = tocLinks
+                .map(a => document.getElementById(decodeURIComponent(a.hash.slice(1))))
+                .filter(Boolean);
+            const setActive = () => {
+                let current = targets[0];
+                for (const t of targets) {
+                    if (t.getBoundingClientRect().top <= 120) current = t;
+                    else break;
+                }
+                tocLinks.forEach(a => a.classList.toggle(
+                    'active',
+                    current && decodeURIComponent(a.hash.slice(1)) === current.id
+                ));
+            };
+            setActive();
+            let queued = false;
+            window.addEventListener('scroll', () => {
+                if (queued) return;
+                queued = true;
+                requestAnimationFrame(() => { setActive(); queued = false; });
+            });
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,998 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fast-WAM - Robotics Knowledge Base</title>
+    <link rel="icon" href="favicon.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="assets/vendor/katex/katex.min.css">
+    <script>
+        // Applied before first paint so the saved theme doesn't flash.
+        (function () {
+            try {
+                var t = localStorage.getItem('theme');
+                if (t === 'dark' || t === 'light') {
+                    document.documentElement.setAttribute('data-theme', t);
+                }
+            } catch (e) {}
+        })();
+    </script>
+</head>
+<body>
+    <button class="menu-toggle" onclick="document.querySelector('.sidebar').classList.toggle('open')">&#9776;</button>
+    <button class="theme-toggle" id="theme-toggle" title="切换日夜模式" aria-label="切换日夜模式">
+        <span class="icon-light">&#9790;</span><span class="icon-dark">&#9728;</span>
+    </button>
+
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <h2>Robotics Knowledge Base</h2>
+            <p>机器人模型架构知识库</p>
+        </div>
+        <nav>
+            <a href="index.html">Overview</a>
+            <div class="nav-group">VLA 模型</div>
+            <a href="01.Pi0_Architecture.html">Pi0</a>
+            <a href="02.Pi0.5_Architecture.html">Pi0.5</a>
+            <a href="03.Pi0-FAST_Architecture.html">Pi0-FAST</a>
+            <a href="04.Pi-Star-0.6_Architecture.html">π*₀.₆ (Pi-Star-0.6)</a>
+            <a href="05.Pi0.7_Architecture.html">π₀.₇ (Pi-0.7)</a>
+            <a href="06.Isaac-GR00T-N1.6_Architecture.html">Isaac-GR00T N1.6</a>
+            <a href="07.Isaac-GR00T-N1.5_Architecture.html">Isaac-GR00T N1.5</a>
+            <a href="08.ACT_Architecture.html">ACT</a>
+            <a href="09.SmolVLA_Architecture.html">SmolVLA</a>
+            <a href="10.WALL-OSS_Architecture.html">WALL-OSS / WALL-X</a>
+            <a href="11.X-VLA_Architecture.html">X-VLA</a>
+            <a href="12.Psi0_Architecture.html">Psi0 (ψ₀)</a>
+            <a href="13.DreamZero_Architecture.html">DreamZero</a>
+            <a href="14.FastWAM_Architecture.html" class="active">Fast-WAM</a>
+            <div class="nav-group">全身控制 (WBC)</div>
+            <a href="15.GR00T-WBC_Overview.html">GR00T-WBC 总览</a>
+            <a href="16.Decoupled-WBC_Architecture.html" class="nav-child">Decoupled WBC</a>
+            <a href="17.GEAR-SONIC_Architecture.html" class="nav-child">GEAR-SONIC</a>
+            <a href="18.MotionBricks_Architecture.html" class="nav-child">MotionBricks</a>
+            <div class="nav-group">3D 视觉与 VLM</div>
+            <a href="19.VLM3_Architecture.html">VLM³</a>
+        </nav>
+    </aside>
+
+    <main class="content">
+      <div class="content-inner">
+        <h1 id="fast-wam-模型架构">Fast-WAM 模型架构<a class="headerlink" href="14.FastWAM_Architecture.html#fast-wam-模型架构" title="Permanent link">#</a></h1>
+<h2 id="1-整体架构概览">1. 整体架构概览<a class="headerlink" href="14.FastWAM_Architecture.html#1-整体架构概览" title="Permanent link">#</a></h2>
+<p>Fast-WAM 是一个<strong>世界动作模型 (World Action Model, WAM)</strong>,论文标题本身就是它要回答的问题:<em>"Do World Action Models Need Test-time Future Imagination?"</em>(arXiv:2603.16666)。结论是<strong>不需要</strong> —— 现有 WAM(如 DreamZero、IDM 类方法)在推理时要先把未来视频去噪生成出来,再从中读出动作,代价是每步决策都要跑一遍完整的视频扩散;Fast-WAM 证明这份"未来想象"只在<strong>训练时</strong>有价值,推理时可以彻底砍掉。</p>
+<p>实现手段是一个<strong>双专家 MoT (Mixture-of-Transformers)</strong>:视频专家来自 Wan2.2-TI2V-5B 的 DiT,动作专家 <code>ActionDiT</code> 是同层数、同头数的窄版 DiT,两者逐层共享同一次 mixed attention。关键设计在<strong>注意力掩码</strong>:动作 token 只被允许看<strong>首帧</strong>视频 token,而首帧在 <code>first_frame_causal</code> 掩码下又不允许看后续帧 —— 于是首帧的 K/V 与"视频有没有被生成"无关。推理时因此可以把视频专家跑<strong>一次</strong>(输入只有观测首帧,timestep=0)缓存下每层 K/V,后续 N 步动作去噪全部走缓存,视频分支一次都不用再跑。</p>
+<div class="mermaid">
+graph TB
+    subgraph Input["输入"]
+        IMG["观测首帧&lt;br/&gt;(多相机水平拼接)&lt;br/&gt;[1, 3, H, W]"]
+        TXT["语言指令&lt;br/&gt;(umt5 text embedding)&lt;br/&gt;[B, 128, 4096]"]
+        PROP["本体状态 proprio&lt;br/&gt;[B, proprio_dim]"]
+        NOISE_A["高斯噪声&lt;br/&gt;[B, T_a, action_dim]"]
+    end
+
+    subgraph Encoders["编码"]
+        VAE_E["Wan2.2 VAE 编码器&lt;br/&gt;时间 ÷4, 空间 ÷16&lt;br/&gt;→ z_dim latent"]
+        PROJ_P["proprio_encoder&lt;br/&gt;Linear(proprio_dim → 4096)&lt;br/&gt;作为 1 个额外 context token"]
+    end
+
+    subgraph MoT["MoT (30 层, 双专家逐层交错)"]
+        direction LR
+        VE["视频专家&lt;br/&gt;Wan2.2 DiT&lt;br/&gt;hidden 3072 / ffn 14336"]
+        MIX["mixed attention&lt;br/&gt;q/k/v 统一投影到&lt;br/&gt;24 heads × 128 = 3072"]
+        AE["动作专家 ActionDiT&lt;br/&gt;hidden 1024 / ffn 4096&lt;br/&gt;由视频 DiT 线性插值初始化"]
+        VE --- MIX
+        AE --- MIX
+    end
+
+    subgraph Mask["注意力掩码 (三个变体的唯一差异)"]
+        M1["uncond: action → 仅首帧"]
+        M2["joint: action → 全部视频帧"]
+        M3["idm: action → teacher-forced 真值视频"]
+    end
+
+    subgraph Output["输出"]
+        VOUT["视频 flow 速度场&lt;br/&gt;(仅训练时用)"]
+        AOUT["动作 flow 速度场&lt;br/&gt;→ 欧拉积分 → action chunk"]
+    end
+
+    IMG --&gt; VAE_E --&gt; VE
+    TXT --&gt; VE
+    TXT --&gt; AE
+    PROP --&gt; PROJ_P --&gt; AE
+    NOISE_A --&gt; AE
+    Mask -.约束.-&gt; MIX
+    VE --&gt; VOUT
+    AE --&gt; AOUT
+
+    style MIX fill:#e1f5ff
+    style Mask fill:#fff4e1
+    style AOUT fill:#e8f5e9
+</div>
+<p>三个变体共用<strong>完全相同的配置文件</strong>(<code>configs/model/fastwam.yaml</code> / <code>fastwam_idm.yaml</code> / <code>fastwam_joint.yaml</code> 逐字段一致,只有 <code>_target_</code> 不同),差异全部落在 Python 类的两个方法上:<code>_build_mot_attention_mask()</code> 和 <code>infer_action()</code>。这让"未来想象是否必要"成为一个干净的受控对比。</p>
+<hr />
+<h2 id="2-核心组件详解">2. 核心组件详解<a class="headerlink" href="14.FastWAM_Architecture.html#2-核心组件详解" title="Permanent link">#</a></h2>
+<h3 id="21-视频专家wan22-ti2v-5b-dit">2.1 视频专家:Wan2.2-TI2V-5B DiT<a class="headerlink" href="14.FastWAM_Architecture.html#21-视频专家wan22-ti2v-5b-dit" title="Permanent link">#</a></h3>
+<p>视频分支直接复用 Wan2.2 的文生视频 DiT,权重从 <code>Wan-AI/Wan2.2-TI2V-5B</code> 加载(<code>src/fastwam/models/wan22/helpers/loader.py</code>)。</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>参数</th>
+<th>值</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>num_layers</code></td>
+<td>30</td>
+</tr>
+<tr>
+<td><code>hidden_dim</code></td>
+<td>3072</td>
+</tr>
+<tr>
+<td><code>ffn_dim</code></td>
+<td>14336</td>
+</tr>
+<tr>
+<td><code>num_heads</code> × <code>attn_head_dim</code></td>
+<td>24 × 128 = 3072</td>
+</tr>
+<tr>
+<td><code>in_dim</code> / <code>out_dim</code></td>
+<td>48 / 48</td>
+</tr>
+<tr>
+<td><code>patch_size</code></td>
+<td><code>[1, 2, 2]</code>(时间不下采样,空间 2×2 patch)</td>
+</tr>
+<tr>
+<td><code>text_dim</code></td>
+<td>4096(umt5)</td>
+</tr>
+<tr>
+<td><code>freq_dim</code></td>
+<td>256</td>
+</tr>
+<tr>
+<td><code>fuse_vae_embedding_in_latents</code></td>
+<td><code>true</code></td>
+</tr>
+</tbody>
+</table></div>
+<p>配套 VAE 是 Wan2.2 VAE:时间下采样 4 倍、空间 16 倍。因此视频帧数必须满足 <code>T % 4 == 1</code>(<code>build_inputs</code> 中强校验,<code>src/fastwam/models/wan22/fastwam.py:296</code>),LIBERO 用 33 帧 → 9 个 latent 时间步。</p>
+<p><code>fuse_vae_embedding_in_latents=true</code> 时,首帧 latent 会在加噪后被<strong>原样写回</strong>(<code>fastwam.py:468</code>):</p>
+<div class="highlight"><pre><span></span><code><span class="n">latents</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">train_video_scheduler</span><span class="o">.</span><span class="n">add_noise</span><span class="p">(</span><span class="n">input_latents</span><span class="p">,</span> <span class="n">noise_video</span><span class="p">,</span> <span class="n">timestep_video</span><span class="p">)</span>
+<span class="o">...</span>
+<span class="k">if</span> <span class="n">inputs</span><span class="p">[</span><span class="s2">&quot;first_frame_latents&quot;</span><span class="p">]</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="n">latents</span><span class="p">[:,</span> <span class="p">:,</span> <span class="mi">0</span><span class="p">:</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">inputs</span><span class="p">[</span><span class="s2">&quot;first_frame_latents&quot;</span><span class="p">]</span>   <span class="c1"># 首帧永远是干净观测</span>
+</code></pre></div>
+
+<p>首帧因此是<strong>条件</strong>而非生成目标,视频 loss 也相应跳过第 0 步(<code>fastwam.py:536</code>)。</p>
+<h3 id="22-视频自注意力掩码first_frame_causal">2.2 视频自注意力掩码:<code>first_frame_causal</code><a class="headerlink" href="14.FastWAM_Architecture.html#22-视频自注意力掩码first_frame_causal" title="Permanent link">#</a></h3>
+<p><code>build_video_to_video_mask()</code>(<code>src/fastwam/models/wan22/wan_video_dit.py:473</code>)支持三种模式,Fast-WAM 全系配置用 <code>first_frame_causal</code>:</p>
+<div class="highlight"><pre><span></span><code><span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">video_attention_mask_mode</span> <span class="o">==</span> <span class="s2">&quot;first_frame_causal&quot;</span><span class="p">:</span>
+    <span class="n">video_mask</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">ones</span><span class="p">((</span><span class="n">video_seq_len</span><span class="p">,</span> <span class="n">video_seq_len</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">bool</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="n">device</span><span class="p">)</span>
+    <span class="n">first_frame_tokens</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">video_tokens_per_frame</span><span class="p">,</span> <span class="n">video_seq_len</span><span class="p">)</span>
+    <span class="n">video_mask</span><span class="p">[:</span><span class="n">first_frame_tokens</span><span class="p">,</span> <span class="n">first_frame_tokens</span><span class="p">:]</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="k">return</span> <span class="n">video_mask</span>
+</code></pre></div>
+
+<p>含义:<strong>首帧的 query 不允许看任何后续帧</strong>,其余帧之间双向可见。这条约束是整套加速的数学前提 —— 首帧 token 的表征只依赖首帧自己,所以"只喂首帧跑一次 DiT"得到的 K/V,与"喂完整视频跑一次 DiT"里首帧那段 K/V <strong>逐位相等</strong>。缓存因此是精确的,不是近似。</p>
+<p>三种模式对比:</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>模式</th>
+<th>语义</th>
+<th>是否可缓存首帧</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>bidirectional</code></td>
+<td>全帧双向可见</td>
+<td>❌ 首帧表征依赖未来帧</td>
+</tr>
+<tr>
+<td><code>per_frame_causal</code></td>
+<td>逐帧下三角因果</td>
+<td>✅ 但每帧都要按序算</td>
+</tr>
+<tr>
+<td><code>first_frame_causal</code></td>
+<td>首帧单向隔离,其余双向</td>
+<td>✅ <strong>Fast-WAM 采用</strong></td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="23-动作专家-actiondit">2.3 动作专家 ActionDiT<a class="headerlink" href="14.FastWAM_Architecture.html#23-动作专家-actiondit" title="Permanent link">#</a></h3>
+<p><code>src/fastwam/models/wan22/action_dit.py</code> 定义,结构上是一个"窄身宽头"的 DiT:</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>参数</th>
+<th>值</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>num_layers</code></td>
+<td>30</td>
+<td><strong>必须</strong>与视频专家一致</td>
+</tr>
+<tr>
+<td><code>hidden_dim</code></td>
+<td>1024</td>
+<td>只有视频专家的 1/3</td>
+</tr>
+<tr>
+<td><code>ffn_dim</code></td>
+<td>4096</td>
+<td></td>
+</tr>
+<tr>
+<td><code>num_heads</code> × <code>attn_head_dim</code></td>
+<td>24 × 128</td>
+<td><strong>必须</strong>与视频专家一致</td>
+</tr>
+<tr>
+<td><code>action_dim</code></td>
+<td>7(LIBERO)</td>
+<td>eef delta pose 6 + gripper 1</td>
+</tr>
+</tbody>
+</table></div>
+<p>注意 <code>hidden_dim=1024</code> 但 <code>num_heads × attn_head_dim = 3072</code>。<code>SelfAttention</code> 里 q/k/v 投影写的是 <code>nn.Linear(hidden_dim, num_heads * attn_head_dim)</code>(<code>wan_video_dit.py:179</code>),即 <code>Linear(1024 → 3072)</code>。这不是笔误 —— <strong>两个专家的 K/V 必须落在同一个 3072 维空间里,才能在 mixed attention 中直接 concat</strong>:</p>
+<div class="highlight"><pre><span></span><code><span class="n">k_cat</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">cat</span><span class="p">([</span><span class="n">k_video</span><span class="p">,</span> <span class="n">k_action</span><span class="p">],</span> <span class="n">dim</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>   <span class="c1"># mot.py:426</span>
+<span class="n">v_cat</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">cat</span><span class="p">([</span><span class="n">v_video</span><span class="p">,</span> <span class="n">v_action</span><span class="p">],</span> <span class="n">dim</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+</code></pre></div>
+
+<p><code>from_wan22_pretrained()</code> 会对三项硬校验,不一致直接抛错(<code>fastwam.py:140-145</code>)。</p>
+<p><strong>ActionDiT 的初始化</strong>不是随机的,而是从 Wan2.2 视频 DiT <strong>线性插值降维</strong>得到。<code>scripts/preprocess_action_dit_backbone.py</code> 把 3072 维权重沿最后一维 <code>F.interpolate(mode="linear", align_corners=True)</code> 压到 1024,并施加 <code>alpha = sqrt(d_video / d_action)</code> 的缩放以保持激活方差:</p>
+<div class="highlight"><pre><span></span><code><span class="k">if</span> <span class="n">apply_alpha_scaling</span> <span class="ow">and</span> <span class="n">src</span><span class="o">.</span><span class="n">ndim</span> <span class="o">&gt;=</span> <span class="mi">2</span> <span class="ow">and</span> <span class="n">src</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">!=</span> <span class="n">target</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]:</span>
+    <span class="n">alpha</span> <span class="o">=</span> <span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="n">src</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span> <span class="o">/</span> <span class="nb">float</span><span class="p">(</span><span class="n">target</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]))</span> <span class="o">**</span> <span class="mf">0.5</span>
+    <span class="n">value</span> <span class="o">=</span> <span class="n">value</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span> <span class="o">*</span> <span class="n">alpha</span>
+</code></pre></div>
+
+<p>产物存为 <code>checkpoints/ActionDiT_linear_interp_Wan22_alphascale_1024hdim.pt</code>,内含 <code>meta</code>(8 个结构字段,加载时逐项校验)+ <code>backbone_state_dict</code>。<code>action_encoder.</code> 和 <code>head.</code> 两个前缀被排除在外(<code>ACTION_BACKBONE_SKIP_PREFIXES</code>),保持随机初始化 —— 因为动作维度与视频 latent 维度无对应关系,插值没有意义。</p>
+<h3 id="24-mot-混合注意力">2.4 MoT 混合注意力<a class="headerlink" href="14.FastWAM_Architecture.html#24-mot-混合注意力" title="Permanent link">#</a></h3>
+<p><code>src/fastwam/models/wan22/mot.py</code> 的 <code>MoT</code> 不是常见的 sparse-MoE 路由,而是<strong>两套完整参数、逐层做一次联合 attention</strong>:</p>
+<div class="mermaid">
+sequenceDiagram
+    participant V as 视频 token [B,Sv,3072]
+    participant A as 动作 token [B,Sa,1024]
+    participant M as mixed attention
+    Note over V,A: 每一层 (共 30 层) 重复
+    V-&gt;&gt;V: norm1 → modulate(shift/scale) → q/k/v → RoPE
+    A-&gt;&gt;A: norm1 → modulate(shift/scale) → q/k/v → RoPE
+    V-&gt;&gt;M: q_v, k_v, v_v  (3072)
+    A-&gt;&gt;M: q_a, k_a, v_a  (3072)
+    M-&gt;&gt;M: concat 后单次 flash_attention&lt;br/&gt;受 attention_mask [Sv+Sa, Sv+Sa] 约束
+    M-&gt;&gt;V: 切回视频段 → o投影 → gate → cross_attn(text) → FFN
+    M-&gt;&gt;A: 切回动作段 → o投影 → gate → cross_attn(text) → FFN
+</div>
+<p>两个专家各自保留独立的 <code>modulation</code>、<code>cross_attn</code>(对文本)、<code>ffn</code>、<code>o</code> 投影 —— 只有 self-attention 那一次矩阵乘是共享的。这正是 MoT 与"共享主干 + 两个 head"的区别:参数完全不共享,只共享<strong>注意力这一次信息交换</strong>。</p>
+<p><code>mot_checkpoint_mixed_attn=true</code> 时,mixed attention 走 <code>torch.utils.checkpoint</code>,以重算换显存(<code>mot.py:89</code>)。</p>
+<h3 id="25-三个变体的注意力掩码">2.5 三个变体的注意力掩码<a class="headerlink" href="14.FastWAM_Architecture.html#25-三个变体的注意力掩码" title="Permanent link">#</a></h3>
+<p>这是整篇论文的实验骨架。三个类的 <code>_build_mot_attention_mask()</code> 只在"action → video"这一个子块上不同:</p>
+<p><strong>FastWAM (uncond)</strong> — <code>fastwam.py:386</code></p>
+<div class="highlight"><pre><span></span><code><span class="n">mask</span><span class="p">[</span><span class="n">video_seq_len</span><span class="p">:,</span> <span class="n">video_seq_len</span><span class="p">:]</span> <span class="o">=</span> <span class="kc">True</span>                 <span class="c1"># action → action 全可见</span>
+<span class="n">first_frame_tokens</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">video_tokens_per_frame</span><span class="p">,</span> <span class="n">video_seq_len</span><span class="p">)</span>
+<span class="n">mask</span><span class="p">[</span><span class="n">video_seq_len</span><span class="p">:,</span> <span class="p">:</span><span class="n">first_frame_tokens</span><span class="p">]</span> <span class="o">=</span> <span class="kc">True</span>            <span class="c1"># action → 仅首帧</span>
+</code></pre></div>
+
+<p><strong>FastWAMJoint</strong> — <code>fastwam_joint.py:29</code></p>
+<div class="highlight"><pre><span></span><code><span class="n">mask</span><span class="p">[</span><span class="n">video_seq_len</span><span class="p">:,</span> <span class="n">video_seq_len</span><span class="p">:]</span> <span class="o">=</span> <span class="kc">True</span>
+<span class="n">mask</span><span class="p">[</span><span class="n">video_seq_len</span><span class="p">:,</span> <span class="p">:</span><span class="n">video_seq_len</span><span class="p">]</span> <span class="o">=</span> <span class="kc">True</span>                 <span class="c1"># action → 全部视频帧</span>
+</code></pre></div>
+
+<p><strong>FastWAMIDM</strong> — <code>fastwam_idm.py:20</code>,训练时构造<strong>三段序列</strong>(noisy video / cond video / action),动作只看 cond 那一段:</p>
+<div class="highlight"><pre><span></span><code><span class="n">mask</span><span class="p">[</span><span class="n">cond_end</span><span class="p">:,</span> <span class="n">cond_end</span><span class="p">:]</span> <span class="o">=</span> <span class="kc">True</span>                           <span class="c1"># action → action</span>
+<span class="n">mask</span><span class="p">[</span><span class="n">cond_end</span><span class="p">:,</span> <span class="n">noisy_end</span><span class="p">:</span><span class="n">cond_end</span><span class="p">]</span> <span class="o">=</span> <span class="kc">True</span>                  <span class="c1"># action → cond_video only</span>
+</code></pre></div>
+
+<p>cond 分支以 <code>video_cond_noise_prob = 0.5</code> 的概率被加噪(<code>fastwam_idm.py:17</code>),否则直接用真值 latent。这是 IDM(逆动力学)的标准 teacher forcing:训练时给模型看真实的未来,让它学"从 s_t 到 s_{t+k} 需要什么动作"。</p>
+<p>三者的推理代价:</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>变体</th>
+<th>action 可见范围</th>
+<th>推理时视频分支</th>
+<th>每次决策的 DiT 前向</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>uncond</strong></td>
+<td>首帧</td>
+<td>prefill <strong>1 次</strong>,之后走 KV cache</td>
+<td>1 × 视频 + N × 动作(窄)</td>
+</tr>
+<tr>
+<td><strong>joint</strong></td>
+<td>全部帧</td>
+<td>与动作<strong>联合去噪 N 步</strong></td>
+<td>N × (视频 + 动作)</td>
+</tr>
+<tr>
+<td><strong>idm</strong></td>
+<td>teacher-forced 真值</td>
+<td>测试时无真值 → 必须先完整生成视频</td>
+<td>N × (视频 + 动作)</td>
+</tr>
+</tbody>
+</table></div>
+<hr />
+<h2 id="3-训练流水线">3. 训练流水线<a class="headerlink" href="14.FastWAM_Architecture.html#3-训练流水线" title="Permanent link">#</a></h2>
+<p><code>training_loss()</code>(<code>fastwam.py:448</code>)对视频和动作<strong>各自独立采样 timestep</strong>,两条 flow matching 支路并行:</p>
+<div class="mermaid">
+graph LR
+    subgraph VideoBranch["视频支路"]
+        V1["input_latents"] --&gt; V2["采样 t_v ~ shift=5.0"]
+        V2 --&gt; V3["add_noise"]
+        V3 --&gt; V4["首帧写回干净 latent"]
+        V4 --&gt; V5["video_expert.pre_dit"]
+    end
+    subgraph ActionBranch["动作支路"]
+        A1["action [B,T,7]"] --&gt; A2["采样 t_a ~ shift=5.0&lt;br/&gt;(与 t_v 独立)"]
+        A2 --&gt; A3["add_noise"]
+        A3 --&gt; A4["action_expert.pre_dit"]
+    end
+    V5 --&gt; MOT["MoT 30 层&lt;br/&gt;mixed attention"]
+    A4 --&gt; MOT
+    MOT --&gt; L1["pred_video → MSE(target_video)&lt;br/&gt;× training_weight(t_v)"]
+    MOT --&gt; L2["pred_action → MSE(target_action)&lt;br/&gt;× training_weight(t_a)"]
+    L1 --&gt; TOT["loss = λ_v · L_video + λ_a · L_action"]
+    L2 --&gt; TOT
+</div>
+<p>几个实现细节:</p>
+<p><strong>两个独立 timestep。</strong> <code>timestep_video</code> 和 <code>timestep_action</code> 分别采样(<code>fastwam.py:459</code> / <code>471</code>),不共享。这意味着模型见过"视频很干净但动作很噪"和反过来的所有组合 —— 对 uncond 变体尤其关键,因为推理时视频侧固定是 <code>timestep_video = 0</code>(全干净),必须在训练中覆盖到这个区域。</p>
+<p><strong>padding 掩码逐样本归一。</strong> 动作和图像都可能有 padding(数据集尾部对齐),loss 按有效步数归一而不是简单 <code>.mean()</code>:</p>
+<div class="highlight"><pre><span></span><code><span class="n">valid</span> <span class="o">=</span> <span class="p">(</span><span class="o">~</span><span class="n">action_is_pad</span><span class="p">)</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="o">...</span><span class="p">)</span>
+<span class="n">valid_sum</span> <span class="o">=</span> <span class="n">valid</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">dim</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">clamp</span><span class="p">(</span><span class="nb">min</span><span class="o">=</span><span class="mf">1.0</span><span class="p">)</span>
+<span class="n">action_loss_per_sample</span> <span class="o">=</span> <span class="p">(</span><span class="n">action_loss_token</span> <span class="o">*</span> <span class="n">valid</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">dim</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span> <span class="o">/</span> <span class="n">valid_sum</span>
+</code></pre></div>
+
+<p>图像侧还要把帧级 mask 折叠到 latent 步(除以 <code>temporal_downsample_factor=4</code>,一个 latent 步内全 pad 才算 pad,<code>fastwam.py:431</code>)。</p>
+<p><strong>proprio 作为 context token。</strong> 本体状态不进动作序列,而是过一个 <code>Linear(proprio_dim → text_dim)</code> 变成<strong>一个 token 拼在文本 context 末尾</strong>(<code>_append_proprio_to_context</code>,<code>fastwam.py:219</code>),两个专家的 cross-attention 都能看到。训练时只取序列首帧的 proprio(<code>proprio[:, 0, :]</code>)。</p>
+<p><strong>文本编码器可以不加载。</strong> 配置里 <code>load_text_encoder: false</code> —— 训练前用 <code>scripts/precompute_text_embeds.py</code> 把 umt5 embedding 全部预计算缓存到 <code>text_embedding_cache_dir</code>,训练时直接读 <code>context</code> / <code>context_mask</code>,省下 umt5-xxl 的显存。</p>
+<p><strong>训练入口</strong>:<code>scripts/train.py</code> + <code>scripts/train_zero1.sh</code>(DeepSpeed ZeRO-1)。优化器和冻结逻辑通过 <code>self.dit = self.mot</code> 这个别名接到 trainer 上(<code>fastwam.py:47</code>)。</p>
+<hr />
+<h2 id="4-推理流水线">4. 推理流水线<a class="headerlink" href="14.FastWAM_Architecture.html#4-推理流水线" title="Permanent link">#</a></h2>
+<h3 id="41-快路径infer_actionuncond-变体">4.1 快路径:<code>infer_action</code>(uncond 变体)<a class="headerlink" href="14.FastWAM_Architecture.html#41-快路径infer_actionuncond-变体" title="Permanent link">#</a></h3>
+<p>这是 Fast-WAM 的核心卖点,<code>fastwam.py:906</code>:</p>
+<div class="mermaid">
+sequenceDiagram
+    participant Env as 环境
+    participant M as FastWAM
+    participant C as video_kv_cache
+
+    Env-&gt;&gt;M: 观测首帧 [1,3,H,W] + 指令
+    M-&gt;&gt;M: VAE 编码首帧 → first_frame_latents
+    M-&gt;&gt;M: video_expert.pre_dit(x=首帧, timestep=0)
+    M-&gt;&gt;C: mot.prefill_video_cache()&lt;br/&gt;逐层存 {k, v}, 共 30 层
+    Note over C: 视频分支从此不再前向
+
+    loop N 步 (默认 20)
+        M-&gt;&gt;M: action_expert.pre_dit(noisy_action, t_a)
+        M-&gt;&gt;C: 读第 i 层 k_video / v_video
+        M-&gt;&gt;M: k_cat = [k_video , k_action]&lt;br/&gt;mixed attention
+        M-&gt;&gt;M: scheduler.step → 更新 latents_action
+    end
+    M-&gt;&gt;Env: action chunk [T_a, action_dim]
+</div>
+<p>代码上的关键三步:</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># 1. 视频专家只在首帧上跑一次,timestep 恒为 0</span>
+<span class="n">timestep_video</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">first_frame_latents</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],),</span> <span class="o">...</span><span class="p">)</span>
+<span class="n">video_pre</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">video_expert</span><span class="o">.</span><span class="n">pre_dit</span><span class="p">(</span><span class="n">x</span><span class="o">=</span><span class="n">first_frame_latents</span><span class="p">,</span> <span class="n">timestep</span><span class="o">=</span><span class="n">timestep_video</span><span class="p">,</span> <span class="o">...</span><span class="p">)</span>
+
+<span class="c1"># 2. 逐层缓存 K/V</span>
+<span class="n">video_kv_cache</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">mot</span><span class="o">.</span><span class="n">prefill_video_cache</span><span class="p">(</span><span class="o">...</span><span class="p">)</span>          <span class="c1"># fastwam.py:1013</span>
+
+<span class="c1"># 3. N 步动作去噪全部走缓存</span>
+<span class="k">for</span> <span class="n">step_t_action</span><span class="p">,</span> <span class="n">step_delta_action</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="o">...</span><span class="p">):</span>
+    <span class="n">pred_action</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_predict_action_noise_with_cache</span><span class="p">(</span><span class="o">...</span><span class="p">,</span> <span class="n">video_kv_cache</span><span class="o">=</span><span class="n">video_kv_cache</span><span class="p">,</span> <span class="o">...</span><span class="p">)</span>
+    <span class="n">latents_action</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">infer_action_scheduler</span><span class="o">.</span><span class="n">step</span><span class="p">(</span><span class="n">pred_action</span><span class="p">,</span> <span class="n">step_delta_action</span><span class="p">,</span> <span class="n">latents_action</span><span class="p">)</span>
+</code></pre></div>
+
+<p><code>infer_action</code> 开头有一条硬断言 —— 没有 <code>first_frame_causal</code> 掩码,缓存就不成立:</p>
+<div class="highlight"><pre><span></span><code><span class="k">if</span> <span class="nb">str</span><span class="p">(</span><span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">video_expert</span><span class="p">,</span> <span class="s2">&quot;video_attention_mask_mode&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">))</span> <span class="o">!=</span> <span class="s2">&quot;first_frame_causal&quot;</span><span class="p">:</span>
+    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;`infer_action` requires `video_attention_mask_mode=&#39;first_frame_causal&#39;`.&quot;</span><span class="p">)</span>
+</code></pre></div>
+
+<p>注意 VAE 解码器<strong>完全没被调用</strong> —— 不生成像素,连 latent 都不生成。返回值只有 <code>{"action": ...}</code>。</p>
+<h3 id="42-慢路径infer_joint">4.2 慢路径:<code>infer_joint</code><a class="headerlink" href="14.FastWAM_Architecture.html#42-慢路径infer_joint" title="Permanent link">#</a></h3>
+<p>joint 和 idm 变体走这条。两个 scheduler 步调对齐,每步都要跑完整的 <code>_predict_joint_noise</code>(视频 + 动作双分支),且每步结束后把首帧 latent 重新写回:</p>
+<div class="highlight"><pre><span></span><code><span class="n">latents_video</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">infer_video_scheduler</span><span class="o">.</span><span class="n">step</span><span class="p">(</span><span class="n">pred_video_posi</span><span class="p">,</span> <span class="n">step_delta_video</span><span class="p">,</span> <span class="n">latents_video</span><span class="p">)</span>
+<span class="n">latents_action</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">infer_action_scheduler</span><span class="o">.</span><span class="n">step</span><span class="p">(</span><span class="n">pred_action_posi</span><span class="p">,</span> <span class="n">step_delta_action</span><span class="p">,</span> <span class="n">latents_action</span><span class="p">)</span>
+<span class="n">latents_video</span><span class="p">[:,</span> <span class="p">:,</span> <span class="mi">0</span><span class="p">:</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">first_frame_latents</span><span class="o">.</span><span class="n">clone</span><span class="p">()</span>      <span class="c1"># fastwam_joint.py:232</span>
+</code></pre></div>
+
+<p>IDM 变体更进一步 —— <code>infer_joint</code> 里视频是<strong>独立的第一阶段</strong>先去噪完,再算动作(<code>fastwam_idm.py:288</code> 起,注释写明 "video is denoised in a standalone first stage")。</p>
+<h3 id="43-仿真评测">4.3 仿真评测<a class="headerlink" href="14.FastWAM_Architecture.html#43-仿真评测" title="Permanent link">#</a></h3>
+<p><code>experiments/libero/run_libero_manager.py</code> 和 <code>experiments/robotwin/run_robotwin_manager.py</code>,配置见 <code>configs/sim_libero.yaml</code>:</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>参数</th>
+<th>值</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>num_trials</code></td>
+<td>50</td>
+</tr>
+<tr>
+<td><code>num_steps_wait</code></td>
+<td>30</td>
+</tr>
+<tr>
+<td><code>replan_steps</code></td>
+<td>10(每 10 步重新推理一次 action chunk)</td>
+</tr>
+<tr>
+<td><code>binarize_gripper</code></td>
+<td>true</td>
+</tr>
+<tr>
+<td><code>text_cfg_scale</code></td>
+<td>1.0(不开 CFG)</td>
+</tr>
+<tr>
+<td><code>visualize_future_video</code></td>
+<td>false</td>
+</tr>
+<tr>
+<td>task suites</td>
+<td>libero_10 / goal / spatial / object,8 GPU × 2 task</td>
+</tr>
+</tbody>
+</table></div>
+<hr />
+<h2 id="5-关键超参数表">5. 关键超参数表<a class="headerlink" href="14.FastWAM_Architecture.html#5-关键超参数表" title="Permanent link">#</a></h2>
+<h3 id="模型结构">模型结构<a class="headerlink" href="14.FastWAM_Architecture.html#模型结构" title="Permanent link">#</a></h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>项</th>
+<th>视频专家</th>
+<th>动作专家</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>层数</td>
+<td>30</td>
+<td>30(强制一致)</td>
+</tr>
+<tr>
+<td>hidden_dim</td>
+<td>3072</td>
+<td>1024</td>
+</tr>
+<tr>
+<td>ffn_dim</td>
+<td>14336</td>
+<td>4096</td>
+</tr>
+<tr>
+<td>num_heads</td>
+<td>24</td>
+<td>24(强制一致)</td>
+</tr>
+<tr>
+<td>attn_head_dim</td>
+<td>128</td>
+<td>128(强制一致)</td>
+</tr>
+<tr>
+<td>q/k/v 投影输出</td>
+<td>3072</td>
+<td>3072(<code>Linear(1024→3072)</code>)</td>
+</tr>
+<tr>
+<td>text_dim</td>
+<td>4096</td>
+<td>4096</td>
+</tr>
+<tr>
+<td>freq_dim</td>
+<td>256</td>
+<td>256</td>
+</tr>
+<tr>
+<td>eps</td>
+<td>1e-6</td>
+<td>1e-6</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="flow-matching">Flow Matching<a class="headerlink" href="14.FastWAM_Architecture.html#flow-matching" title="Permanent link">#</a></h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>项</th>
+<th>值</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>调度器</td>
+<td><code>WanContinuousFlowMatchScheduler</code></td>
+</tr>
+<tr>
+<td><code>num_train_timesteps</code></td>
+<td>1000</td>
+</tr>
+<tr>
+<td><code>train_shift</code> / <code>infer_shift</code></td>
+<td>5.0 / 5.0(视频与动作相同)</td>
+</tr>
+<tr>
+<td>推理步数</td>
+<td>20(<code>eval_num_inference_steps</code>)</td>
+</tr>
+<tr>
+<td>损失</td>
+<td><code>λ_video · MSE_video + λ_action · MSE_action</code>,均带 <code>training_weight(t)</code></td>
+</tr>
+<tr>
+<td><code>λ_action</code></td>
+<td>1.0</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="数据libero-2-cam">数据(LIBERO 2-cam)<a class="headerlink" href="14.FastWAM_Architecture.html#数据libero-2-cam" title="Permanent link">#</a></h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>项</th>
+<th>值</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>num_frames</code></td>
+<td>33(→ 9 个 latent 时间步)</td>
+</tr>
+<tr>
+<td><code>action_video_freq_ratio</code></td>
+<td>4(→ 32 步动作)</td>
+</tr>
+<tr>
+<td>单相机分辨率</td>
+<td>224 × 224</td>
+</tr>
+<tr>
+<td>拼接后视频尺寸</td>
+<td>224 × 448(<code>concat_multi_camera: horizontal</code>)</td>
+</tr>
+<tr>
+<td><code>action_output_dim</code></td>
+<td>7 = eef delta pose(6) + gripper(1)</td>
+</tr>
+<tr>
+<td><code>proprio_output_dim</code></td>
+<td>8 = eef pose(6) + gripper(2)</td>
+</tr>
+<tr>
+<td><code>delta_action_dim_mask</code></td>
+<td>前 6 维为 delta,gripper 为绝对值</td>
+</tr>
+<tr>
+<td>归一化</td>
+<td><code>min/max</code></td>
+</tr>
+<tr>
+<td><code>context_len</code></td>
+<td>128</td>
+</tr>
+</tbody>
+</table></div>
+<p>RoboTwin 配置为 3 相机 384 分辨率(<code>configs/task/robotwin_*_3cam_384_1e-4.yaml</code>)。</p>
+<hr />
+<h2 id="6-关键源文件表">6. 关键源文件表<a class="headerlink" href="14.FastWAM_Architecture.html#6-关键源文件表" title="Permanent link">#</a></h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>文件</th>
+<th>作用</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>src/fastwam/models/wan22/fastwam.py</code></td>
+<td>主模型(uncond 变体)、训练 loss、<code>infer_action</code> 快路径、<code>infer_joint</code></td>
+</tr>
+<tr>
+<td><code>src/fastwam/models/wan22/fastwam_joint.py</code></td>
+<td>Joint 变体:action 看全部视频帧</td>
+</tr>
+<tr>
+<td><code>src/fastwam/models/wan22/fastwam_idm.py</code></td>
+<td>IDM 变体:teacher-forcing 三段序列</td>
+</tr>
+<tr>
+<td><code>src/fastwam/models/wan22/mot.py</code></td>
+<td>MoT 混合注意力、<code>prefill_video_cache</code>、<code>forward_action_with_video_cache</code></td>
+</tr>
+<tr>
+<td><code>src/fastwam/models/wan22/action_dit.py</code></td>
+<td>ActionDiT 定义与插值权重加载</td>
+</tr>
+<tr>
+<td><code>src/fastwam/models/wan22/wan_video_dit.py</code></td>
+<td>Wan2.2 DiT、<code>build_video_to_video_mask</code>、SelfAttention/DiTBlock</td>
+</tr>
+<tr>
+<td><code>src/fastwam/models/wan22/wan_video_vae.py</code></td>
+<td>Wan2.2 视频 VAE</td>
+</tr>
+<tr>
+<td><code>src/fastwam/models/wan22/schedulers/scheduler_continuous.py</code></td>
+<td>连续 flow matching 调度器</td>
+</tr>
+<tr>
+<td><code>src/fastwam/models/wan22/wan22.py</code></td>
+<td><code>Wan22Core</code> 基线(纯视频,无动作分支)</td>
+</tr>
+<tr>
+<td><code>scripts/preprocess_action_dit_backbone.py</code></td>
+<td>由视频 DiT 线性插值生成 ActionDiT 初始权重</td>
+</tr>
+<tr>
+<td><code>scripts/precompute_text_embeds.py</code></td>
+<td>预计算 umt5 文本 embedding 缓存</td>
+</tr>
+<tr>
+<td><code>scripts/train.py</code> / <code>scripts/train_zero1.sh</code></td>
+<td>训练入口 / DeepSpeed ZeRO-1</td>
+</tr>
+<tr>
+<td><code>experiments/libero/run_libero_manager.py</code></td>
+<td>LIBERO 评测</td>
+</tr>
+<tr>
+<td><code>experiments/robotwin/run_robotwin_manager.py</code></td>
+<td>RoboTwin 评测</td>
+</tr>
+<tr>
+<td><code>src/fastwam/datasets/lerobot/processors/fastwam_processor.py</code></td>
+<td>动作/状态归一化与 delta 变换</td>
+</tr>
+</tbody>
+</table></div>
+<hr />
+<h2 id="7-与-dreamzero-的对照">7. 与 DreamZero 的对照<a class="headerlink" href="14.FastWAM_Architecture.html#7-与-dreamzero-的对照" title="Permanent link">#</a></h2>
+<p>两者都是 Wan 系视频扩散改造的 WAM,放在一起看差异很清楚(DreamZero 细节见 <a href="13.DreamZero_Architecture.html">DreamZero 架构</a>):</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>维度</th>
+<th>DreamZero</th>
+<th>Fast-WAM</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>视频基座</td>
+<td>Wan2.1</td>
+<td>Wan2.2-TI2V-5B</td>
+</tr>
+<tr>
+<td>动作分支</td>
+<td>action head 挂在 DiT 上,与视频 latent 同序列</td>
+<td>独立 ActionDiT 专家,MoT 逐层混合注意力</td>
+</tr>
+<tr>
+<td>跨形态支持</td>
+<td>Category-specific MLP(embodiment id 白名单)</td>
+<td>无 —— 单形态,proprio 走 context token</td>
+</tr>
+<tr>
+<td>推理时是否生成视频</td>
+<td><strong>是</strong>,先出未来帧再出动作</td>
+<td><strong>否</strong>(uncond 变体),视频分支只 prefill 一次</td>
+</tr>
+<tr>
+<td>定位</td>
+<td>追求泛化(RoboArena / MolmoSpaces 榜首)</td>
+<td>追求"证明未来想象在推理时冗余"</td>
+</tr>
+<tr>
+<td>评测环境</td>
+<td>真机 + 多平台</td>
+<td>LIBERO / RoboTwin 仿真</td>
+</tr>
+</tbody>
+</table></div>
+<p>Fast-WAM 的 <code>joint</code> 与 <code>idm</code> 两个变体,本质上就是把 DreamZero 那类"推理时也要想象未来"的做法做成受控基线,再用 <code>uncond</code> 变体证明砍掉它不掉点。</p>
+      </div>
+    </main>
+        <aside class="toc">
+            <div class="toc-title">本页目录</div>
+            <ul>
+                <li><a href="14.FastWAM_Architecture.html#1-整体架构概览" class="toc-h2">1. 整体架构概览</a></li>
+                <li><a href="14.FastWAM_Architecture.html#2-核心组件详解" class="toc-h2">2. 核心组件详解</a></li>
+                <li><a href="14.FastWAM_Architecture.html#21-视频专家wan22-ti2v-5b-dit" class="toc-h3">2.1 视频专家:Wan2.2-TI2V-5B DiT</a></li>
+                <li><a href="14.FastWAM_Architecture.html#22-视频自注意力掩码first_frame_causal" class="toc-h3">2.2 视频自注意力掩码:first_frame_causal</a></li>
+                <li><a href="14.FastWAM_Architecture.html#23-动作专家-actiondit" class="toc-h3">2.3 动作专家 ActionDiT</a></li>
+                <li><a href="14.FastWAM_Architecture.html#24-mot-混合注意力" class="toc-h3">2.4 MoT 混合注意力</a></li>
+                <li><a href="14.FastWAM_Architecture.html#25-三个变体的注意力掩码" class="toc-h3">2.5 三个变体的注意力掩码</a></li>
+                <li><a href="14.FastWAM_Architecture.html#3-训练流水线" class="toc-h2">3. 训练流水线</a></li>
+                <li><a href="14.FastWAM_Architecture.html#4-推理流水线" class="toc-h2">4. 推理流水线</a></li>
+                <li><a href="14.FastWAM_Architecture.html#41-快路径infer_actionuncond-变体" class="toc-h3">4.1 快路径:infer_action(uncond 变体)</a></li>
+                <li><a href="14.FastWAM_Architecture.html#42-慢路径infer_joint" class="toc-h3">4.2 慢路径:infer_joint</a></li>
+                <li><a href="14.FastWAM_Architecture.html#43-仿真评测" class="toc-h3">4.3 仿真评测</a></li>
+                <li><a href="14.FastWAM_Architecture.html#5-关键超参数表" class="toc-h2">5. 关键超参数表</a></li>
+                <li><a href="14.FastWAM_Architecture.html#模型结构" class="toc-h3">模型结构</a></li>
+                <li><a href="14.FastWAM_Architecture.html#flow-matching" class="toc-h3">Flow Matching</a></li>
+                <li><a href="14.FastWAM_Architecture.html#数据libero-2-cam" class="toc-h3">数据(LIBERO 2-cam)</a></li>
+                <li><a href="14.FastWAM_Architecture.html#6-关键源文件表" class="toc-h2">6. 关键源文件表</a></li>
+                <li><a href="14.FastWAM_Architecture.html#7-与-dreamzero-的对照" class="toc-h2">7. 与 DreamZero 的对照</a></li>
+            </ul>
+        </aside>
+
+    <button class="back-to-top" onclick="window.scrollTo({top:0,behavior:'smooth'})">&#8593;</button>
+
+    <script src="assets/vendor/mermaid/mermaid.min.js"></script>
+    <script defer src="assets/vendor/katex/katex.min.js"></script>
+    <script defer src="assets/vendor/katex/auto-render.min.js"
+            onload="renderMathInElement(document.querySelector('.content-inner'), {
+                delimiters: [
+                    { left: '$$', right: '$$', display: true },
+                    { left: '$', right: '$', display: false }
+                ],
+                ignoredTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code', 'option'],
+                ignoredClasses: ['mermaid', 'diagram'],
+                throwOnError: false
+            });"></script>
+    <script>
+        // Mermaid destroys the source text when it renders, so keep a copy in
+        // order to re-render on theme change.
+        document.querySelectorAll('.mermaid').forEach(el => {
+            el.dataset.src = el.textContent;
+        });
+
+        const prefersDark = window.matchMedia('(prefers-color-scheme: dark)');
+        function currentTheme() {
+            const forced = document.documentElement.getAttribute('data-theme');
+            if (forced) return forced;
+            return prefersDark.matches ? 'dark' : 'light';
+        }
+
+        function initMermaid() {
+            mermaid.initialize({
+                startOnLoad: false,
+                theme: currentTheme() === 'dark' ? 'dark' : 'default',
+                flowchart: { useMaxWidth: true, htmlLabels: true },
+                securityLevel: 'loose'
+            });
+        }
+
+        function renderMermaid() {
+            const nodes = document.querySelectorAll('.mermaid');
+            nodes.forEach(el => {
+                el.removeAttribute('data-processed');
+                el.textContent = el.dataset.src;
+            });
+            // mermaid.run rejects on its internal font probe in some browsers;
+            // the diagrams still render, so swallow it rather than surfacing an
+            // unhandled rejection.
+            if (!nodes.length) return;
+            Promise.resolve(mermaid.run({ nodes: nodes }))
+                .catch(() => {})
+                .then(() => nodes.forEach(applyZoom));
+        }
+
+        /* ---------- Diagram zoom ----------
+           Scale is tracked as a factor of the diagram's NATURAL size (its
+           viewBox), so 100% means 1:1 and one font size looks identical in
+           every diagram on the site. Left to itself mermaid's useMaxWidth
+           stretches each svg to the container, which blows a 3-node diagram
+           up to 3.4x and shrinks a wide one to 0.34x — a 10x spread in
+           apparent font size. FIT_MAX caps the auto-fit at 1:1 (never
+           upscale) and FIT_MIN stops wide diagrams from shrinking to
+           unreadable; anything past that overflows and scrolls/pans. */
+        const MIN_Z = 0.3, MAX_Z = 6, STEP = 1.25;
+        const FIT_MIN = 0.55, FIT_MAX = 1;
+        const PAD = 40;               // .mermaid horizontal padding (20px each side)
+        const zoom = new WeakMap();   // .mermaid -> explicit scale; absent = auto-fit
+
+        function naturalSize(svg) {
+            const vb = svg.viewBox && svg.viewBox.baseVal;
+            if (vb && vb.width) return { w: vb.width, h: vb.height };
+            const r = svg.getBoundingClientRect();
+            return { w: r.width, h: r.height };
+        }
+
+        function fitScale(el, nat) {
+            const avail = el.clientWidth - PAD;
+            if (!nat.w || avail <= 0) return 1;
+            return Math.min(FIT_MAX, Math.max(FIT_MIN, avail / nat.w));
+        }
+
+        function scaleOf(el, nat) {
+            const k = zoom.get(el);
+            return k === undefined ? fitScale(el, nat) : k;
+        }
+
+        function applyZoom(el) {
+            const svg = el.querySelector('svg');
+            if (!svg) return;
+            const nat = naturalSize(svg);
+            if (!nat.w) return;
+            const k = scaleOf(el, nat);
+
+            const label = el.closest('.diagram')?.querySelector('.diagram-zoom');
+            if (label) label.textContent = Math.round(k * 100) + '%';
+
+            // Size the svg explicitly instead of leaving it to useMaxWidth,
+            // so the container gets real scrollbars when the diagram overflows.
+            svg.style.maxWidth = 'none';
+            svg.style.width = (nat.w * k) + 'px';
+            svg.style.height = (nat.h * k) + 'px';
+
+            const overflows = nat.w * k > el.clientWidth - PAD + 1;
+            el.classList.toggle('is-zoomed', overflows);
+            if (!overflows) el.scrollLeft = el.scrollTop = 0;
+        }
+
+        function setZoom(el, k, anchor) {
+            const svg = el.querySelector('svg');
+            if (!svg) return;
+            const nat = naturalSize(svg);
+            const prev = scaleOf(el, nat);
+            if (k !== null) k = Math.min(MAX_Z, Math.max(MIN_Z, k));
+            const next = k === null ? fitScale(el, nat) : k;
+            if (next === prev) return;
+            // Keep the point under the cursor (or the viewport centre) put.
+            const ax = anchor ? anchor.x : el.clientWidth / 2;
+            const ay = anchor ? anchor.y : el.clientHeight / 2;
+            const rx = (el.scrollLeft + ax) / prev;
+            const ry = (el.scrollTop + ay) / prev;
+            if (k === null) zoom.delete(el); else zoom.set(el, k);
+            applyZoom(el);
+            el.scrollLeft = rx * next - ax;
+            el.scrollTop = ry * next - ay;
+        }
+
+        function currentScale(el) {
+            const svg = el.querySelector('svg');
+            return svg ? scaleOf(el, naturalSize(svg)) : 1;
+        }
+
+        function setupDiagrams() {
+            document.querySelectorAll('.mermaid').forEach(el => {
+                const wrap = document.createElement('div');
+                wrap.className = 'diagram';
+                el.parentNode.insertBefore(wrap, el);
+                wrap.appendChild(el);
+
+                const tools = document.createElement('div');
+                tools.className = 'diagram-tools';
+                tools.innerHTML =
+                    '<button type="button" data-act="out" title="缩小">&minus;</button>' +
+                    '<span class="diagram-zoom">100%</span>' +
+                    '<button type="button" data-act="in" title="放大">+</button>' +
+                    '<button type="button" data-act="reset" title="适应宽度">&#9633;</button>' +
+                    '<button type="button" data-act="full" title="全屏">&#10530;</button>';
+                wrap.appendChild(tools);
+
+                tools.addEventListener('click', e => {
+                    const act = e.target.closest('button')?.dataset.act;
+                    if (!act) return;
+                    const k = currentScale(el);
+                    if (act === 'in') setZoom(el, k * STEP);
+                    else if (act === 'out') setZoom(el, k / STEP);
+                    else if (act === 'reset') setZoom(el, null);
+                    else if (act === 'full') {
+                        if (document.fullscreenElement === wrap) document.exitFullscreen();
+                        else wrap.requestFullscreen?.();
+                    }
+                });
+
+                // Ctrl/⌘ + wheel zooms; a plain wheel keeps scrolling the page.
+                el.addEventListener('wheel', e => {
+                    if (!e.ctrlKey && !e.metaKey) return;
+                    e.preventDefault();
+                    const r = el.getBoundingClientRect();
+                    setZoom(el, currentScale(el) * (e.deltaY < 0 ? STEP : 1 / STEP),
+                            { x: e.clientX - r.left, y: e.clientY - r.top });
+                }, { passive: false });
+
+                // Drag to pan once zoomed in.
+                let drag = null;
+                el.addEventListener('pointerdown', e => {
+                    // Pan only matters once the diagram actually overflows.
+                    if (e.button !== 0 || !el.classList.contains('is-zoomed')) return;
+                    drag = { x: e.clientX, y: e.clientY, l: el.scrollLeft, t: el.scrollTop };
+                    el.setPointerCapture(e.pointerId);
+                    el.classList.add('is-panning');
+                });
+                el.addEventListener('pointermove', e => {
+                    if (!drag) return;
+                    el.scrollLeft = drag.l - (e.clientX - drag.x);
+                    el.scrollTop = drag.t - (e.clientY - drag.y);
+                });
+                const endDrag = () => { drag = null; el.classList.remove('is-panning'); };
+                el.addEventListener('pointerup', endDrag);
+                el.addEventListener('pointercancel', endDrag);
+
+                // Double click toggles between auto-fit and true 1:1.
+                el.addEventListener('dblclick', () => setZoom(el, zoom.has(el) ? null : 1));
+            });
+        }
+
+        setupDiagrams();
+        initMermaid();
+        renderMermaid();
+
+        const remeasure = () => document.querySelectorAll('.mermaid').forEach(applyZoom);
+        document.addEventListener('fullscreenchange', remeasure);
+        window.addEventListener('resize', remeasure);
+
+        // Theme toggle
+        const toggle = document.getElementById('theme-toggle');
+        toggle.addEventListener('click', () => {
+            const next = currentTheme() === 'dark' ? 'light' : 'dark';
+            document.documentElement.setAttribute('data-theme', next);
+            try { localStorage.setItem('theme', next); } catch (e) {}
+            initMermaid();
+            renderMermaid();
+        });
+
+        // Follow the OS while the user hasn't made an explicit choice
+        prefersDark.addEventListener('change', () => {
+            if (!document.documentElement.getAttribute('data-theme')) {
+                initMermaid();
+                renderMermaid();
+            }
+        });
+
+        // Back to top button
+        const btn = document.querySelector('.back-to-top');
+        window.addEventListener('scroll', () => {
+            btn.classList.toggle('visible', window.scrollY > 300);
+        });
+
+        // Close sidebar on mobile when clicking a link
+        document.querySelectorAll('.sidebar nav a').forEach(a => {
+            a.addEventListener('click', () => {
+                document.querySelector('.sidebar').classList.remove('open');
+            });
+        });
+
+        // Highlight the TOC entry for the heading currently in view
+        const tocLinks = Array.from(document.querySelectorAll('.toc a'));
+        if (tocLinks.length) {
+            const targets = tocLinks
+                .map(a => document.getElementById(decodeURIComponent(a.hash.slice(1))))
+                .filter(Boolean);
+            const setActive = () => {
+                let current = targets[0];
+                for (const t of targets) {
+                    if (t.getBoundingClientRect().top <= 120) current = t;
+                    else break;
+                }
+                tocLinks.forEach(a => a.classList.toggle(
+                    'active',
+                    current && decodeURIComponent(a.hash.slice(1)) === current.id
+                ));
+            };
+            setActive();
+            let queued = false;
+            window.addEventListener('scroll', () => {
+                if (queued) return;
+                queued = true;
+                requestAnimationFrame(() => { setActive(); queued = false; });
+            });
+        }
+    </script>
+</body>
+</html>

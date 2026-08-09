@@ -1,0 +1,1014 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Decoupled WBC - Robotics Knowledge Base</title>
+    <link rel="icon" href="favicon.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="assets/vendor/katex/katex.min.css">
+    <script>
+        // Applied before first paint so the saved theme doesn't flash.
+        (function () {
+            try {
+                var t = localStorage.getItem('theme');
+                if (t === 'dark' || t === 'light') {
+                    document.documentElement.setAttribute('data-theme', t);
+                }
+            } catch (e) {}
+        })();
+    </script>
+</head>
+<body>
+    <button class="menu-toggle" onclick="document.querySelector('.sidebar').classList.toggle('open')">&#9776;</button>
+    <button class="theme-toggle" id="theme-toggle" title="切换日夜模式" aria-label="切换日夜模式">
+        <span class="icon-light">&#9790;</span><span class="icon-dark">&#9728;</span>
+    </button>
+
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <h2>Robotics Knowledge Base</h2>
+            <p>机器人模型架构知识库</p>
+        </div>
+        <nav>
+            <a href="index.html">Overview</a>
+            <div class="nav-group">VLA 模型</div>
+            <a href="01.Pi0_Architecture.html">Pi0</a>
+            <a href="02.Pi0.5_Architecture.html">Pi0.5</a>
+            <a href="03.Pi0-FAST_Architecture.html">Pi0-FAST</a>
+            <a href="04.Pi-Star-0.6_Architecture.html">π*₀.₆ (Pi-Star-0.6)</a>
+            <a href="05.Pi0.7_Architecture.html">π₀.₇ (Pi-0.7)</a>
+            <a href="06.Isaac-GR00T-N1.6_Architecture.html">Isaac-GR00T N1.6</a>
+            <a href="07.Isaac-GR00T-N1.5_Architecture.html">Isaac-GR00T N1.5</a>
+            <a href="08.ACT_Architecture.html">ACT</a>
+            <a href="09.SmolVLA_Architecture.html">SmolVLA</a>
+            <a href="10.WALL-OSS_Architecture.html">WALL-OSS / WALL-X</a>
+            <a href="11.X-VLA_Architecture.html">X-VLA</a>
+            <a href="12.Psi0_Architecture.html">Psi0 (ψ₀)</a>
+            <a href="13.DreamZero_Architecture.html">DreamZero</a>
+            <a href="14.FastWAM_Architecture.html">Fast-WAM</a>
+            <div class="nav-group">全身控制 (WBC)</div>
+            <a href="15.GR00T-WBC_Overview.html">GR00T-WBC 总览</a>
+            <a href="16.Decoupled-WBC_Architecture.html" class="nav-child active">Decoupled WBC</a>
+            <a href="17.GEAR-SONIC_Architecture.html" class="nav-child">GEAR-SONIC</a>
+            <a href="18.MotionBricks_Architecture.html" class="nav-child">MotionBricks</a>
+            <div class="nav-group">3D 视觉与 VLM</div>
+            <a href="19.VLM3_Architecture.html">VLM³</a>
+        </nav>
+    </aside>
+
+    <main class="content">
+      <div class="content-inner">
+        <h1 id="decoupled-wbc-架构">Decoupled WBC 架构<a class="headerlink" href="16.Decoupled-WBC_Architecture.html#decoupled-wbc-架构" title="Permanent link">#</a></h1>
+<h2 id="1-整体架构概览">1. 整体架构概览<a class="headerlink" href="16.Decoupled-WBC_Architecture.html#1-整体架构概览" title="Permanent link">#</a></h2>
+<p>Decoupled WBC 是 GR00T-WholeBodyControl 里<strong>最保守也最好调试</strong>的一条全身控制路线:它不训练一个端到端的全身策略,而是把机器人从腰部劈成两半 —— <strong>下半身交给强化学习</strong>(ONNX 策略,50 Hz 闭环),<strong>上半身交给逆运动学</strong>(QP-IK + 插值,开环跟随遥操作目标)。</p>
+<p>这个"解耦"不是工程上的偷懒,而是一个明确的契约:上半身<strong>不看任何观测</strong>,只是把遥操作算出来的关节目标做速率受限插值;下半身则把上半身的姿态当作<strong>扰动的先验信息</strong>读进观测里,自己去维持平衡。二者之间只有四个标量/向量在流动:手臂关节角 <code>q_arms</code>、基座高度指令 <code>base_height_command</code>、躯干相对腰部的 RPY <code>torso_orientation_rpy</code>、插值后的导航速度 <code>navigate_cmd</code>。</p>
+<div class="mermaid">
+graph TB
+    subgraph Teleop["遥操作输入 (20 Hz)"]
+        VR["Apple Vision Pro / Pico&lt;br/&gt;头 + 双手 6D 位姿&lt;br/&gt;手指 (25,4,4)"]
+        KB["键盘 / 手柄&lt;br/&gt;WASD + 高度 + 步频"]
+    end
+
+    subgraph IK["上半身:逆运动学 (开环)"]
+        RETARGET["TeleopRetargetingIK&lt;br/&gt;首次调用 50 次 IK 预热"]
+        BODYIK["BodyIKSolver&lt;br/&gt;pink + pinocchio + qpsolvers&lt;br/&gt;dt=0.05, 3 步/帧"]
+        HANDIK["左右手 IK&lt;br/&gt;覆写手部驱动关节"]
+        INTERP["InterpolationPolicy&lt;br/&gt;速率受限航点插值&lt;br/&gt;max_change_rate"]
+    end
+
+    subgraph Coupling["耦合层 G1DecoupledWholeBodyPolicy"]
+        FK["前向运动学&lt;br/&gt;torso_link vs pelvis&lt;br/&gt;去掉腰部 yaw"]
+        SPLIT["goal 按 key 分流&lt;br/&gt;upper: pose/height/nav&lt;br/&gt;lower: toggle_*"]
+    end
+
+    subgraph RL["下半身:强化学习 (闭环 50 Hz)"]
+        OBS["观测拼装 86 维 × 6 帧 = 516"]
+        SW{"‖cmd‖ &lt; 0.05 ?"}
+        P1["policy_1&lt;br/&gt;Balance.onnx"]
+        P2["policy_2&lt;br/&gt;Walk.onnx"]
+        ACT["action × 0.25 + default_angles&lt;br/&gt;15 维 → 腿 12 + 腰 3"]
+    end
+
+    ROBOT["G1Env&lt;br/&gt;29 DoF PD 控制&lt;br/&gt;sim 200 Hz / 真机 DDS"]
+
+    VR --&gt; RETARGET --&gt; BODYIK --&gt; HANDIK --&gt; INTERP
+    KB --&gt; SPLIT
+    INTERP --&gt; FK
+    INTERP --&gt;|q_arms| ROBOT
+    FK --&gt;|torso rpy| OBS
+    INTERP --&gt;|height / nav_cmd| OBS
+    ROBOT --&gt;|q, dq, quat, omega| OBS
+    OBS --&gt; SW
+    SW --&gt;|是| P1
+    SW --&gt;|否| P2
+    P1 --&gt; ACT
+    P2 --&gt; ACT
+    ACT --&gt; ROBOT
+
+    style Coupling fill:#fff4e1
+    style SW fill:#e1f5ff
+    style ACT fill:#e8f5e9
+</div>
+<p>与 <a href="17.GEAR-SONIC_Architecture.html">GEAR-SONIC</a> 那种"一个 RL 策略管全身"的做法相比,Decoupled WBC 的优势是<strong>上半身可以精确跟踪任意 IK 目标</strong>(做操作任务时手的位置误差只由 QP 求解器决定,不受 RL 策略的探索噪声影响),代价是上下半身的动力学耦合只能靠观测里那几维隐式补偿,做不了大幅度的全身动态动作。</p>
+<hr />
+<h2 id="2-核心组件详解">2. 核心组件详解<a class="headerlink" href="16.Decoupled-WBC_Architecture.html#2-核心组件详解" title="Permanent link">#</a></h2>
+<h3 id="21-解耦契约g1decoupledwholebodypolicy">2.1 解耦契约:<code>G1DecoupledWholeBodyPolicy</code><a class="headerlink" href="16.Decoupled-WBC_Architecture.html#21-解耦契约g1decoupledwholebodypolicy" title="Permanent link">#</a></h3>
+<p><code>decoupled_wbc/control/policy/g1_decoupled_whole_body_policy.py</code> 只有 157 行,却把整套契约写得很干净。</p>
+<p><strong>第一条:上半身不接收观测。</strong></p>
+<div class="highlight"><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">set_observation</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">observation</span><span class="p">):</span>
+    <span class="c1"># Upper body policy is open loop (just interpolation), so we don&#39;t need to set the observation</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">lower_body_policy</span><span class="o">.</span><span class="n">set_observation</span><span class="p">(</span><span class="n">observation</span><span class="p">)</span>
+</code></pre></div>
+
+<p>(<code>g1_decoupled_whole_body_policy.py:30</code>)。这一行就是"解耦"的定义 —— 上半身策略在整个控制回路里<strong>没有反馈通路</strong>。</p>
+<p><strong>第二条:goal 按 key 分流。</strong></p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>目标 key</th>
+<th>去向</th>
+<th>含义</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>target_upper_body_pose</code></td>
+<td>上半身</td>
+<td>IK 解出的上半身关节目标</td>
+</tr>
+<tr>
+<td><code>base_height_command</code></td>
+<td>上半身(再转下半身)</td>
+<td>期望基座高度,先经插值再喂给 RL</td>
+</tr>
+<tr>
+<td><code>target_time</code></td>
+<td>上半身</td>
+<td>该航点的到达时刻</td>
+</tr>
+<tr>
+<td><code>interpolation_garbage_collection_time</code></td>
+<td>上半身</td>
+<td>早于此时刻的航点被丢弃</td>
+</tr>
+<tr>
+<td><code>navigate_cmd</code></td>
+<td>上半身(再转下半身)</td>
+<td>期望速度 (vx, vy, ωz),先插值再喂 RL</td>
+</tr>
+<tr>
+<td><code>toggle_stand_command</code></td>
+<td>下半身</td>
+<td>站立/行走切换</td>
+</tr>
+<tr>
+<td><code>toggle_policy_action</code></td>
+<td>下半身</td>
+<td>RL 输出是否生效(否则原地保持当前关节角)</td>
+</tr>
+</tbody>
+</table></div>
+<p>注意 <code>base_height_command</code> 和 <code>navigate_cmd</code> 明明是给下半身用的,却先走上半身的插值器 —— 这是刻意的:<strong>遥操作发来的指令是 20 Hz 的稀疏航点,而控制环是 50 Hz</strong>,统一用同一个 <code>InterpolationPolicy</code> 做时间对齐,可以保证速度指令不会阶跃跳变。</p>
+<p><strong>第三条:遥操作缺省即安全。</strong></p>
+<div class="highlight"><pre><span></span><code><span class="k">if</span> <span class="s2">&quot;navigate_cmd&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">goal</span><span class="p">:</span>
+    <span class="c1"># Safety: Inject safe default navigate_cmd to ensure interpolation goes to stop</span>
+    <span class="o">...</span> <span class="n">upper_body_goal</span><span class="p">[</span><span class="s2">&quot;navigate_cmd&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">DEFAULT_NAV_CMD</span><span class="p">)</span>   <span class="c1"># [0, 0, 0]</span>
+</code></pre></div>
+
+<p>(<code>:65</code>)。以及 <code>get_action</code> 里的<strong>1 秒超时</strong>(<code>:91</code> 起):如果 1 秒内没收到新的遥操作 goal,主动注入一个 <code>target_time = now + 0.1</code>、<code>interpolation_garbage_collection_time = now - 1.0</code> 的安全 goal,让插值器把速度收敛到 0、并触发下半身的重置逻辑。</p>
+<p><strong>第四条:是否处于遥操作模式由指令本身决定。</strong></p>
+<div class="highlight"><pre><span></span><code><span class="n">has_teleop_commands</span> <span class="o">=</span> <span class="p">(</span><span class="s2">&quot;navigate_cmd&quot;</span> <span class="ow">in</span> <span class="n">goal</span><span class="p">)</span> <span class="ow">or</span> <span class="p">(</span><span class="s2">&quot;base_height_command&quot;</span> <span class="ow">in</span> <span class="n">goal</span><span class="p">)</span>
+<span class="bp">self</span><span class="o">.</span><span class="n">is_in_teleop_mode</span> <span class="o">=</span> <span class="n">has_teleop_commands</span>
+<span class="bp">self</span><span class="o">.</span><span class="n">lower_body_policy</span><span class="o">.</span><span class="n">set_use_teleop_policy_cmd</span><span class="p">(</span><span class="n">has_teleop_commands</span><span class="p">)</span>
+</code></pre></div>
+
+<p>(<code>:75</code>)。这个开关直接决定下半身要不要采纳外部的高度/速度/躯干姿态 —— 键盘模式下它是 <code>False</code>,RL 策略用自己的键盘状态量。</p>
+<h3 id="22-上下半身的唯一物理耦合躯干相对腰部姿态">2.2 上下半身的唯一物理耦合:躯干相对腰部姿态<a class="headerlink" href="16.Decoupled-WBC_Architecture.html#22-上下半身的唯一物理耦合躯干相对腰部姿态" title="Permanent link">#</a></h3>
+<p>这是整个文档里最值得细看的十行代码(<code>g1_decoupled_whole_body_policy.py:124-134</code>):</p>
+<div class="highlight"><pre><span></span><code><span class="bp">self</span><span class="o">.</span><span class="n">robot_model</span><span class="o">.</span><span class="n">cache_forward_kinematics</span><span class="p">(</span><span class="n">q</span><span class="p">,</span> <span class="n">auto_clip</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+<span class="n">torso_orientation</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">robot_model</span><span class="o">.</span><span class="n">frame_placement</span><span class="p">(</span><span class="s2">&quot;torso_link&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">rotation</span>
+<span class="n">waist_orientation</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">robot_model</span><span class="o">.</span><span class="n">frame_placement</span><span class="p">(</span><span class="s2">&quot;pelvis&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">rotation</span>
+<span class="n">waist_yaw</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arctan2</span><span class="p">(</span><span class="n">waist_orientation</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span> <span class="n">waist_orientation</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">])</span>
+<span class="n">waist_yaw_only_rotation</span> <span class="o">=</span> <span class="n">rpy</span><span class="o">.</span><span class="n">rpyToMatrix</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">waist_yaw</span><span class="p">)</span>
+<span class="n">yaw_only_waist_from_torso</span> <span class="o">=</span> <span class="n">waist_yaw_only_rotation</span><span class="o">.</span><span class="n">T</span> <span class="o">@</span> <span class="n">torso_orientation</span>
+<span class="n">torso_orientation_rpy</span> <span class="o">=</span> <span class="n">rpy</span><span class="o">.</span><span class="n">matrixToRpy</span><span class="p">(</span><span class="n">yaw_only_waist_from_torso</span><span class="p">)</span>
+</code></pre></div>
+
+<p>逻辑是:先取骨盆的世界姿态,<strong>只保留它的 yaw</strong>,构造一个纯 yaw 旋转矩阵,再用它的转置去左乘躯干的世界姿态。结果 <code>torso_orientation_rpy</code> 表达的是"躯干相对于一个与骨盆同朝向、但保持水平的参考系"的 roll/pitch/yaw。</p>
+<p>为什么要去掉 roll/pitch 只留 yaw?因为骨盆的 roll/pitch 是<strong>平衡状态的一部分</strong>,RL 策略已经从 <code>gravity_orientation</code> 里知道了;如果不剥离,躯干姿态指令就会和平衡状态纠缠在一起,策略无法区分"我倾斜了"和"操作员让我弯腰了"。剥离之后这三个数变成纯粹的<strong>上半身意图</strong>,直接写进观测的 <code>[4:7]</code> 槽位。</p>
+<p><strong>关节写回的顺序也定义了优先级</strong>:</p>
+<div class="highlight"><pre><span></span><code><span class="n">q</span><span class="p">[</span><span class="n">upper_body_indices</span><span class="p">]</span> <span class="o">=</span> <span class="n">upper_body_action</span><span class="p">[</span><span class="s2">&quot;target_upper_body_pose&quot;</span><span class="p">]</span>
+<span class="o">...</span>
+<span class="n">q</span><span class="p">[</span><span class="n">lower_body_indices</span><span class="p">]</span> <span class="o">=</span> <span class="n">lower_body_action</span><span class="p">[</span><span class="s2">&quot;body_action&quot;</span><span class="p">][</span><span class="mi">0</span><span class="p">][:</span> <span class="nb">len</span><span class="p">(</span><span class="n">lower_body_indices</span><span class="p">)]</span>
+</code></pre></div>
+
+<p>(<code>:119</code> 与 <code>:141</code>)。上半身先写,下半身后写 —— 在腰部关节(<code>waist_yaw/roll/pitch</code>)重叠的情况下,<strong>下半身的 RL 输出覆盖上半身的 IK 输出</strong>。这与 <code>configs.py</code> 里 <code>enable_waist: False</code> 的默认值是一致的:默认腰部归下半身管。</p>
+<h3 id="23-下半身-rl-策略g1gearwbcpolicy">2.3 下半身 RL 策略:<code>G1GearWbcPolicy</code><a class="headerlink" href="16.Decoupled-WBC_Architecture.html#23-下半身-rl-策略g1gearwbcpolicy" title="Permanent link">#</a></h3>
+<p><code>decoupled_wbc/control/policy/g1_gear_wbc_policy.py</code>,295 行,核心是<strong>两个 ONNX 模型 + 一个观测历史缓冲</strong>。</p>
+<p><strong>双策略加载。</strong> <code>model_path</code> 是一个逗号分隔的字符串,split 后分别加载(<code>:30</code> / <code>:33</code>):</p>
+<div class="highlight"><pre><span></span><code><span class="bp">self</span><span class="o">.</span><span class="n">policy_1</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">load_onnx_policy</span><span class="p">(</span><span class="n">model_path</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;,&quot;</span><span class="p">)[</span><span class="mi">0</span><span class="p">])</span>   <span class="c1"># Balance</span>
+<span class="bp">self</span><span class="o">.</span><span class="n">policy_2</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">load_onnx_policy</span><span class="p">(</span><span class="n">model_path</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;,&quot;</span><span class="p">)[</span><span class="mi">1</span><span class="p">])</span>   <span class="c1"># Walk</span>
+</code></pre></div>
+
+<p>默认值在 <code>configs.py</code>:</p>
+<div class="highlight"><pre><span></span><code><span class="n">wbc_model_path</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="p">(</span>
+    <span class="s2">&quot;policy/GR00T-WholeBodyControl-Balance.onnx,&quot;</span>
+    <span class="s2">&quot;policy/GR00T-WholeBodyControl-Walk.onnx&quot;</span>
+<span class="p">)</span>
+</code></pre></div>
+
+<p>而 <code>sim2mujoco/resources/robots/g1/g1_gear_wbc.yaml</code> 里对应的是 <code>policy/ft92.onnx</code>(站立)和 <code>policy/ft109.onnx</code>(行走)。</p>
+<p><strong>观测布局:86 维单帧。</strong> <code>compute_observation</code>(<code>:68</code>)显式声明维度构成:</p>
+<div class="highlight"><pre><span></span><code><span class="n">single_obs_dim</span> <span class="o">=</span> <span class="mi">86</span>  <span class="c1"># 3 + 1 + 3 + 3 + 3 + n_joints + n_joints + 15, n_joints = 29</span>
+</code></pre></div>
+
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>槽位</th>
+<th>维度</th>
+<th>内容</th>
+<th>缩放</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>[0:3]</code></td>
+<td>3</td>
+<td>速度指令 <code>cmd[:3]</code></td>
+<td><code>× cmd_scale = [2.0, 2.0, 0.5]</code></td>
+</tr>
+<tr>
+<td><code>[3:4]</code></td>
+<td>1</td>
+<td>基座高度指令 <code>height_cmd</code></td>
+<td>无(默认 0.74 m)</td>
+</tr>
+<tr>
+<td><code>[4:7]</code></td>
+<td>3</td>
+<td>躯干 RPY 指令(见 2.2)</td>
+<td>无</td>
+</tr>
+<tr>
+<td><code>[7:10]</code></td>
+<td>3</td>
+<td>基座角速度 <code>omega</code></td>
+<td><code>× ang_vel_scale = 0.5</code></td>
+</tr>
+<tr>
+<td><code>[10:13]</code></td>
+<td>3</td>
+<td>重力方向 <code>gravity_orientation</code></td>
+<td>无</td>
+</tr>
+<tr>
+<td><code>[13:42]</code></td>
+<td>29</td>
+<td><code>(q - default_angles)</code></td>
+<td><code>× dof_pos_scale</code></td>
+</tr>
+<tr>
+<td><code>[42:71]</code></td>
+<td>29</td>
+<td><code>dq</code></td>
+<td><code>× dof_vel_scale = 0.05</code></td>
+</tr>
+<tr>
+<td><code>[71:86]</code></td>
+<td>15</td>
+<td>上一步动作 <code>self.action</code></td>
+<td>无</td>
+</tr>
+</tbody>
+</table></div>
+<p>注意 <code>[13:42]</code> 和 <code>[42:71]</code> 都是 <strong>29 维全身关节</strong> —— 下半身策略能看到手臂的全部关节角和角速度,这是它感知上半身负载的第二条通道(第一条是 2.2 的躯干姿态)。而输出只有 15 维(12 腿 + 3 腰),所以它"看全身、控下半身"。</p>
+<p><strong>堆叠历史。</strong> <code>num_obs: 516 = 86 × 6</code>,<code>obs_history_len: 6</code>,即 6 帧 × 86 维滑窗(<code>set_observation</code>,<code>:135</code> 起)。</p>
+<blockquote>
+<p>⚠️ <strong>配置陷阱</strong>:<code>control/main/teleop/configs/g1_gear_wbc.yaml</code> 里写的是 <code>num_obs: 570 # 76*6</code>,与代码里的 86 矛盾。追踪 <code>GEAR_WBC_CONFIG</code> 可知实际加载的是 <code>decoupled_wbc/sim2mujoco/resources/robots/g1/g1_gear_wbc.yaml</code>(<code>num_obs: 516 # 86 × 6</code>)。前者是残留的旧文件,不要参照。</p>
+</blockquote>
+<p><strong>步态时钟:算了但没用。</strong> <code>compute_observation</code> 开头老老实实算了一套双足步态相位(<code>:71-87</code>):</p>
+<div class="highlight"><pre><span></span><code><span class="bp">self</span><span class="o">.</span><span class="n">gait_indices</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">remainder</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">gait_indices</span> <span class="o">+</span> <span class="mf">0.02</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">freq_cmd</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">)</span>
+<span class="n">durations</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">full_like</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">gait_indices</span><span class="p">,</span> <span class="mf">0.5</span><span class="p">)</span>          <span class="c1"># duty = 0.5</span>
+<span class="n">foot_indices</span> <span class="o">=</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">gait_indices</span> <span class="o">+</span> <span class="n">phases</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">gait_indices</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span>
+<span class="bp">self</span><span class="o">.</span><span class="n">clock_inputs</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">stack</span><span class="p">([</span><span class="n">torch</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">*</span> <span class="n">fi</span><span class="p">)</span> <span class="k">for</span> <span class="n">fi</span> <span class="ow">in</span> <span class="n">foot_indices</span><span class="p">],</span> <span class="n">dim</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+</code></pre></div>
+
+<p>但写进 <code>single_obs</code> 的那两行被注释掉了(<code>:129-131</code>)。也就是说<strong>当前发布的策略是无相位时钟的</strong>,步态节奏完全由网络自己涌现;<code>freq_cmd</code>(默认 0.75,键盘 <code>n</code>/<code>m</code> 可在 [1.0, 2.0] 内调)目前只影响这个未被使用的时钟。这是一个明显的"训练时用过、部署时关掉"的痕迹。</p>
+<p><strong>策略切换:一个阈值。</strong></p>
+<div class="highlight"><pre><span></span><code><span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">cmd</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mf">0.05</span><span class="p">:</span>
+    <span class="n">policy</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">policy_1</span>      <span class="c1"># 站立/平衡</span>
+<span class="k">else</span><span class="p">:</span>
+    <span class="n">policy</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">policy_2</span>      <span class="c1"># 行走</span>
+<span class="bp">self</span><span class="o">.</span><span class="n">action</span> <span class="o">=</span> <span class="n">policy</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">obs_tensor</span><span class="p">)</span><span class="o">.</span><span class="n">detach</span><span class="p">()</span><span class="o">.</span><span class="n">numpy</span><span class="p">()</span><span class="o">.</span><span class="n">squeeze</span><span class="p">()</span>
+</code></pre></div>
+
+<p>(<code>:223-230</code>)。切换是<strong>硬切换</strong>,没有混合、没有渐变。之所以能这样做,是因为两个策略共享完全相同的观测空间和动作空间,且都在 <code>cmd ≈ 0</code> 附近训练过,输出连续性由 <code>default_angles</code> 这个共同锚点保证。</p>
+<p><strong>动作反缩放与安全阀。</strong></p>
+<div class="highlight"><pre><span></span><code><span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">use_policy_action</span><span class="p">:</span>
+    <span class="n">cmd_q</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">action</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="p">[</span><span class="s2">&quot;action_scale&quot;</span><span class="p">]</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="p">[</span><span class="s2">&quot;default_angles&quot;</span><span class="p">]</span>
+<span class="k">else</span><span class="p">:</span>
+    <span class="n">cmd_q</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">observation</span><span class="p">[</span><span class="s2">&quot;q&quot;</span><span class="p">][</span><span class="bp">self</span><span class="o">.</span><span class="n">robot_model</span><span class="o">.</span><span class="n">get_joint_group_indices</span><span class="p">(</span><span class="s2">&quot;lower_body&quot;</span><span class="p">)]</span>
+<span class="k">return</span> <span class="p">{</span><span class="s2">&quot;body_action&quot;</span><span class="p">:</span> <span class="p">(</span><span class="n">cmd_q</span><span class="p">,</span> <span class="n">cmd_dq</span><span class="p">,</span> <span class="n">cmd_tau</span><span class="p">)}</span>
+</code></pre></div>
+
+<p>(<code>:233-241</code>)。<code>use_policy_action = False</code> 时(默认值,<code>:44</code>),下半身<strong>原地冻结在当前关节角</strong> —— 这是上电后的安全状态,必须按键盘 <code>]</code> 才会把 RL 输出接进去,按 <code>o</code> 断开。<code>cmd_dq</code> 和 <code>cmd_tau</code> 恒为零向量,即<strong>纯位置 PD 控制</strong>,不做前馈力矩。</p>
+<h3 id="24-上半身插值interpolationpolicy">2.4 上半身插值:<code>InterpolationPolicy</code><a class="headerlink" href="16.Decoupled-WBC_Architecture.html#24-上半身插值interpolationpolicy" title="Permanent link">#</a></h3>
+<p><code>decoupled_wbc/control/policy/interpolation_policy.py</code>。它维护一个 <code>PoseTrajectoryInterpolator</code>(<code>:152</code>),把 <code>target_upper_body_pose</code> / <code>base_height_command</code> / <code>navigate_cmd</code> 三者拼成一个长向量统一插值(<code>_concat_vecs</code> / <code>_unconcat_vecs</code>),取值时再拆开。</p>
+<p>关键机制是 <code>schedule_waypoint</code>(<code>:197</code>):</p>
+<ul>
+<li><strong>速率钳制</strong>:<code>max_change_rate</code> 逐关节生效(<code>upper_body_max_joint_speed</code>,配置里给的是 1000 —— 实际上等同于不限速,限速交给下游的关节安全监控),新航点若要求的变化率超限则被推后。</li>
+<li><strong>垃圾回收</strong>:早于 <code>interpolation_garbage_collection_time</code> 的历史航点被 <code>trim</code> 掉(<code>:218</code>),防止轨迹缓冲无限增长,也保证遥操作断连后旧航点不会被重新插值出来。</li>
+<li><strong>单调时间</strong>:全程用 <code>time.monotonic()</code>,不受系统时钟调整影响。</li>
+</ul>
+<p>工厂函数 <code>wbc_policy_factory.py:31</code> 给它的初值是:</p>
+<div class="highlight"><pre><span></span><code><span class="n">InterpolationPolicy</span><span class="p">(</span>
+    <span class="n">init_values</span><span class="o">=</span><span class="p">{</span>
+        <span class="s2">&quot;target_upper_body_pose&quot;</span><span class="p">:</span> <span class="n">robot_model</span><span class="o">.</span><span class="n">get_initial_upper_body_pose</span><span class="p">(),</span>
+        <span class="s2">&quot;base_height_command&quot;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">DEFAULT_BASE_HEIGHT</span><span class="p">]),</span>   <span class="c1"># 0.74</span>
+        <span class="s2">&quot;navigate_cmd&quot;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">DEFAULT_NAV_CMD</span><span class="p">]),</span>              <span class="c1"># [0, 0, 0]</span>
+    <span class="p">},</span>
+    <span class="n">max_change_rate</span><span class="o">=</span><span class="n">wbc_config</span><span class="p">[</span><span class="s2">&quot;upper_body_max_joint_speed&quot;</span><span class="p">],</span>
+<span class="p">)</span>
+</code></pre></div>
+
+<p>若配置 <code>upper_body_policy_type: "identity"</code>,则换成 <code>IdentityPolicy</code> —— 目标原样透传,不插值。这条路径用于策略回放/数据重演场景。</p>
+<h3 id="25-遥操作-ik-栈">2.5 遥操作 IK 栈<a class="headerlink" href="16.Decoupled-WBC_Architecture.html#25-遥操作-ik-栈" title="Permanent link">#</a></h3>
+<div class="mermaid">
+sequenceDiagram
+    participant VR as VR 设备
+    participant TS as TeleopStreamer
+    participant TP as TeleopPolicy
+    participant RIK as TeleopRetargetingIK
+    participant BIK as BodyIKSolver (pink)
+    participant HIK as Hand IK ×2
+
+    VR-&gt;&gt;TS: 头 + 双手 6D 位姿, 手指 (25,4,4)
+    Note over TP: 按键 `l` 或 toggle_activation&lt;br/&gt;→ 倒计时 → calibrate()
+    TS-&gt;&gt;TP: 校准后的相对位姿
+    TP-&gt;&gt;RIK: get_action()
+    Note over RIK: 首次调用先跑 50 次 IK 预热
+    RIK-&gt;&gt;BIK: 求解全身姿态
+    BIK-&gt;&gt;BIK: 3 × QP 迭代 (dt=0.05)
+    BIK--&gt;&gt;RIK: q_body
+    RIK-&gt;&gt;HIK: 手指关节
+    HIK--&gt;&gt;RIK: q_hand
+    Note over RIK: 用 q_hand 覆写手部驱动关节索引
+    RIK--&gt;&gt;TP: target_upper_body_pose
+</div>
+<p><strong><code>TeleopRetargetingIK</code></strong>(<code>control/teleop/teleop_retargeting_ik.py</code>,148 行):首次调用时连跑 <strong>50 次 IK 迭代</strong>做预热 —— 因为 QP-IK 是增量式的,冷启动第一帧误差可能很大,预热让它先收敛到当前 VR 姿态附近。之后每帧先解身体,再用左右手 IK 求解器的结果覆写手部驱动关节的对应索引。</p>
+<p><strong><code>BodyIKSolver</code></strong>(<code>control/teleop/solver/body/body_ik_solver.py</code>,179 行)基于 <code>pink</code> + <code>pinocchio</code> + <code>qpsolvers</code>(优先 <code>quadprog</code>)。它的特色是自定义了一个 <code>WeightedPostureTask(PostureTask)</code>,重写 <code>compute_error</code> 和 <code>compute_jacobian</code>,让不同关节的"回归默认姿态"代价可以差几个数量级:</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>关节</th>
+<th>posture 权重</th>
+<th>解读</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>waist_pitch</code> / <code>waist_roll</code></td>
+<td>10</td>
+<td>强烈不希望动腰</td>
+</tr>
+<tr>
+<td><code>shoulder_pitch</code></td>
+<td>4</td>
+<td>较硬</td>
+</tr>
+<tr>
+<td><code>elbow_pitch</code> / <code>shoulder_roll</code></td>
+<td>3</td>
+<td>中等</td>
+</tr>
+<tr>
+<td><code>waist_yaw</code></td>
+<td>2</td>
+<td>允许转身</td>
+</tr>
+<tr>
+<td><code>wrist_pitch</code></td>
+<td>1</td>
+<td>较软</td>
+</tr>
+<tr>
+<td><code>shoulder_yaw</code> / <code>wrist_yaw</code></td>
+<td>0.1</td>
+<td>几乎自由</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>任务代价</strong>(<code>body_ik_solver_settings.py</code>)则给手部末端:<code>position_cost: 8.0</code>、<code>orientation_cost: 2.0</code>、<code>lm_damping: 3.0</code> —— 位置权重是姿态的 4 倍,说明"手到哪儿"比"手朝哪儿"重要;<code>posture_cost: 0.01</code> 是全局正则系数,与上表的逐关节权重相乘。</p>
+<p>求解参数:<code>dt = 0.05</code>(20 Hz 遥操作周期),<code>num_step_per_frame = 3</code>(每帧解 3 次 QP)。</p>
+<p><strong>关节限位覆写</strong>:IK 用的限位比机器人物理限位更紧,<code>waist_pitch: [-0.52, 0.9]</code>、<code>elbow_pitch: [-1.0472, 1.4]</code> —— 前者防止弯腰过度破坏平衡,后者避开肘部自碰撞区。<code>q_default</code> 里 <code>shoulder_roll</code> 设为 ±0.2,让手臂略微外展,远离躯干奇异位形。</p>
+<hr />
+<h2 id="3-控制循环与频率">3. 控制循环与频率<a class="headerlink" href="16.Decoupled-WBC_Architecture.html#3-控制循环与频率" title="Permanent link">#</a></h2>
+<p><code>control/main/teleop/run_g1_control_loop.py</code>(236 行)是 ROS 节点 <code>ControlPolicy</code> 的主循环:</p>
+<div class="mermaid">
+graph LR
+    A["ROS 订阅&lt;br/&gt;CONTROL_GOAL_TOPIC"] --&gt; B["wbc_policy.set_goal(goal)"]
+    C["G1Env&lt;br/&gt;读关节/IMU"] --&gt; D["wbc_policy.set_observation(obs)"]
+    B --&gt; E["wbc_policy.get_action(t)"]
+    D --&gt; E
+    E --&gt; F["G1Env.step(q_cmd)&lt;br/&gt;PD → 力矩"]
+    F --&gt; G["rate.sleep()&lt;br/&gt;50 Hz"]
+    G --&gt; C
+    H["KeyboardEStop"] -.急停.-&gt; F
+    I["Telemetry&lt;br/&gt;window=100"] -.统计.-&gt; G
+</div>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>频率</th>
+<th>值</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>control_frequency</code></td>
+<td><strong>50 Hz</strong></td>
+<td>主循环 / RL 策略推理频率</td>
+</tr>
+<tr>
+<td><code>sim_frequency</code></td>
+<td><strong>200 Hz</strong></td>
+<td>MuJoCo 物理步进(<code>SIMULATE_DT: 0.005</code>)</td>
+</tr>
+<tr>
+<td><code>teleop_frequency</code></td>
+<td><strong>20 Hz</strong></td>
+<td>VR 数据与 IK 求解</td>
+</tr>
+<tr>
+<td><code>VIEWER_DT</code></td>
+<td>0.02</td>
+<td>可视化刷新 50 Hz</td>
+</tr>
+<tr>
+<td><code>control_decimation</code></td>
+<td>4</td>
+<td>200 Hz ÷ 4 = 50 Hz,与上面一致</td>
+</tr>
+</tbody>
+</table></div>
+<p>几个循环里的细节:</p>
+<ul>
+<li><code>waist_location = "lower_and_upper_body" if config.enable_waist else "lower_body"</code>(<code>:55</code>)—— 决定腰部三关节归属哪一组,直接影响 2.2 里 <code>q[lower_body_indices]</code> 覆盖的范围。</li>
+<li><code>Telemetry(window_size=100)</code>(<code>:53</code>)滑窗统计单步耗时,超过 <code>1/control_frequency</code> 且非 <code>sim_sync_mode</code> 时告警(<code>:220</code>)。</li>
+<li><code>KeyboardEStop</code>(<code>:72</code>)独立于策略之外,任何时刻可切断输出。</li>
+<li>键盘输入有两条通路:直接读终端(raw)或订阅 <code>/keyboard_input</code> ROS 话题 —— 后者让远端机器也能发按键。</li>
+</ul>
+<p><strong>键盘绑定</strong>(<code>g1_gear_wbc_policy.py:243</code> 起):</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>按键</th>
+<th>作用</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>]</code> / <code>o</code></td>
+<td>RL 动作接入 / 断开(<code>use_policy_action</code>)</td>
+</tr>
+<tr>
+<td><code>W</code> / <code>S</code></td>
+<td><code>cmd[0]</code> ±0.2(前后)</td>
+</tr>
+<tr>
+<td><code>A</code> / <code>D</code></td>
+<td><code>cmd[1]</code> ±0.2(左右)</td>
+</tr>
+<tr>
+<td><code>Q</code> / <code>E</code></td>
+<td><code>cmd[2]</code> ±0.2(转向)</td>
+</tr>
+<tr>
+<td><code>z</code></td>
+<td>三个速度分量全部清零</td>
+</tr>
+<tr>
+<td><code>1</code> / <code>2</code></td>
+<td><code>height_cmd</code> ±0.1</td>
+</tr>
+<tr>
+<td><code>n</code> / <code>m</code></td>
+<td><code>freq_cmd</code> ±,钳制在 [1.0, 2.0]</td>
+</tr>
+<tr>
+<td><code>3</code>–<code>8</code></td>
+<td>躯干 roll / pitch / yaw ±10°</td>
+</tr>
+<tr>
+<td><code>l</code></td>
+<td>遥操作激活(倒计时后 <code>calibrate()</code>)</td>
+</tr>
+<tr>
+<td><code>k</code></td>
+<td>遥操作重置</td>
+</tr>
+</tbody>
+</table></div>
+<hr />
+<h2 id="4-部署">4. 部署<a class="headerlink" href="16.Decoupled-WBC_Architecture.html#4-部署" title="Permanent link">#</a></h2>
+<h3 id="41-仿真">4.1 仿真<a class="headerlink" href="16.Decoupled-WBC_Architecture.html#41-仿真" title="Permanent link">#</a></h3>
+<p><code>ROBOT_SCENE: scene_43dof.xml</code>,<code>SIMULATE_DT: 0.005</code>,<code>ENABLE_ELASTIC_BAND: True</code> —— 弹性绳吊住机器人,方便调试时不摔。<code>GAIT_PERIOD: 0.9</code>。</p>
+<p>配置里 <code>MOTOR2JOINT</code> / <code>JOINT2MOTOR</code> 都是 29 元的恒等映射,说明仿真侧不需要电机重排;真机侧则通过 <code>UNITREE_LEGGED_CONST</code>(<code>LOWLEVEL = 0xFF</code>,<code>MODE_MACHINE = 5</code>)走低层 DDS 接口。</p>
+<h3 id="42-真机">4.2 真机<a class="headerlink" href="16.Decoupled-WBC_Architecture.html#42-真机" title="Permanent link">#</a></h3>
+<ul>
+<li>Docker 镜像 <code>docker.io/nvgear</code>。</li>
+<li>机器人静态 IP <code>192.168.123.222/255.255.255.0</code>,<code>robot_ip: "192.168.123.164"</code>(相机服务器)。</li>
+<li><code>scripts/deploy_g1.py</code> 起一个名为 <code>g1_deployment</code> 的 tmux 会话,分窗格拉起各组件。</li>
+<li><strong>PD 增益分两套</strong>:<code>JOINT_KP/KD</code>(策略侧)与 <code>MOTOR_KP/KD</code>(电机侧)各一个 29 维向量。真机上有一处针对性微调:</li>
+</ul>
+<p><code>python
+  wbc_config["MOTOR_KD"][14] = wbc_config["MOTOR_KD"][14] - 10   # 腰部 pitch 阻尼下调</code></p>
+<p>索引 14 是腰部 pitch,降阻尼是为了让上半身 IK 的目标更容易跟上。</p>
+<ul>
+<li><code>DataExporterConfig.state_dim / action_dim = 43</code> —— 29 身体关节 + 14 手指关节(<code>with_hands: True</code>),导出为 LeRobot 格式用于后续 VLA 训练。</li>
+</ul>
+<h3 id="43-关键-rl-配置sim2mujocoresourcesrobotsg1g1_gear_wbcyaml">4.3 关键 RL 配置(<code>sim2mujoco/resources/robots/g1/g1_gear_wbc.yaml</code>)<a class="headerlink" href="16.Decoupled-WBC_Architecture.html#43-关键-rl-配置sim2mujocoresourcesrobotsg1g1_gear_wbcyaml" title="Permanent link">#</a></h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>项</th>
+<th>值</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>policy_path</code></td>
+<td><code>policy/ft92.onnx</code>(站立)</td>
+</tr>
+<tr>
+<td><code>walk_policy_path</code></td>
+<td><code>policy/ft109.onnx</code>(行走)</td>
+</tr>
+<tr>
+<td><code>simulation_dt</code></td>
+<td>0.005</td>
+</tr>
+<tr>
+<td><code>control_decimation</code></td>
+<td>4</td>
+</tr>
+<tr>
+<td><code>kps</code></td>
+<td><code>[150,150,150,200,40,40] × 2 + [250,250,250]</code></td>
+</tr>
+<tr>
+<td><code>kds</code></td>
+<td><code>[2,2,2,4,2,2] × 2 + [5,5,5]</code></td>
+</tr>
+<tr>
+<td><code>default_angles</code></td>
+<td><code>[-0.1,0,0,0.3,-0.2,0] × 2 + [0,0,0]</code></td>
+</tr>
+<tr>
+<td><code>ang_vel_scale</code></td>
+<td>0.5</td>
+</tr>
+<tr>
+<td><code>dof_vel_scale</code></td>
+<td>0.05</td>
+</tr>
+<tr>
+<td><code>action_scale</code></td>
+<td>0.25</td>
+</tr>
+<tr>
+<td><code>cmd_scale</code></td>
+<td><code>[2.0, 2.0, 0.5]</code></td>
+</tr>
+<tr>
+<td><code>num_actions</code></td>
+<td>15</td>
+</tr>
+<tr>
+<td><code>num_obs</code></td>
+<td>516(= 86 × 6)</td>
+</tr>
+<tr>
+<td><code>obs_history_len</code></td>
+<td>6</td>
+</tr>
+<tr>
+<td><code>height_cmd</code></td>
+<td>0.74</td>
+</tr>
+<tr>
+<td><code>freq_cmd</code></td>
+<td>0.75</td>
+</tr>
+</tbody>
+</table></div>
+<p><code>kps</code> 的结构读法:每条腿 6 关节 <code>[hip_pitch, hip_roll, hip_yaw, knee, ankle_pitch, ankle_roll]</code>,膝盖最硬(200),踝最软(40);腰部三关节最硬(250)——因为它要顶住整个上半身。<code>default_angles</code> 是一个微蹲姿态:髋 pitch -0.1、膝 +0.3、踝 pitch -0.2,三者相加保证小腿垂直、重心略低。</p>
+<hr />
+<h2 id="5-关键源文件表">5. 关键源文件表<a class="headerlink" href="16.Decoupled-WBC_Architecture.html#5-关键源文件表" title="Permanent link">#</a></h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>文件</th>
+<th>作用</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>decoupled_wbc/control/policy/g1_decoupled_whole_body_policy.py</code></td>
+<td>解耦契约:goal 分流、躯干姿态计算、上下半身关节合并、遥操作超时</td>
+</tr>
+<tr>
+<td><code>decoupled_wbc/control/policy/g1_gear_wbc_policy.py</code></td>
+<td>下半身 RL:双 ONNX 加载、86 维观测拼装、策略切换、键盘</td>
+</tr>
+<tr>
+<td><code>decoupled_wbc/control/policy/wbc_policy_factory.py</code></td>
+<td>组装上下半身策略,<code>WBC_VERSIONS = ["gear_wbc"]</code></td>
+</tr>
+<tr>
+<td><code>decoupled_wbc/control/policy/interpolation_policy.py</code></td>
+<td>速率受限航点插值 + 垃圾回收</td>
+</tr>
+<tr>
+<td><code>decoupled_wbc/control/policy/identity_policy.py</code></td>
+<td>目标透传(无插值)分支</td>
+</tr>
+<tr>
+<td><code>decoupled_wbc/control/policy/teleop_policy.py</code></td>
+<td><code>TeleopStreamer</code> 封装、激活/校准状态机</td>
+</tr>
+<tr>
+<td><code>decoupled_wbc/control/teleop/teleop_retargeting_ik.py</code></td>
+<td>IK 预热、身体 + 双手求解结果拼接</td>
+</tr>
+<tr>
+<td><code>decoupled_wbc/control/teleop/solver/body/body_ik_solver.py</code></td>
+<td>pink/pinocchio QP-IK,<code>WeightedPostureTask</code></td>
+</tr>
+<tr>
+<td><code>decoupled_wbc/control/teleop/solver/body/body_ik_solver_settings.py</code></td>
+<td>IK 权重、限位覆写、<code>q_default</code></td>
+</tr>
+<tr>
+<td><code>decoupled_wbc/control/main/teleop/run_g1_control_loop.py</code></td>
+<td>ROS 主循环、频率控制、遥测、急停</td>
+</tr>
+<tr>
+<td><code>decoupled_wbc/control/main/teleop/configs/configs.py</code></td>
+<td><code>ControlLoopConfig</code> / <code>DataExporterConfig</code> 等数据类</td>
+</tr>
+<tr>
+<td><code>decoupled_wbc/control/main/teleop/configs/g1_29dof_gear_wbc.yaml</code></td>
+<td>顶层部署配置,指向真正的 RL 配置</td>
+</tr>
+<tr>
+<td><code>decoupled_wbc/sim2mujoco/resources/robots/g1/g1_gear_wbc.yaml</code></td>
+<td><strong>实际加载</strong>的 RL 超参与 ONNX 路径</td>
+</tr>
+<tr>
+<td><code>decoupled_wbc/control/main/constants.py</code></td>
+<td>ROS 话题名、<code>DEFAULT_BASE_HEIGHT = 0.74</code>、<code>DEFAULT_NAV_CMD</code></td>
+</tr>
+<tr>
+<td><code>docs/source/references/decoupled_wbc.md</code></td>
+<td>官方部署说明、键盘/Pico 绑定</td>
+</tr>
+</tbody>
+</table></div>
+<hr />
+<h2 id="6-与-gear-sonic-的对照">6. 与 GEAR-SONIC 的对照<a class="headerlink" href="16.Decoupled-WBC_Architecture.html#6-与-gear-sonic-的对照" title="Permanent link">#</a></h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>维度</th>
+<th>Decoupled WBC</th>
+<th><a href="17.GEAR-SONIC_Architecture.html">GEAR-SONIC</a></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>全身控制方式</td>
+<td>上下分治(IK + RL)</td>
+<td>单一 RL 策略统管 29 DoF</td>
+</tr>
+<tr>
+<td>上半身反馈</td>
+<td><strong>无</strong>(开环插值)</td>
+<td>有(策略观测包含全身状态)</td>
+</tr>
+<tr>
+<td>上下耦合</td>
+<td>4 个显式通道(<code>q_arms</code> / 高度 / 躯干 RPY / 速度)</td>
+<td>隐式,统一潜空间</td>
+</tr>
+<tr>
+<td>指令接口</td>
+<td>关节角目标 + 速度指令</td>
+<td>64 维运动 token</td>
+</tr>
+<tr>
+<td>训练</td>
+<td>ONNX 策略离线训练,仓库不含训练码</td>
+<td>Isaac Lab PPO,4096 并行环境,训练码开源</td>
+</tr>
+<tr>
+<td>动作能力</td>
+<td>稳态操作、行走 + 手臂作业</td>
+<td>大幅度全身动态动作、多来源运动重定向</td>
+</tr>
+<tr>
+<td>调试难度</td>
+<td>低 —— 每一层都可单独观察</td>
+<td>高 —— 潜空间不可直接解释</td>
+</tr>
+<tr>
+<td>适用场景</td>
+<td>精确遥操作、数据采集</td>
+<td>通用运动跟踪、VLA 下游动作空间</td>
+</tr>
+</tbody>
+</table></div>
+<p>两条路线在这个仓库里是<strong>并列的</strong>,不是迭代替换关系。Decoupled WBC 更适合"要把手准确送到某个位姿"的操作类任务;GEAR-SONIC 更适合"要机器人做出某种整体运动"的场景,并且它的 64 维 token 已经被当作 VLA 的动作空间使用(见 <a href="15.GR00T-WBC_Overview.html">GR00T-WBC 总览</a>)。</p>
+      </div>
+    </main>
+        <aside class="toc">
+            <div class="toc-title">本页目录</div>
+            <ul>
+                <li><a href="16.Decoupled-WBC_Architecture.html#1-整体架构概览" class="toc-h2">1. 整体架构概览</a></li>
+                <li><a href="16.Decoupled-WBC_Architecture.html#2-核心组件详解" class="toc-h2">2. 核心组件详解</a></li>
+                <li><a href="16.Decoupled-WBC_Architecture.html#21-解耦契约g1decoupledwholebodypolicy" class="toc-h3">2.1 解耦契约:G1DecoupledWholeBodyPolicy</a></li>
+                <li><a href="16.Decoupled-WBC_Architecture.html#22-上下半身的唯一物理耦合躯干相对腰部姿态" class="toc-h3">2.2 上下半身的唯一物理耦合:躯干相对腰部姿态</a></li>
+                <li><a href="16.Decoupled-WBC_Architecture.html#23-下半身-rl-策略g1gearwbcpolicy" class="toc-h3">2.3 下半身 RL 策略:G1GearWbcPolicy</a></li>
+                <li><a href="16.Decoupled-WBC_Architecture.html#24-上半身插值interpolationpolicy" class="toc-h3">2.4 上半身插值:InterpolationPolicy</a></li>
+                <li><a href="16.Decoupled-WBC_Architecture.html#25-遥操作-ik-栈" class="toc-h3">2.5 遥操作 IK 栈</a></li>
+                <li><a href="16.Decoupled-WBC_Architecture.html#3-控制循环与频率" class="toc-h2">3. 控制循环与频率</a></li>
+                <li><a href="16.Decoupled-WBC_Architecture.html#4-部署" class="toc-h2">4. 部署</a></li>
+                <li><a href="16.Decoupled-WBC_Architecture.html#41-仿真" class="toc-h3">4.1 仿真</a></li>
+                <li><a href="16.Decoupled-WBC_Architecture.html#42-真机" class="toc-h3">4.2 真机</a></li>
+                <li><a href="16.Decoupled-WBC_Architecture.html#43-关键-rl-配置sim2mujocoresourcesrobotsg1g1_gear_wbcyaml" class="toc-h3">4.3 关键 RL 配置(sim2mujoco/resources/robots/g1/g1_gear_wbc.yaml)</a></li>
+                <li><a href="16.Decoupled-WBC_Architecture.html#5-关键源文件表" class="toc-h2">5. 关键源文件表</a></li>
+                <li><a href="16.Decoupled-WBC_Architecture.html#6-与-gear-sonic-的对照" class="toc-h2">6. 与 GEAR-SONIC 的对照</a></li>
+            </ul>
+        </aside>
+
+    <button class="back-to-top" onclick="window.scrollTo({top:0,behavior:'smooth'})">&#8593;</button>
+
+    <script src="assets/vendor/mermaid/mermaid.min.js"></script>
+    <script defer src="assets/vendor/katex/katex.min.js"></script>
+    <script defer src="assets/vendor/katex/auto-render.min.js"
+            onload="renderMathInElement(document.querySelector('.content-inner'), {
+                delimiters: [
+                    { left: '$$', right: '$$', display: true },
+                    { left: '$', right: '$', display: false }
+                ],
+                ignoredTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code', 'option'],
+                ignoredClasses: ['mermaid', 'diagram'],
+                throwOnError: false
+            });"></script>
+    <script>
+        // Mermaid destroys the source text when it renders, so keep a copy in
+        // order to re-render on theme change.
+        document.querySelectorAll('.mermaid').forEach(el => {
+            el.dataset.src = el.textContent;
+        });
+
+        const prefersDark = window.matchMedia('(prefers-color-scheme: dark)');
+        function currentTheme() {
+            const forced = document.documentElement.getAttribute('data-theme');
+            if (forced) return forced;
+            return prefersDark.matches ? 'dark' : 'light';
+        }
+
+        function initMermaid() {
+            mermaid.initialize({
+                startOnLoad: false,
+                theme: currentTheme() === 'dark' ? 'dark' : 'default',
+                flowchart: { useMaxWidth: true, htmlLabels: true },
+                securityLevel: 'loose'
+            });
+        }
+
+        function renderMermaid() {
+            const nodes = document.querySelectorAll('.mermaid');
+            nodes.forEach(el => {
+                el.removeAttribute('data-processed');
+                el.textContent = el.dataset.src;
+            });
+            // mermaid.run rejects on its internal font probe in some browsers;
+            // the diagrams still render, so swallow it rather than surfacing an
+            // unhandled rejection.
+            if (!nodes.length) return;
+            Promise.resolve(mermaid.run({ nodes: nodes }))
+                .catch(() => {})
+                .then(() => nodes.forEach(applyZoom));
+        }
+
+        /* ---------- Diagram zoom ----------
+           Scale is tracked as a factor of the diagram's NATURAL size (its
+           viewBox), so 100% means 1:1 and one font size looks identical in
+           every diagram on the site. Left to itself mermaid's useMaxWidth
+           stretches each svg to the container, which blows a 3-node diagram
+           up to 3.4x and shrinks a wide one to 0.34x — a 10x spread in
+           apparent font size. FIT_MAX caps the auto-fit at 1:1 (never
+           upscale) and FIT_MIN stops wide diagrams from shrinking to
+           unreadable; anything past that overflows and scrolls/pans. */
+        const MIN_Z = 0.3, MAX_Z = 6, STEP = 1.25;
+        const FIT_MIN = 0.55, FIT_MAX = 1;
+        const PAD = 40;               // .mermaid horizontal padding (20px each side)
+        const zoom = new WeakMap();   // .mermaid -> explicit scale; absent = auto-fit
+
+        function naturalSize(svg) {
+            const vb = svg.viewBox && svg.viewBox.baseVal;
+            if (vb && vb.width) return { w: vb.width, h: vb.height };
+            const r = svg.getBoundingClientRect();
+            return { w: r.width, h: r.height };
+        }
+
+        function fitScale(el, nat) {
+            const avail = el.clientWidth - PAD;
+            if (!nat.w || avail <= 0) return 1;
+            return Math.min(FIT_MAX, Math.max(FIT_MIN, avail / nat.w));
+        }
+
+        function scaleOf(el, nat) {
+            const k = zoom.get(el);
+            return k === undefined ? fitScale(el, nat) : k;
+        }
+
+        function applyZoom(el) {
+            const svg = el.querySelector('svg');
+            if (!svg) return;
+            const nat = naturalSize(svg);
+            if (!nat.w) return;
+            const k = scaleOf(el, nat);
+
+            const label = el.closest('.diagram')?.querySelector('.diagram-zoom');
+            if (label) label.textContent = Math.round(k * 100) + '%';
+
+            // Size the svg explicitly instead of leaving it to useMaxWidth,
+            // so the container gets real scrollbars when the diagram overflows.
+            svg.style.maxWidth = 'none';
+            svg.style.width = (nat.w * k) + 'px';
+            svg.style.height = (nat.h * k) + 'px';
+
+            const overflows = nat.w * k > el.clientWidth - PAD + 1;
+            el.classList.toggle('is-zoomed', overflows);
+            if (!overflows) el.scrollLeft = el.scrollTop = 0;
+        }
+
+        function setZoom(el, k, anchor) {
+            const svg = el.querySelector('svg');
+            if (!svg) return;
+            const nat = naturalSize(svg);
+            const prev = scaleOf(el, nat);
+            if (k !== null) k = Math.min(MAX_Z, Math.max(MIN_Z, k));
+            const next = k === null ? fitScale(el, nat) : k;
+            if (next === prev) return;
+            // Keep the point under the cursor (or the viewport centre) put.
+            const ax = anchor ? anchor.x : el.clientWidth / 2;
+            const ay = anchor ? anchor.y : el.clientHeight / 2;
+            const rx = (el.scrollLeft + ax) / prev;
+            const ry = (el.scrollTop + ay) / prev;
+            if (k === null) zoom.delete(el); else zoom.set(el, k);
+            applyZoom(el);
+            el.scrollLeft = rx * next - ax;
+            el.scrollTop = ry * next - ay;
+        }
+
+        function currentScale(el) {
+            const svg = el.querySelector('svg');
+            return svg ? scaleOf(el, naturalSize(svg)) : 1;
+        }
+
+        function setupDiagrams() {
+            document.querySelectorAll('.mermaid').forEach(el => {
+                const wrap = document.createElement('div');
+                wrap.className = 'diagram';
+                el.parentNode.insertBefore(wrap, el);
+                wrap.appendChild(el);
+
+                const tools = document.createElement('div');
+                tools.className = 'diagram-tools';
+                tools.innerHTML =
+                    '<button type="button" data-act="out" title="缩小">&minus;</button>' +
+                    '<span class="diagram-zoom">100%</span>' +
+                    '<button type="button" data-act="in" title="放大">+</button>' +
+                    '<button type="button" data-act="reset" title="适应宽度">&#9633;</button>' +
+                    '<button type="button" data-act="full" title="全屏">&#10530;</button>';
+                wrap.appendChild(tools);
+
+                tools.addEventListener('click', e => {
+                    const act = e.target.closest('button')?.dataset.act;
+                    if (!act) return;
+                    const k = currentScale(el);
+                    if (act === 'in') setZoom(el, k * STEP);
+                    else if (act === 'out') setZoom(el, k / STEP);
+                    else if (act === 'reset') setZoom(el, null);
+                    else if (act === 'full') {
+                        if (document.fullscreenElement === wrap) document.exitFullscreen();
+                        else wrap.requestFullscreen?.();
+                    }
+                });
+
+                // Ctrl/⌘ + wheel zooms; a plain wheel keeps scrolling the page.
+                el.addEventListener('wheel', e => {
+                    if (!e.ctrlKey && !e.metaKey) return;
+                    e.preventDefault();
+                    const r = el.getBoundingClientRect();
+                    setZoom(el, currentScale(el) * (e.deltaY < 0 ? STEP : 1 / STEP),
+                            { x: e.clientX - r.left, y: e.clientY - r.top });
+                }, { passive: false });
+
+                // Drag to pan once zoomed in.
+                let drag = null;
+                el.addEventListener('pointerdown', e => {
+                    // Pan only matters once the diagram actually overflows.
+                    if (e.button !== 0 || !el.classList.contains('is-zoomed')) return;
+                    drag = { x: e.clientX, y: e.clientY, l: el.scrollLeft, t: el.scrollTop };
+                    el.setPointerCapture(e.pointerId);
+                    el.classList.add('is-panning');
+                });
+                el.addEventListener('pointermove', e => {
+                    if (!drag) return;
+                    el.scrollLeft = drag.l - (e.clientX - drag.x);
+                    el.scrollTop = drag.t - (e.clientY - drag.y);
+                });
+                const endDrag = () => { drag = null; el.classList.remove('is-panning'); };
+                el.addEventListener('pointerup', endDrag);
+                el.addEventListener('pointercancel', endDrag);
+
+                // Double click toggles between auto-fit and true 1:1.
+                el.addEventListener('dblclick', () => setZoom(el, zoom.has(el) ? null : 1));
+            });
+        }
+
+        setupDiagrams();
+        initMermaid();
+        renderMermaid();
+
+        const remeasure = () => document.querySelectorAll('.mermaid').forEach(applyZoom);
+        document.addEventListener('fullscreenchange', remeasure);
+        window.addEventListener('resize', remeasure);
+
+        // Theme toggle
+        const toggle = document.getElementById('theme-toggle');
+        toggle.addEventListener('click', () => {
+            const next = currentTheme() === 'dark' ? 'light' : 'dark';
+            document.documentElement.setAttribute('data-theme', next);
+            try { localStorage.setItem('theme', next); } catch (e) {}
+            initMermaid();
+            renderMermaid();
+        });
+
+        // Follow the OS while the user hasn't made an explicit choice
+        prefersDark.addEventListener('change', () => {
+            if (!document.documentElement.getAttribute('data-theme')) {
+                initMermaid();
+                renderMermaid();
+            }
+        });
+
+        // Back to top button
+        const btn = document.querySelector('.back-to-top');
+        window.addEventListener('scroll', () => {
+            btn.classList.toggle('visible', window.scrollY > 300);
+        });
+
+        // Close sidebar on mobile when clicking a link
+        document.querySelectorAll('.sidebar nav a').forEach(a => {
+            a.addEventListener('click', () => {
+                document.querySelector('.sidebar').classList.remove('open');
+            });
+        });
+
+        // Highlight the TOC entry for the heading currently in view
+        const tocLinks = Array.from(document.querySelectorAll('.toc a'));
+        if (tocLinks.length) {
+            const targets = tocLinks
+                .map(a => document.getElementById(decodeURIComponent(a.hash.slice(1))))
+                .filter(Boolean);
+            const setActive = () => {
+                let current = targets[0];
+                for (const t of targets) {
+                    if (t.getBoundingClientRect().top <= 120) current = t;
+                    else break;
+                }
+                tocLinks.forEach(a => a.classList.toggle(
+                    'active',
+                    current && decodeURIComponent(a.hash.slice(1)) === current.id
+                ));
+            };
+            setActive();
+            let queued = false;
+            window.addEventListener('scroll', () => {
+                if (queued) return;
+                queued = true;
+                requestAnimationFrame(() => { setActive(); queued = false; });
+            });
+        }
+    </script>
+</body>
+</html>

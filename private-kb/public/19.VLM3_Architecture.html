@@ -1,0 +1,792 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VLM³ - Robotics Knowledge Base</title>
+    <link rel="icon" href="favicon.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="assets/vendor/katex/katex.min.css">
+    <script>
+        // Applied before first paint so the saved theme doesn't flash.
+        (function () {
+            try {
+                var t = localStorage.getItem('theme');
+                if (t === 'dark' || t === 'light') {
+                    document.documentElement.setAttribute('data-theme', t);
+                }
+            } catch (e) {}
+        })();
+    </script>
+</head>
+<body>
+    <button class="menu-toggle" onclick="document.querySelector('.sidebar').classList.toggle('open')">&#9776;</button>
+    <button class="theme-toggle" id="theme-toggle" title="切换日夜模式" aria-label="切换日夜模式">
+        <span class="icon-light">&#9790;</span><span class="icon-dark">&#9728;</span>
+    </button>
+
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <h2>Robotics Knowledge Base</h2>
+            <p>机器人模型架构知识库</p>
+        </div>
+        <nav>
+            <a href="index.html">Overview</a>
+            <div class="nav-group">VLA 模型</div>
+            <a href="01.Pi0_Architecture.html">Pi0</a>
+            <a href="02.Pi0.5_Architecture.html">Pi0.5</a>
+            <a href="03.Pi0-FAST_Architecture.html">Pi0-FAST</a>
+            <a href="04.Pi-Star-0.6_Architecture.html">π*₀.₆ (Pi-Star-0.6)</a>
+            <a href="05.Pi0.7_Architecture.html">π₀.₇ (Pi-0.7)</a>
+            <a href="06.Isaac-GR00T-N1.6_Architecture.html">Isaac-GR00T N1.6</a>
+            <a href="07.Isaac-GR00T-N1.5_Architecture.html">Isaac-GR00T N1.5</a>
+            <a href="08.ACT_Architecture.html">ACT</a>
+            <a href="09.SmolVLA_Architecture.html">SmolVLA</a>
+            <a href="10.WALL-OSS_Architecture.html">WALL-OSS / WALL-X</a>
+            <a href="11.X-VLA_Architecture.html">X-VLA</a>
+            <a href="12.Psi0_Architecture.html">Psi0 (ψ₀)</a>
+            <a href="13.DreamZero_Architecture.html">DreamZero</a>
+            <a href="14.FastWAM_Architecture.html">Fast-WAM</a>
+            <div class="nav-group">全身控制 (WBC)</div>
+            <a href="15.GR00T-WBC_Overview.html">GR00T-WBC 总览</a>
+            <a href="16.Decoupled-WBC_Architecture.html" class="nav-child">Decoupled WBC</a>
+            <a href="17.GEAR-SONIC_Architecture.html" class="nav-child">GEAR-SONIC</a>
+            <a href="18.MotionBricks_Architecture.html" class="nav-child">MotionBricks</a>
+            <div class="nav-group">3D 视觉与 VLM</div>
+            <a href="19.VLM3_Architecture.html" class="active">VLM³</a>
+        </nav>
+    </aside>
+
+    <main class="content">
+      <div class="content-inner">
+        <h1 id="vlm3-方法架构">VLM³ 方法架构<a class="headerlink" href="19.VLM3_Architecture.html#vlm3-方法架构" title="Permanent link">#</a></h1>
+<blockquote>
+<p><em>Vision Language Models Are Native 3D Learners</em> · arXiv:2605.30561 · Meta FAIR · CC-BY-NC</p>
+</blockquote>
+<h2 id="1-核心主张">1. 核心主张<a class="headerlink" href="19.VLM3_Architecture.html#1-核心主张" title="Permanent link">#</a></h2>
+<p>VLM³ 的论点非常直接,也非常反直觉:</p>
+<blockquote>
+<p><strong>标准 VLM 本身就是原生的 3D 学习器。不需要改架构、不需要改损失、不需要复杂数据增强。</strong></p>
+</blockquote>
+<p>它做的事情是把一系列 3D 视觉任务 —— 度量深度估计、像素对应、相机位姿估计、物体级 3D 理解 —— <strong>全部重写成纯文本问答</strong>,然后用标准 SFT 微调一个 Qwen3-VL-4B。结果是在四条赛道上同时打平或超过各自领域的专用模型:</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>任务</th>
+<th>对比基线</th>
+<th>VLM³ 结果</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>物体级 3D 理解</td>
+<td>SpatialRGPT</td>
+<td><strong>超过</strong>(SpatialRGPT-bench 定性与定量),且<strong>不用额外编码器</strong></td>
+</tr>
+<tr>
+<td>度量深度估计</td>
+<td>UniDepthV2 / MoGe-2</td>
+<td><strong>打平</strong>;把 DepthLM 的精度从 0.84 提到 <strong>0.90</strong></td>
+</tr>
+<tr>
+<td>像素对应</td>
+<td>DKM / RoMa</td>
+<td><strong>超过</strong></td>
+</tr>
+<tr>
+<td>相机位姿估计</td>
+<td>DepthAnything3 / VGGT</td>
+<td>打平 DA3,<strong>超过</strong> VGGT</td>
+</tr>
+</tbody>
+</table></div>
+<p>作者由此给出的结论列表几乎是对当前 3D 视觉工程范式的逐条否定:</p>
+<ul>
+<li>大模型 —— 不必要(4B 就够)</li>
+<li>任务专用架构 —— 不必要</li>
+<li>任务专用损失与权重平衡 —— 不必要</li>
+<li>复杂数据增强(裁剪、旋转、平移、外观扰动)—— 不必要</li>
+<li><strong>甚至连回归形式本身</strong>(几乎所有 SOTA 3D 模型的基础)—— 也不必要</li>
+</ul>
+<p>留下的充分条件只有两条:<strong>统一输出域为文本的通用基础模型 + 数据规模</strong>。</p>
+<div class="mermaid">
+graph TB
+    subgraph Old["传统 3D 视觉范式"]
+        O1["专用 backbone&lt;br/&gt;(DPT / DINO / ViT 变体)"]
+        O2["任务专用预测头&lt;br/&gt;(depth head / flow head / pose head)"]
+        O3["任务专用损失&lt;br/&gt;+ 多损失权重平衡"]
+        O4["复杂数据增强&lt;br/&gt;裁剪/旋转/平移/颜色"]
+        O5["回归输出&lt;br/&gt;连续数值"]
+        O1 --&gt; O2 --&gt; O3
+        O4 --&gt; O1
+        O2 --&gt; O5
+    end
+
+    subgraph New["VLM³ 范式"]
+        N1["标准 VLM&lt;br/&gt;Qwen3-VL-4B, 架构零改动"]
+        N2["焦距归一化&lt;br/&gt;resize 到统一 focal"]
+        N3["文本化坐标&lt;br/&gt;[0,1000) 或 [0,2000)"]
+        N4["标准 SFT&lt;br/&gt;单一交叉熵损失"]
+        N5["文本输出&lt;br/&gt;&amp;lt;think&amp;gt;...&amp;lt;/think&amp;gt;&amp;lt;answer&amp;gt;...&amp;lt;/answer&amp;gt;"]
+        N2 --&gt; N1
+        N3 --&gt; N1
+        N1 --&gt; N4 --&gt; N5
+    end
+
+    style New fill:#e8f5e9
+    style Old fill:#ffe8e8
+</div>
+<hr />
+<h2 id="2-方法只有两个技巧">2. 方法:只有两个技巧<a class="headerlink" href="19.VLM3_Architecture.html#2-方法只有两个技巧" title="Permanent link">#</a></h2>
+<p>VLM³ 的"方法"部分短到可以一段话讲完,但两个技巧都直击要害。</p>
+<h3 id="21-焦距归一化解决相机歧义">2.1 焦距归一化:解决相机歧义<a class="headerlink" href="19.VLM3_Architecture.html#21-焦距归一化解决相机歧义" title="Permanent link">#</a></h3>
+<p><strong>问题</strong>:同一张图,如果不知道相机内参,深度是不可解的 —— 一个近处的小物体和一个远处的大物体在图像上完全一样。传统做法是给模型加一个内参编码器/嵌入模块。</p>
+<p><strong>VLM³ 的做法</strong>:直接把所有输入图像 <strong>resize 到同一个焦距</strong>。</p>
+<div class="highlight"><pre><span></span><code>resize 后 fx = fy = 常数 (如 1000 px)
+</code></pre></div>
+
+<p>这样一来,焦距变成了一个模型可以硬编码的先验,不再是一个需要显式输入的变量。<strong>不需要任何额外的 VLM 编码器或模块。</strong></p>
+<p>不同任务用的归一化焦距不同:</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>任务</th>
+<th>归一化目标</th>
+<th>来源</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>度量深度</td>
+<td><strong>fx = fy = 1000 px</strong></td>
+<td><code>depth_labels.json</code></td>
+</tr>
+<tr>
+<td>物体级 3D(SpatialRGPT)</td>
+<td><strong>fx ≈ 1000 px</strong></td>
+<td><code>spatialrgpt_labels.json</code></td>
+</tr>
+<tr>
+<td>相机位姿</td>
+<td><strong>fx = fy = 750 px</strong></td>
+<td><code>pose_labels.json</code>,匹配 WAI 评测流程</td>
+</tr>
+<tr>
+<td>像素对应</td>
+<td><strong>不做焦距归一化</strong>,只 resize 到 <code>max(W,H) = 1024</code></td>
+<td><code>pixel_corr_labels.json</code></td>
+</tr>
+</tbody>
+</table></div>
+<p>像素对应是例外,理由写在数据里:后续的最大边 resize 本身就产生了固定分辨率,再做焦距归一化是多余的,而且推理更轻。这也侧面说明焦距归一化只在<strong>需要绝对尺度</strong>的任务里必要 —— 像素对应是纯 2D 匹配问题,不涉及尺度。</p>
+<p>深度任务的图像还会先做<strong>去畸变</strong>(当 fx ≠ fy 时)。</p>
+<h3 id="22-文本化坐标解决指代问题">2.2 文本化坐标:解决指代问题<a class="headerlink" href="19.VLM3_Architecture.html#22-文本化坐标解决指代问题" title="Permanent link">#</a></h3>
+<p><strong>问题</strong>:怎么让模型知道"我问的是图上哪个点/哪个物体"?常见做法是渲染视觉标记(画圈、上色、贴数字),或者引入 region encoder。</p>
+<p><strong>VLM³ 的做法</strong>:直接在文本里写归一化坐标。</p>
+<div class="highlight"><pre><span></span><code>点:  (norm_x, norm_y)      ← [0, 2000) 或 [0, 1000)
+框:  (x1, y1, x2, y2)      ← [0, 1000)
+</code></pre></div>
+
+<p>归一化是相对 <strong>resize 后</strong>图像的宽高,横纵轴各自独立归一化。</p>
+<p>好处清单:</p>
+<ul>
+<li><strong>不改架构</strong> —— 坐标就是普通 token。</li>
+<li><strong>不渲染标记</strong> —— 不污染图像,不引入渲染 artifact,同一张图可以问 100 个不同的点而只编码一次(实际实现里每个点仍是一次前向,但图像可复用)。</li>
+<li><strong>更灵活</strong> —— 点、框、任意多个实体,统一用文本表达。</li>
+<li><strong>更可扩展</strong> —— 加新任务只需要设计 prompt 模板,不需要写新的 head。</li>
+</ul>
+<p>坐标范围在不同任务里不同(深度用 2000,其余用 1000),说明这个尺度是可调超参而非固定设计 —— 更大的范围给更细的空间分辨率,代价是数字 token 更长。</p>
+<hr />
+<h2 id="3-四个任务的接口">3. 四个任务的接口<a class="headerlink" href="19.VLM3_Architecture.html#3-四个任务的接口" title="Permanent link">#</a></h2>
+<p>VLM³ 发布了 <strong>4 个独立 checkpoint</strong>,每个任务一个,均基于同一个 Qwen3-VL-4B 基座。</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Checkpoint</th>
+<th>任务</th>
+<th>输入</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>facebook/VLM3-depth</code></td>
+<td>度量深度估计</td>
+<td>1 图 + 1 点</td>
+</tr>
+<tr>
+<td><code>facebook/VLM3-object</code></td>
+<td>物体级 3D 理解</td>
+<td>1 图 + N 个框</td>
+</tr>
+<tr>
+<td><code>facebook/VLM3-corr</code></td>
+<td>像素对应</td>
+<td>2 图 + 1 点</td>
+</tr>
+<tr>
+<td><code>facebook/VLM3-pose</code></td>
+<td>相机位姿估计</td>
+<td>2 图</td>
+</tr>
+</tbody>
+</table></div>
+<blockquote>
+<p>⚠️ <strong>每个任务是一个单独的模型</strong>,不是一个多任务模型。<code>inference.ipynb</code> 里在切换任务前显式 <code>del model</code> + <code>gc.collect()</code> + <code>torch.cuda.empty_cache()</code>。README 顶部的模型表格写的是 "Coming Soon!",实际权重通过 HuggingFace <code>facebook/VLM3-*</code> 提供。</p>
+</blockquote>
+<h3 id="31-度量深度vlm3-depth">3.1 度量深度(<code>VLM3-depth</code>)<a class="headerlink" href="19.VLM3_Architecture.html#31-度量深度vlm3-depth" title="Permanent link">#</a></h3>
+<p><strong>Prompt:</strong></p>
+<div class="highlight"><pre><span></span><code>Given this image, how far is the point at coordinates ({nx}, {ny}) from the camera?
+The coordinates are in normalised [0, 2000] format relative to image width and height.
+Output the thinking process in &lt;think&gt; &lt;/think&gt; and final answer
+(the meter number only, without the unit) in &lt;answer&gt; &lt;/answer&gt; tags.
+</code></pre></div>
+
+<p><strong>输出</strong>:<code>&lt;think&gt; ... &lt;/think&gt; &lt;answer&gt; 14.01 &lt;/answer&gt;</code>,单位米,纯数字。</p>
+<p><strong>解析</strong>:一条正则 <code>&lt;answer&gt;\s*([-+]?\d*\.?\d+...)\s*&lt;/answer&gt;</code>。</p>
+<p><strong>评测</strong>:DepthLM 风格的 δ₁ 精度 ——</p>
+<p>$$\max\left(\frac{\hat d}{d_{gt}},\ \frac{d_{gt}}{\hat d}\right) &lt; 1.25$$</p>
+<p>样例数据:1215 × 920 图像,归一化后 <code>fx = fy = 1000</code>,<code>cx = 609.06</code>,<code>cy = 458.13</code>,100 个标注点,深度范围约 8–18 m。</p>
+<h3 id="32-物体级-3d-理解vlm3-object">3.2 物体级 3D 理解(<code>VLM3-object</code>)<a class="headerlink" href="19.VLM3_Architecture.html#32-物体级-3d-理解vlm3-object" title="Permanent link">#</a></h3>
+<p>用 SpatialRGPT-Bench 的问答格式,物体通过 <strong>[0, 1000] 归一化边界框</strong>指代:</p>
+<div class="highlight"><pre><span></span><code>Can you confirm if bounding box region (0, 39, 652, 999) is smaller than
+bounding box region (6, 380, 228, 562)?
+</code></pre></div>
+
+<p>GT 回答:</p>
+<div class="highlight"><pre><span></span><code>Incorrect, bounding box region (0, 39, 652, 999) is not smaller in size than
+bounding box region (6, 380, 228, 562).
+</code></pre></div>
+
+<p>问答元信息里带 <code>category</code>(如 <code>small_predicate</code>)、<code>class</code>(如 <code>["lamp", "television"]</code>)、<code>type</code>(<code>qualitative</code> / 定量)。定性题的评测就是抽取极性(positive / negative)后比对 —— notebook 里用两条正则匹配 <code>yes|correct|affirmative|true|right|indeed</code> 与 <code>no|incorrect|wrong|false|not</code>,同时命中时取<strong>出现位置更靠前</strong>的那个。</p>
+<p>这是 VLM³ 最能说明问题的一条赛道:SpatialRGPT 为了做物体级空间推理,专门引入了深度编码器和 region 表示;VLM³ 只用文本框坐标就超过了它。</p>
+<h3 id="33-像素对应vlm3-corr">3.3 像素对应(<code>VLM3-corr</code>)<a class="headerlink" href="19.VLM3_Architecture.html#33-像素对应vlm3-corr" title="Permanent link">#</a></h3>
+<p><strong>Prompt 模板</strong>:</p>
+<div class="highlight"><pre><span></span><code>Given these two images, what pixel in the second image corresponds to pixel
+({x1}, {y1}) in the first image? Report the answer as (x, y).
+</code></pre></div>
+
+<p>可选追加思考格式指令:</p>
+<div class="highlight"><pre><span></span><code>Please think step by step and follow the format: &quot;&lt;think&gt; [think process] &lt;/think&gt;\n\n[answer]&quot;.
+</code></pre></div>
+
+<p><strong>预处理</strong>:两图各自 resize 到 <code>max(W, H) == 1024</code>,坐标归一化到 [0, 1000]。</p>
+<p><strong>评测</strong>:EPE(End-Point Error),在 norm-1000 像素单位下的欧氏距离,越低越好。</p>
+<p>样例数据:ETH3D <code>courtyard</code> 场景,600 × 400 → 1024 × 683,<strong>covisibility 仅 0.135</strong>(共视区只有 13.5%),56 对对应点。共视率这么低意味着这是一个相当困难的宽基线匹配样例。</p>
+<p>开思考(<code>USE_THINK = True</code>)时 <code>max_new_tokens</code> 从 256 提到 <strong>2048</strong> —— 说明推理链可以很长。</p>
+<h3 id="34-相机位姿vlm3-pose">3.4 相机位姿(<code>VLM3-pose</code>)<a class="headerlink" href="19.VLM3_Architecture.html#34-相机位姿vlm3-pose" title="Permanent link">#</a></h3>
+<p>这是四个任务里输出结构最丰富的,一对图问 <strong>4 个独立问题</strong>:</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>问题 id</th>
+<th>问题</th>
+<th>GT 回答格式</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>rotation_angle</code></td>
+<td>两个相机位姿之间的相对旋转角(度)</td>
+<td><code>Rotation angle: 89.7 degrees</code></td>
+</tr>
+<tr>
+<td><code>euler_natural</code></td>
+<td>以第一相机局部轴、内旋 yaw→pitch→roll 描述重定向</td>
+<td><code>Yaw=+89.6°, Pitch=+2.6°, Roll=+6.1°</code></td>
+</tr>
+<tr>
+<td><code>translation_direction</code></td>
+<td>第一相机局部系下的平移方向</td>
+<td><code>The camera moves left, forward, unit vector (-0.69, +0.02, +0.72).</code></td>
+</tr>
+<tr>
+<td><code>translation_distance</code></td>
+<td>平移距离</td>
+<td><code>Translation distance: 1.98 meters</code></td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>约定</strong>(非常重要,是模型能学会的前提):</p>
+<ul>
+<li><strong>旋转</strong>:关于 cam-1 体轴的<strong>内旋</strong> Yaw → Pitch → Roll</li>
+<li>yaw &gt; 0 → 右转(绕竖直/down 轴)</li>
+<li>pitch &gt; 0 → 抬头(绕 yaw 之后的横向/right 轴)</li>
+<li>roll &gt; 0 → 右倾(绕 yaw、pitch 之后的光轴/forward 轴,画面顺时针转)</li>
+<li><strong>平移</strong>:cam-1 体系下的单位向量,<code>x &gt; 0</code> 右、<code>y &gt; 0</code> 下、<code>z &gt; 0</code> 前</li>
+<li><strong>距离</strong>:米,<strong>只在 <code>metric</code> / <code>estimated metric</code> 数据集上输出</strong></li>
+</ul>
+<p>注意 <code>translation_direction</code> 的回答<strong>同时给定性描述和精确向量</strong> —— "moves left, forward" 加 "(-0.69, +0.02, +0.72)"。这种"先说人话再给数"的格式很可能不是偶然:定性词充当了一个粗粒度的自我一致性检查,让后续的数字生成有个锚。</p>
+<p>样例数据:ScanNet++v2,1752 × 1168 → 2830 × 1884(为了把焦距压到 750 px 反而<strong>放大</strong>了图像),<code>scale_type: metric</code>。</p>
+<hr />
+<h2 id="4-与-depthlm-的关系">4. 与 DepthLM 的关系<a class="headerlink" href="19.VLM3_Architecture.html#4-与-depthlm-的关系" title="Permanent link">#</a></h2>
+<p>VLM³ 明确说自己 "largely motivated by" 同组的前作 <strong>DepthLM</strong>(arXiv:2509.25413,<em>Metric Depth from Vision Language Models</em>)。</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th></th>
+<th>DepthLM</th>
+<th>VLM³</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>任务</td>
+<td>只做度量深度</td>
+<td>深度 + 对应 + 位姿 + 物体级理解</td>
+</tr>
+<tr>
+<td>坐标指代</td>
+<td>文本坐标</td>
+<td>文本坐标(继承)</td>
+</tr>
+<tr>
+<td>焦距处理</td>
+<td>焦距归一化</td>
+<td>焦距归一化(继承)</td>
+</tr>
+<tr>
+<td>δ₁ 精度</td>
+<td>0.84</td>
+<td><strong>0.90</strong></td>
+</tr>
+<tr>
+<td>论点</td>
+<td>VLM 能做度量深度</td>
+<td>VLM 是<strong>原生 3D 学习器</strong>,通用范式</td>
+</tr>
+</tbody>
+</table></div>
+<p>也就是说 VLM³ 的两个技巧都是从 DepthLM 继承的,它的贡献在于<strong>把这套配方推广到整个 3D 视觉任务谱系</strong>,并证明它在每一条赛道上都能打专用模型。评测协议(δ₁ &lt; 1.25、<code>DepthLM_eval_from_metadata_coord2k</code> 坐标系)也直接沿用。</p>
+<hr />
+<h2 id="5-工程细节">5. 工程细节<a class="headerlink" href="19.VLM3_Architecture.html#5-工程细节" title="Permanent link">#</a></h2>
+<h3 id="51-依赖与推理">5.1 依赖与推理<a class="headerlink" href="19.VLM3_Architecture.html#51-依赖与推理" title="Permanent link">#</a></h3>
+<p>基座是 <strong>Qwen3-VL-4B</strong>,架构<strong>零改动</strong>,所以调用方式与原始 VLM 完全一致:</p>
+<div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">transformers</span><span class="w"> </span><span class="kn">import</span> <span class="n">AutoModelForImageTextToText</span><span class="p">,</span> <span class="n">AutoProcessor</span>
+
+<span class="n">model</span> <span class="o">=</span> <span class="n">AutoModelForImageTextToText</span><span class="o">.</span><span class="n">from_pretrained</span><span class="p">(</span>
+    <span class="s2">&quot;facebook/VLM3-depth&quot;</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="s2">&quot;auto&quot;</span><span class="p">,</span> <span class="n">device_map</span><span class="o">=</span><span class="s2">&quot;auto&quot;</span>
+<span class="p">)</span>
+<span class="n">processor</span> <span class="o">=</span> <span class="n">AutoProcessor</span><span class="o">.</span><span class="n">from_pretrained</span><span class="p">(</span><span class="s2">&quot;facebook/VLM3-depth&quot;</span><span class="p">)</span>
+</code></pre></div>
+
+<p>关键依赖版本(<code>requirements.txt</code> 里为可复现性钉死):</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>包</th>
+<th>版本</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>transformers</code></td>
+<td><strong>≥ 5.4.0</strong>(硬性要求)</td>
+</tr>
+<tr>
+<td><code>torch</code> / <code>torchvision</code></td>
+<td>2.8.0 / 0.23.0</td>
+</tr>
+<tr>
+<td><code>trl</code></td>
+<td>1.0.0</td>
+</tr>
+<tr>
+<td><code>liger_kernel</code></td>
+<td>0.7.0</td>
+</tr>
+<tr>
+<td><code>flash_attn</code></td>
+<td>2.8.3</td>
+</tr>
+<tr>
+<td><code>qwen-vl-utils</code></td>
+<td>0.0.14</td>
+</tr>
+<tr>
+<td><code>timm</code></td>
+<td>1.0.22</td>
+</tr>
+<tr>
+<td><code>datasets</code> / <code>accelerate</code></td>
+<td>4.8.4 / 1.12.0</td>
+</tr>
+</tbody>
+</table></div>
+<p><code>trl</code> + <code>liger_kernel</code> 的组合说明训练侧就是<strong>标准 TRL SFT</strong>,<code>liger_kernel</code> 用于降显存 —— 进一步印证"没有自定义损失"的说法:如果有自定义损失,就用不了 liger 的融合算子。</p>
+<p>推理一律 <code>do_sample=False</code>(贪心解码),<code>max_new_tokens</code> 按任务取 128 / 256 / 512 / 2048。</p>
+<h3 id="52-仓库里有什么">5.2 仓库里有什么<a class="headerlink" href="19.VLM3_Architecture.html#52-仓库里有什么" title="Permanent link">#</a></h3>
+<div class="highlight"><pre><span></span><code>VLM3/
+├── inference.ipynb      # 唯一的代码:四个任务的完整推理 + 评测 cookbook
+├── requirements.txt     # 钉死版本的依赖清单
+├── sample_data/         # 每个任务一组样例图 + 标注 JSON
+│   ├── depth.jpeg / depth_labels.json                    (100 点)
+│   ├── spatialrgpt.jpeg / spatialrgpt_labels.json        (5 框 + 1 QA)
+│   ├── pixel_corr_img{1,2}.jpeg / pixel_corr_labels.json (56 对)
+│   └── pose_img{1,2}.jpeg / pose_labels.json             (4 QA)
+├── media/               # teaser / pipeline / visualizations / table1 / table2
+└── LICENSE              # FAIR CC-BY-NC
+</code></pre></div>
+
+<p><strong>注意:仓库里没有模型代码,也没有训练代码。</strong> 这与 <a href="04.Pi-Star-0.6_Architecture.html">π*₀.₆</a> / <a href="05.Pi0.7_Architecture.html">π₀.₇</a> 这类以论文为主的条目一样 —— 本文档基于 README、<code>inference.ipynb</code> 和样例标注的元数据整理,不是从模型实现反推的。</p>
+<p>样例标注 JSON 的价值不低:它们完整记录了<strong>评测流水线的预处理约定</strong>(归一化焦距、resize 目标、坐标范围、内参),这些是复现结果的必要信息,而这些信息在论文正文里通常只有一句话。</p>
+<hr />
+<h2 id="6-关键文件表">6. 关键文件表<a class="headerlink" href="19.VLM3_Architecture.html#6-关键文件表" title="Permanent link">#</a></h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>文件</th>
+<th>内容</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>README.md</code></td>
+<td>论文主张、四条赛道的对比结论、方法概述、Quickstart</td>
+</tr>
+<tr>
+<td><code>inference.ipynb</code></td>
+<td>四个任务的 prompt 模板、输出解析正则、评测指标实现</td>
+</tr>
+<tr>
+<td><code>requirements.txt</code></td>
+<td>钉死版本依赖(<code>transformers ≥ 5.4.0</code> 为硬性要求)</td>
+</tr>
+<tr>
+<td><code>sample_data/depth_labels.json</code></td>
+<td>归一化内参、<code>[0,2000)</code> 坐标约定、100 个 GT 深度点</td>
+</tr>
+<tr>
+<td><code>sample_data/spatialrgpt_labels.json</code></td>
+<td>原始/归一化内参、5 个 <code>[0,1000)</code> 框、QA 类别与 GT</td>
+</tr>
+<tr>
+<td><code>sample_data/pixel_corr_labels.json</code></td>
+<td>prompt 模板、思考格式指令、共视率、56 对对应点</td>
+</tr>
+<tr>
+<td><code>sample_data/pose_labels.json</code></td>
+<td>旋转/平移约定、f750 预处理说明、4 个 QA 及 GT</td>
+</tr>
+<tr>
+<td><code>media/pipeline.svg</code></td>
+<td>方法流程图</td>
+</tr>
+<tr>
+<td><code>media/table1.png</code> / <code>table2.png</code></td>
+<td>定量结果表</td>
+</tr>
+</tbody>
+</table></div>
+<hr />
+<h2 id="7-对-vla-的意义">7. 对 VLA 的意义<a class="headerlink" href="19.VLM3_Architecture.html#7-对-vla-的意义" title="Permanent link">#</a></h2>
+<p>VLM³ 本身不是 VLA,但它给具身智能提供了一个直接可用的结论:<strong>VLM 的文本输出空间足以承载精确的几何量</strong>。</p>
+<p>这与 VLA 领域的两条主流做法形成对照:</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>路线</th>
+<th>动作/几何量表示</th>
+<th>代表</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>连续回归头</td>
+<td>flow matching / 扩散 action expert</td>
+<td><a href="01.Pi0_Architecture.html">π₀</a>、<a href="07.Isaac-GR00T-N1.5_Architecture.html">GR00T N1.5</a></td>
+</tr>
+<tr>
+<td>离散 token</td>
+<td>FAST 等动作分词器</td>
+<td><a href="03.Pi0-FAST_Architecture.html">π₀-FAST</a></td>
+</tr>
+<tr>
+<td><strong>纯文本数值</strong></td>
+<td>直接生成数字字符串</td>
+<td><strong>VLM³</strong>(几何量);RT-2 类早期工作(动作)</td>
+</tr>
+</tbody>
+</table></div>
+<p>VLM³ 的证据说明第三条路被低估了 —— 至少在几何量上,只要把<strong>输入歧义消掉</strong>(焦距归一化)、把<strong>指代方式统一</strong>(文本坐标),标准 VLM 的文本头就能达到专用回归头的精度。这对 VLA 的启示是:动作离散化/回归头未必是必需品,数据规模和输入表示的规范化可能是更关键的变量。</p>
+<p>另一个可直接迁移的点是<strong>深度与位姿能力本身</strong>:机器人操作需要度量深度和相对位姿,而 <code>VLM3-depth</code> / <code>VLM3-pose</code> 提供的正是这两项能力,且已经是 VLM 的形态,理论上可以与 VLA 的语言主干共享或直接作为预训练初始化。</p>
+      </div>
+    </main>
+        <aside class="toc">
+            <div class="toc-title">本页目录</div>
+            <ul>
+                <li><a href="19.VLM3_Architecture.html#1-核心主张" class="toc-h2">1. 核心主张</a></li>
+                <li><a href="19.VLM3_Architecture.html#2-方法只有两个技巧" class="toc-h2">2. 方法:只有两个技巧</a></li>
+                <li><a href="19.VLM3_Architecture.html#21-焦距归一化解决相机歧义" class="toc-h3">2.1 焦距归一化:解决相机歧义</a></li>
+                <li><a href="19.VLM3_Architecture.html#22-文本化坐标解决指代问题" class="toc-h3">2.2 文本化坐标:解决指代问题</a></li>
+                <li><a href="19.VLM3_Architecture.html#3-四个任务的接口" class="toc-h2">3. 四个任务的接口</a></li>
+                <li><a href="19.VLM3_Architecture.html#31-度量深度vlm3-depth" class="toc-h3">3.1 度量深度(VLM3-depth)</a></li>
+                <li><a href="19.VLM3_Architecture.html#32-物体级-3d-理解vlm3-object" class="toc-h3">3.2 物体级 3D 理解(VLM3-object)</a></li>
+                <li><a href="19.VLM3_Architecture.html#33-像素对应vlm3-corr" class="toc-h3">3.3 像素对应(VLM3-corr)</a></li>
+                <li><a href="19.VLM3_Architecture.html#34-相机位姿vlm3-pose" class="toc-h3">3.4 相机位姿(VLM3-pose)</a></li>
+                <li><a href="19.VLM3_Architecture.html#4-与-depthlm-的关系" class="toc-h2">4. 与 DepthLM 的关系</a></li>
+                <li><a href="19.VLM3_Architecture.html#5-工程细节" class="toc-h2">5. 工程细节</a></li>
+                <li><a href="19.VLM3_Architecture.html#51-依赖与推理" class="toc-h3">5.1 依赖与推理</a></li>
+                <li><a href="19.VLM3_Architecture.html#52-仓库里有什么" class="toc-h3">5.2 仓库里有什么</a></li>
+                <li><a href="19.VLM3_Architecture.html#6-关键文件表" class="toc-h2">6. 关键文件表</a></li>
+                <li><a href="19.VLM3_Architecture.html#7-对-vla-的意义" class="toc-h2">7. 对 VLA 的意义</a></li>
+            </ul>
+        </aside>
+
+    <button class="back-to-top" onclick="window.scrollTo({top:0,behavior:'smooth'})">&#8593;</button>
+
+    <script src="assets/vendor/mermaid/mermaid.min.js"></script>
+    <script defer src="assets/vendor/katex/katex.min.js"></script>
+    <script defer src="assets/vendor/katex/auto-render.min.js"
+            onload="renderMathInElement(document.querySelector('.content-inner'), {
+                delimiters: [
+                    { left: '$$', right: '$$', display: true },
+                    { left: '$', right: '$', display: false }
+                ],
+                ignoredTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code', 'option'],
+                ignoredClasses: ['mermaid', 'diagram'],
+                throwOnError: false
+            });"></script>
+    <script>
+        // Mermaid destroys the source text when it renders, so keep a copy in
+        // order to re-render on theme change.
+        document.querySelectorAll('.mermaid').forEach(el => {
+            el.dataset.src = el.textContent;
+        });
+
+        const prefersDark = window.matchMedia('(prefers-color-scheme: dark)');
+        function currentTheme() {
+            const forced = document.documentElement.getAttribute('data-theme');
+            if (forced) return forced;
+            return prefersDark.matches ? 'dark' : 'light';
+        }
+
+        function initMermaid() {
+            mermaid.initialize({
+                startOnLoad: false,
+                theme: currentTheme() === 'dark' ? 'dark' : 'default',
+                flowchart: { useMaxWidth: true, htmlLabels: true },
+                securityLevel: 'loose'
+            });
+        }
+
+        function renderMermaid() {
+            const nodes = document.querySelectorAll('.mermaid');
+            nodes.forEach(el => {
+                el.removeAttribute('data-processed');
+                el.textContent = el.dataset.src;
+            });
+            // mermaid.run rejects on its internal font probe in some browsers;
+            // the diagrams still render, so swallow it rather than surfacing an
+            // unhandled rejection.
+            if (!nodes.length) return;
+            Promise.resolve(mermaid.run({ nodes: nodes }))
+                .catch(() => {})
+                .then(() => nodes.forEach(applyZoom));
+        }
+
+        /* ---------- Diagram zoom ----------
+           Scale is tracked as a factor of the diagram's NATURAL size (its
+           viewBox), so 100% means 1:1 and one font size looks identical in
+           every diagram on the site. Left to itself mermaid's useMaxWidth
+           stretches each svg to the container, which blows a 3-node diagram
+           up to 3.4x and shrinks a wide one to 0.34x — a 10x spread in
+           apparent font size. FIT_MAX caps the auto-fit at 1:1 (never
+           upscale) and FIT_MIN stops wide diagrams from shrinking to
+           unreadable; anything past that overflows and scrolls/pans. */
+        const MIN_Z = 0.3, MAX_Z = 6, STEP = 1.25;
+        const FIT_MIN = 0.55, FIT_MAX = 1;
+        const PAD = 40;               // .mermaid horizontal padding (20px each side)
+        const zoom = new WeakMap();   // .mermaid -> explicit scale; absent = auto-fit
+
+        function naturalSize(svg) {
+            const vb = svg.viewBox && svg.viewBox.baseVal;
+            if (vb && vb.width) return { w: vb.width, h: vb.height };
+            const r = svg.getBoundingClientRect();
+            return { w: r.width, h: r.height };
+        }
+
+        function fitScale(el, nat) {
+            const avail = el.clientWidth - PAD;
+            if (!nat.w || avail <= 0) return 1;
+            return Math.min(FIT_MAX, Math.max(FIT_MIN, avail / nat.w));
+        }
+
+        function scaleOf(el, nat) {
+            const k = zoom.get(el);
+            return k === undefined ? fitScale(el, nat) : k;
+        }
+
+        function applyZoom(el) {
+            const svg = el.querySelector('svg');
+            if (!svg) return;
+            const nat = naturalSize(svg);
+            if (!nat.w) return;
+            const k = scaleOf(el, nat);
+
+            const label = el.closest('.diagram')?.querySelector('.diagram-zoom');
+            if (label) label.textContent = Math.round(k * 100) + '%';
+
+            // Size the svg explicitly instead of leaving it to useMaxWidth,
+            // so the container gets real scrollbars when the diagram overflows.
+            svg.style.maxWidth = 'none';
+            svg.style.width = (nat.w * k) + 'px';
+            svg.style.height = (nat.h * k) + 'px';
+
+            const overflows = nat.w * k > el.clientWidth - PAD + 1;
+            el.classList.toggle('is-zoomed', overflows);
+            if (!overflows) el.scrollLeft = el.scrollTop = 0;
+        }
+
+        function setZoom(el, k, anchor) {
+            const svg = el.querySelector('svg');
+            if (!svg) return;
+            const nat = naturalSize(svg);
+            const prev = scaleOf(el, nat);
+            if (k !== null) k = Math.min(MAX_Z, Math.max(MIN_Z, k));
+            const next = k === null ? fitScale(el, nat) : k;
+            if (next === prev) return;
+            // Keep the point under the cursor (or the viewport centre) put.
+            const ax = anchor ? anchor.x : el.clientWidth / 2;
+            const ay = anchor ? anchor.y : el.clientHeight / 2;
+            const rx = (el.scrollLeft + ax) / prev;
+            const ry = (el.scrollTop + ay) / prev;
+            if (k === null) zoom.delete(el); else zoom.set(el, k);
+            applyZoom(el);
+            el.scrollLeft = rx * next - ax;
+            el.scrollTop = ry * next - ay;
+        }
+
+        function currentScale(el) {
+            const svg = el.querySelector('svg');
+            return svg ? scaleOf(el, naturalSize(svg)) : 1;
+        }
+
+        function setupDiagrams() {
+            document.querySelectorAll('.mermaid').forEach(el => {
+                const wrap = document.createElement('div');
+                wrap.className = 'diagram';
+                el.parentNode.insertBefore(wrap, el);
+                wrap.appendChild(el);
+
+                const tools = document.createElement('div');
+                tools.className = 'diagram-tools';
+                tools.innerHTML =
+                    '<button type="button" data-act="out" title="缩小">&minus;</button>' +
+                    '<span class="diagram-zoom">100%</span>' +
+                    '<button type="button" data-act="in" title="放大">+</button>' +
+                    '<button type="button" data-act="reset" title="适应宽度">&#9633;</button>' +
+                    '<button type="button" data-act="full" title="全屏">&#10530;</button>';
+                wrap.appendChild(tools);
+
+                tools.addEventListener('click', e => {
+                    const act = e.target.closest('button')?.dataset.act;
+                    if (!act) return;
+                    const k = currentScale(el);
+                    if (act === 'in') setZoom(el, k * STEP);
+                    else if (act === 'out') setZoom(el, k / STEP);
+                    else if (act === 'reset') setZoom(el, null);
+                    else if (act === 'full') {
+                        if (document.fullscreenElement === wrap) document.exitFullscreen();
+                        else wrap.requestFullscreen?.();
+                    }
+                });
+
+                // Ctrl/⌘ + wheel zooms; a plain wheel keeps scrolling the page.
+                el.addEventListener('wheel', e => {
+                    if (!e.ctrlKey && !e.metaKey) return;
+                    e.preventDefault();
+                    const r = el.getBoundingClientRect();
+                    setZoom(el, currentScale(el) * (e.deltaY < 0 ? STEP : 1 / STEP),
+                            { x: e.clientX - r.left, y: e.clientY - r.top });
+                }, { passive: false });
+
+                // Drag to pan once zoomed in.
+                let drag = null;
+                el.addEventListener('pointerdown', e => {
+                    // Pan only matters once the diagram actually overflows.
+                    if (e.button !== 0 || !el.classList.contains('is-zoomed')) return;
+                    drag = { x: e.clientX, y: e.clientY, l: el.scrollLeft, t: el.scrollTop };
+                    el.setPointerCapture(e.pointerId);
+                    el.classList.add('is-panning');
+                });
+                el.addEventListener('pointermove', e => {
+                    if (!drag) return;
+                    el.scrollLeft = drag.l - (e.clientX - drag.x);
+                    el.scrollTop = drag.t - (e.clientY - drag.y);
+                });
+                const endDrag = () => { drag = null; el.classList.remove('is-panning'); };
+                el.addEventListener('pointerup', endDrag);
+                el.addEventListener('pointercancel', endDrag);
+
+                // Double click toggles between auto-fit and true 1:1.
+                el.addEventListener('dblclick', () => setZoom(el, zoom.has(el) ? null : 1));
+            });
+        }
+
+        setupDiagrams();
+        initMermaid();
+        renderMermaid();
+
+        const remeasure = () => document.querySelectorAll('.mermaid').forEach(applyZoom);
+        document.addEventListener('fullscreenchange', remeasure);
+        window.addEventListener('resize', remeasure);
+
+        // Theme toggle
+        const toggle = document.getElementById('theme-toggle');
+        toggle.addEventListener('click', () => {
+            const next = currentTheme() === 'dark' ? 'light' : 'dark';
+            document.documentElement.setAttribute('data-theme', next);
+            try { localStorage.setItem('theme', next); } catch (e) {}
+            initMermaid();
+            renderMermaid();
+        });
+
+        // Follow the OS while the user hasn't made an explicit choice
+        prefersDark.addEventListener('change', () => {
+            if (!document.documentElement.getAttribute('data-theme')) {
+                initMermaid();
+                renderMermaid();
+            }
+        });
+
+        // Back to top button
+        const btn = document.querySelector('.back-to-top');
+        window.addEventListener('scroll', () => {
+            btn.classList.toggle('visible', window.scrollY > 300);
+        });
+
+        // Close sidebar on mobile when clicking a link
+        document.querySelectorAll('.sidebar nav a').forEach(a => {
+            a.addEventListener('click', () => {
+                document.querySelector('.sidebar').classList.remove('open');
+            });
+        });
+
+        // Highlight the TOC entry for the heading currently in view
+        const tocLinks = Array.from(document.querySelectorAll('.toc a'));
+        if (tocLinks.length) {
+            const targets = tocLinks
+                .map(a => document.getElementById(decodeURIComponent(a.hash.slice(1))))
+                .filter(Boolean);
+            const setActive = () => {
+                let current = targets[0];
+                for (const t of targets) {
+                    if (t.getBoundingClientRect().top <= 120) current = t;
+                    else break;
+                }
+                tocLinks.forEach(a => a.classList.toggle(
+                    'active',
+                    current && decodeURIComponent(a.hash.slice(1)) === current.id
+                ));
+            };
+            setActive();
+            let queued = false;
+            window.addEventListener('scroll', () => {
+                if (queued) return;
+                queued = true;
+                requestAnimationFrame(() => { setActive(); queued = false; });
+            });
+        }
+    </script>
+</body>
+</html>

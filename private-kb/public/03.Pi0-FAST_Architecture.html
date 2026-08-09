@@ -1,0 +1,942 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pi0-FAST - Robotics Knowledge Base</title>
+    <link rel="icon" href="favicon.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="assets/vendor/katex/katex.min.css">
+    <script>
+        // Applied before first paint so the saved theme doesn't flash.
+        (function () {
+            try {
+                var t = localStorage.getItem('theme');
+                if (t === 'dark' || t === 'light') {
+                    document.documentElement.setAttribute('data-theme', t);
+                }
+            } catch (e) {}
+        })();
+    </script>
+</head>
+<body>
+    <button class="menu-toggle" onclick="document.querySelector('.sidebar').classList.toggle('open')">&#9776;</button>
+    <button class="theme-toggle" id="theme-toggle" title="切换日夜模式" aria-label="切换日夜模式">
+        <span class="icon-light">&#9790;</span><span class="icon-dark">&#9728;</span>
+    </button>
+
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <h2>Robotics Knowledge Base</h2>
+            <p>机器人模型架构知识库</p>
+        </div>
+        <nav>
+            <a href="index.html">Overview</a>
+            <div class="nav-group">VLA 模型</div>
+            <a href="01.Pi0_Architecture.html">Pi0</a>
+            <a href="02.Pi0.5_Architecture.html">Pi0.5</a>
+            <a href="03.Pi0-FAST_Architecture.html" class="active">Pi0-FAST</a>
+            <a href="04.Pi-Star-0.6_Architecture.html">π*₀.₆ (Pi-Star-0.6)</a>
+            <a href="05.Pi0.7_Architecture.html">π₀.₇ (Pi-0.7)</a>
+            <a href="06.Isaac-GR00T-N1.6_Architecture.html">Isaac-GR00T N1.6</a>
+            <a href="07.Isaac-GR00T-N1.5_Architecture.html">Isaac-GR00T N1.5</a>
+            <a href="08.ACT_Architecture.html">ACT</a>
+            <a href="09.SmolVLA_Architecture.html">SmolVLA</a>
+            <a href="10.WALL-OSS_Architecture.html">WALL-OSS / WALL-X</a>
+            <a href="11.X-VLA_Architecture.html">X-VLA</a>
+            <a href="12.Psi0_Architecture.html">Psi0 (ψ₀)</a>
+            <a href="13.DreamZero_Architecture.html">DreamZero</a>
+            <a href="14.FastWAM_Architecture.html">Fast-WAM</a>
+            <div class="nav-group">全身控制 (WBC)</div>
+            <a href="15.GR00T-WBC_Overview.html">GR00T-WBC 总览</a>
+            <a href="16.Decoupled-WBC_Architecture.html" class="nav-child">Decoupled WBC</a>
+            <a href="17.GEAR-SONIC_Architecture.html" class="nav-child">GEAR-SONIC</a>
+            <a href="18.MotionBricks_Architecture.html" class="nav-child">MotionBricks</a>
+            <div class="nav-group">3D 视觉与 VLM</div>
+            <a href="19.VLM3_Architecture.html">VLM³</a>
+        </nav>
+    </aside>
+
+    <main class="content">
+      <div class="content-inner">
+        <h1 id="pi0-fast-模型架构">Pi0-FAST 模型架构<a class="headerlink" href="03.Pi0-FAST_Architecture.html#pi0-fast-模型架构" title="Permanent link">#</a></h1>
+<h2 id="1-整体架构概览">1. 整体架构概览<a class="headerlink" href="03.Pi0-FAST_Architecture.html#1-整体架构概览" title="Permanent link">#</a></h2>
+<p>Pi0-FAST (Fast Action Sequence Tokenizer) 是 Physical Intelligence 提出的一种高效视觉-语言-动作 (VLA) 模型。与 Pi0 使用 Flow Matching 扩散生成连续动作不同，Pi0-FAST <strong>将连续动作离散化为 token</strong>，然后通过 PaliGemma 视觉语言模型进行 <strong>自回归 next-token 预测</strong>。这种设计避免了多步去噪推理，实现了更快的动作生成。</p>
+<p>核心思路：<strong>连续动作 → DCT 变换 → BPE 分词 → 离散 token → 自回归预测</strong></p>
+<div class="mermaid">
+graph TB
+    subgraph Input["输入"]
+        IMG["相机图像&lt;br/&gt;(pixel_values)"]
+        TXT["语言指令&lt;br/&gt;(input_ids)"]
+        ACT_TRAIN["动作序列&lt;br/&gt;[B, chunk_size, action_dim]&lt;br/&gt;(仅训练)"]
+    end
+
+    subgraph Tokenizer["FAST 动作分词器"]
+        DCT["DCT 变换&lt;br/&gt;连续动作 → 频域系数"]
+        BPE["BPE 分词&lt;br/&gt;频域系数 → 离散 token ID"]
+    end
+
+    subgraph VLM["PaliGemma 视觉语言模型"]
+        VE["SigLIP 视觉编码器"]
+        EMB["词元嵌入层&lt;br/&gt;(共享: 语言 + 动作 token)"]
+        GEMMA["Gemma 2B&lt;br/&gt;18 层 Transformer"]
+        LM_HEAD["LM Head&lt;br/&gt;(Linear → vocab logits)"]
+    end
+
+    subgraph Output["输出"]
+        LOGITS["下一个 token 预测&lt;br/&gt;(训练: 交叉熵损失)"]
+        ACTIONS["预测动作序列&lt;br/&gt;(推理: 自回归解码 → IDCT)"]
+    end
+
+    IMG --&gt; VE --&gt; GEMMA
+    TXT --&gt; EMB --&gt; GEMMA
+    ACT_TRAIN --&gt; DCT --&gt; BPE --&gt; EMB
+    GEMMA --&gt; LM_HEAD
+    LM_HEAD --&gt; LOGITS
+    LM_HEAD --&gt; ACTIONS
+
+    style Input fill:#e8f4fd,stroke:#2196F3
+    style Tokenizer fill:#fff3e0,stroke:#FF9800
+    style VLM fill:#e8f5e9,stroke:#4CAF50
+    style Output fill:#fce4ec,stroke:#E91E63
+</div>
+<hr />
+<h2 id="2-核心组件详解">2. 核心组件详解<a class="headerlink" href="03.Pi0-FAST_Architecture.html#2-核心组件详解" title="Permanent link">#</a></h2>
+<h3 id="21-paligemma-视觉语言模型">2.1 PaliGemma 视觉语言模型<a class="headerlink" href="03.Pi0-FAST_Architecture.html#21-paligemma-视觉语言模型" title="Permanent link">#</a></h3>
+<p>Pi0-FAST 使用 PaliGemma（SigLIP + Gemma）作为统一的视觉语言主干。<strong>与 Pi0 不同，Pi0-FAST 没有独立的 Action Expert</strong>——动作 token 直接复用语言模型的词元嵌入和 LM Head 进行预测。</p>
+<div class="mermaid">
+graph LR
+    subgraph Vision["SigLIP 视觉编码器"]
+        PIX["pixel_values&lt;br/&gt;[B, C, H, W]"] --&gt; SIG["SigLIP&lt;br/&gt;视觉 Transformer"]
+        SIG --&gt; IMG_EMB["图像嵌入&lt;br/&gt;[B, N_patches, 2048]"]
+    end
+
+    subgraph Language["词元嵌入（共享）"]
+        LANG_TOK["语言 token&lt;br/&gt;[B, seq_len]"] --&gt; EMBED["embed_tokens()"]
+        ACT_TOK["动作 token&lt;br/&gt;[B, num_tokens]"] --&gt; EMBED
+        EMBED --&gt; LANG_EMB["嵌入 × √dim&lt;br/&gt;[B, *, 2048]"]
+    end
+
+    subgraph LM["Gemma 2B (18 层)"]
+        direction TB
+        L0["Layer 0"] --&gt; L1["Layer 1~16"] --&gt; L17["Layer 17"]
+    end
+
+    IMG_EMB --&gt; LM
+    LANG_EMB --&gt; LM
+    LM --&gt; HEAD["LM Head&lt;br/&gt;2048 → 257152 (vocab)"]
+
+    style Vision fill:#e3f2fd,stroke:#2196F3
+    style Language fill:#f3e5f5,stroke:#9C27B0
+    style LM fill:#e8f5e9,stroke:#4CAF50
+</div>
+<p><strong>关键设计：</strong>
+- 动作 token 和语言 token <strong>共享同一个嵌入层</strong> (<code>embed_tokens</code>)
+- 动作 token 和语言 token <strong>共享同一个 LM Head</strong> 进行预测
+- 嵌入后乘以 <code>√hidden_dim</code> 进行缩放（与 Gemma 标准做法一致）
+- 无需额外的状态投影或动作投影层</p>
+<h3 id="22-fast-动作分词器-action-tokenizer">2.2 FAST 动作分词器 (Action Tokenizer)<a class="headerlink" href="03.Pi0-FAST_Architecture.html#22-fast-动作分词器-action-tokenizer" title="Permanent link">#</a></h3>
+<p>FAST 分词器将连续动作序列转换为离散 token，是 Pi0-FAST 的核心创新。</p>
+<div class="mermaid">
+graph LR
+    subgraph Encode["编码（训练时）"]
+        A["连续动作&lt;br/&gt;[B, T, action_dim]"] --&gt; DCT["DCT 变换&lt;br/&gt;(离散余弦变换)"]
+        DCT --&gt; COEFF["频域系数&lt;br/&gt;(压缩表示)"]
+        COEFF --&gt; BPE["BPE 分词&lt;br/&gt;(字节对编码)"]
+        BPE --&gt; TOKENS["离散 token ID&lt;br/&gt;[B, num_tokens]"]
+    end
+
+    subgraph Decode["解码（推理时）"]
+        PRED_TOK["预测 token ID"] --&gt; DE_BPE["BPE 解码"]
+        DE_BPE --&gt; IDCT["IDCT 逆变换&lt;br/&gt;(scipy.fftpack.idct)"]
+        IDCT --&gt; PRED_A["连续动作&lt;br/&gt;[B, T, action_dim]"]
+    end
+
+    style Encode fill:#e8f5e9,stroke:#4CAF50
+    style Decode fill:#fff3e0,stroke:#FF9800
+</div>
+<p><strong>DCT 变换的优势：</strong>
+- 将时间域动作序列转换为频域系数，实现 <strong>有损压缩</strong>
+- 低频成分（平滑运动）用少量系数即可表示
+- 天然规避了连续值域的归一化和 padding 不稳定问题
+- BPE 分词进一��将系数编码为可预测的离散 token</p>
+<p><strong>Token 空间：</strong>
+- 总词表大小: 257,152（Gemma 原始词表）
+- <code>fast_skip_tokens</code>: 128（跳过前 128 个 token）
+- 最大动作 token 数: 256（<code>max_action_tokens</code>）</p>
+<h3 id="23-自定义注意力掩码">2.3 自定义注意力掩码<a class="headerlink" href="03.Pi0-FAST_Architecture.html#23-自定义注意力掩码" title="Permanent link">#</a></h3>
+<p>Pi0-FAST 使用精心设计的注意力掩码，确保图像/语言和动作 token 之间正确的信息流动。</p>
+<div class="mermaid">
+graph TB
+    subgraph Mask["注意力掩码结构"]
+        direction LR
+        subgraph QueryAxis["Query (行)"]
+            QI["图像 token"]
+            QL["语言 token"]
+            QA["动作 token"]
+        end
+
+        subgraph Rules["注意力规则"]
+            R1["图像 ↔ 图像: ✅ 双向"]
+            R2["图像 ↔ 语言: ✅ 双向"]
+            R3["语言 ↔ 语言: ✅ 双向"]
+            R4["动作 → 图像: ✅ 允许"]
+            R5["动作 → 语言: ✅ 允许"]
+            R6["图像 → 动作: ❌ 禁止"]
+            R7["语言 → 动作: ❌ 禁止"]
+            R8["动作 ↔ 动作: ⬇️ 因果"]
+        end
+    end
+
+    style Mask fill:#e0f2f1,stroke:#009688
+</div>
+<div class="mermaid">
+graph LR
+    subgraph AttentionMatrix["注意力矩阵可视化"]
+        M["        图像    语言   动作&lt;br/&gt;图像   [✅✅✅ ✅✅ ❌❌❌]&lt;br/&gt;语言   [✅✅✅ ✅✅ ❌❌❌]&lt;br/&gt;动作₁  [✅✅✅ ✅✅ ✅❌❌]&lt;br/&gt;动作₂  [✅✅✅ ✅✅ ✅✅❌]&lt;br/&gt;动作₃  [✅✅✅ ✅✅ ✅✅✅]"]
+    end
+
+    style AttentionMatrix fill:#f5f5f5,stroke:#9E9E9E
+</div>
+<p><strong>实现细节</strong> (<code>_create_custom_attention_mask_fast</code>):
+1. 初始化全零布尔掩码 <code>[B, total_len, total_len]</code>
+2. 图像/语言段之间：设为 <code>True</code>（双向注意力）
+3. 动作段 → 图像/语言段：设为 <code>True</code>（动作可看到观测）
+4. 动作段内部：设下三角 <code>True</code>（因果注意力，自回归生成）
+5. 最后与 padding mask 相交：<code>att_masks &amp;= pad_2d_masks</code></p>
+<hr />
+<h2 id="3-训练流水线">3. 训练流水线<a class="headerlink" href="03.Pi0-FAST_Architecture.html#3-训练流水线" title="Permanent link">#</a></h2>
+<div class="mermaid">
+graph TB
+    subgraph DataPrep["数据准备"]
+        RAW_A["原始连续动作&lt;br/&gt;[B, chunk_size, action_dim]"]
+        RAW_A --&gt; NORM["归一化&lt;br/&gt;(MEAN_STD)"]
+        NORM --&gt; PAD["零填充至 max_action_dim=32"]
+        PAD --&gt; FAST_ENC["FAST Tokenizer 编码&lt;br/&gt;DCT → BPE"]
+        FAST_ENC --&gt; ACT_TOKENS["动作 token ID&lt;br/&gt;[B, max_action_tokens]"]
+
+        RAW_IMG["原始图像&lt;br/&gt;[B, n_cameras, C, H, W]"]
+        RAW_IMG --&gt; RESIZE["resize_with_pad&lt;br/&gt;→ 224×224"]
+
+        RAW_LANG["语言指令&lt;br/&gt;(文本)"]
+        RAW_LANG --&gt; TOK["PaliGemma Tokenizer&lt;br/&gt;max_length=200"]
+        TOK --&gt; LANG_TOKENS["语言 token ID&lt;br/&gt;[B, seq_len]"]
+    end
+
+    subgraph Embedding["嵌入构建"]
+        RESIZE --&gt; VIS_EMB["SigLIP 编码&lt;br/&gt;→ 图像嵌入"]
+        LANG_TOKENS --&gt; LANG_EMB["embed_tokens × √dim&lt;br/&gt;→ 语言嵌入"]
+        ACT_TOKENS --&gt; ACT_EMB["embed_tokens × √dim&lt;br/&gt;→ 动作嵌入"]
+
+        VIS_EMB --&gt; CONCAT["拼接&lt;br/&gt;[图像, 语言, 动作]"]
+        LANG_EMB --&gt; CONCAT
+        ACT_EMB --&gt; CONCAT
+    end
+
+    subgraph Forward["前向传播"]
+        CONCAT --&gt; ATT_MASK["构建注意力掩码&lt;br/&gt;(双向 + 因果)"]
+        ATT_MASK --&gt; GEMMA["Gemma 2B&lt;br/&gt;18 层 Transformer"]
+        GEMMA --&gt; HIDDEN["隐藏状态&lt;br/&gt;[B, total_len, 2048]"]
+    end
+
+    subgraph Loss["损失计算"]
+        HIDDEN --&gt; EXTRACT["提取动作位置&lt;br/&gt;hidden[:, -num_fast:]"]
+        EXTRACT --&gt; LM_HEAD["LM Head&lt;br/&gt;→ vocab logits"]
+        LM_HEAD --&gt; SHIFT["左移 logits / 右移 targets&lt;br/&gt;(next-token prediction)"]
+        SHIFT --&gt; CE["CrossEntropyLoss&lt;br/&gt;(带 padding mask)"]
+        CE --&gt; LOSS["fast_loss = masked_sum / mask_count"]
+    end
+
+    style DataPrep fill:#e3f2fd,stroke:#2196F3
+    style Embedding fill:#f3e5f5,stroke:#9C27B0
+    style Forward fill:#e8f5e9,stroke:#4CAF50
+    style Loss fill:#fce4ec,stroke:#E91E63
+</div>
+<p><strong>训练目标详解：</strong></p>
+<div class="highlight"><pre><span></span><code>输入 token:  [img_1, ..., img_N, lang_1, ..., lang_M, act_1, act_2, ..., act_{T-1}]
+目标 token:  [                                         act_2, act_3, ..., act_T    ]
+</code></pre></div>
+
+<ul>
+<li>logits 左移一位，targets 右移一位，实现 next-token prediction</li>
+<li>只在动作 token 位置计算损失（图像和语言 token 不参与损失）</li>
+<li>使用 <code>fast_action_masks</code> 屏蔽 padding token</li>
+<li>损失函数：<code>CrossEntropyLoss(reduction="none")</code>，然后 mask 加权平均</li>
+</ul>
+<hr />
+<h2 id="4-推理流水线">4. 推理流水线<a class="headerlink" href="03.Pi0-FAST_Architecture.html#4-推理流水线" title="Permanent link">#</a></h2>
+<p>Pi0-FAST 支持两种推理模式：<strong>无缓存</strong> 和 <strong>KV 缓存</strong> 加速。</p>
+<h3 id="41-kv-缓存推理默认高效">4.1 KV 缓存推理（默认，高效）<a class="headerlink" href="03.Pi0-FAST_Architecture.html#41-kv-缓存推理默认高效" title="Permanent link">#</a></h3>
+<div class="mermaid">
+graph TB
+    subgraph Prefill["阶段一: Prefill（一次性）"]
+        IMG["图像"] --&gt; VIS["SigLIP 编码"]
+        LANG["语言 + BOS"] --&gt; EMB["词元嵌入"]
+        VIS --&gt; CAT["拼接 [图像, 语言, BOS]"]
+        EMB --&gt; CAT
+        CAT --&gt; FWD1["Gemma 前向&lt;br/&gt;use_cache=True"]
+        FWD1 --&gt; KV["KV Cache&lt;br/&gt;(18 层缓存)"]
+        FWD1 --&gt; FIRST["LM Head → 采样&lt;br/&gt;→ 第一个动作 token"]
+    end
+
+    subgraph Decode["阶段二: 自回归解码（逐 token）"]
+        FIRST --&gt; LOOP["循环 t = 1 → max_decoding_steps"]
+        LOOP --&gt; EMB_NEW["嵌入上一个 token&lt;br/&gt;[B, 1, 2048]"]
+        EMB_NEW --&gt; FWD2["Gemma 前向&lt;br/&gt;+ KV Cache&lt;br/&gt;只处理 1 个 token"]
+        KV --&gt; FWD2
+        FWD2 --&gt; SAMPLE["LM Head → 采样"]
+        SAMPLE --&gt;|"temperature=0: argmax&lt;br/&gt;temperature&gt;0: multinomial"| NEXT["下一个 token"]
+        NEXT --&gt; LOOP
+    end
+
+    subgraph PostProcess["后处理"]
+        LOOP --&gt;|"生成完毕"| ALL_TOKENS["所有动作 token&lt;br/&gt;[B, max_decoding_steps]"]
+        ALL_TOKENS --&gt; DEBPE["BPE 解码"]
+        DEBPE --&gt; IDCT["IDCT 逆变换"]
+        IDCT --&gt; FINAL["连续动作&lt;br/&gt;[B, chunk_size, action_dim]"]
+    end
+
+    style Prefill fill:#e3f2fd,stroke:#2196F3
+    style Decode fill:#e8f5e9,stroke:#4CAF50
+    style PostProcess fill:#fff3e0,stroke:#FF9800
+</div>
+<p><strong>KV 缓存优化要点：</strong>
+- Prefill 阶段：处理完整前缀序列，生成 KV Cache
+- 解码阶段：每步只处理 <strong>1 个新 token</strong>，重用缓存的 K/V
+- 注意力掩码：新 token 可注意到所有历���有效 token
+- 复杂度从 O(T²) 降低到 O(T)（T = 总序列长度）</p>
+<h3 id="42-无缓存推理简单但慢">4.2 无缓存推理（简单但慢）<a class="headerlink" href="03.Pi0-FAST_Architecture.html#42-无缓存推理简单但慢" title="Permanent link">#</a></h3>
+<div class="mermaid">
+graph LR
+    subgraph NaiveLoop["逐步完整前向传播"]
+        T0["t=0: [img, lang] → Gemma → token₁"]
+        T1["t=1: [img, lang, token₁] → Gemma → token₂"]
+        T2["t=2: [img, lang, token₁, token₂] → Gemma → token₃"]
+        DOTS["..."]
+        TN["t=N: [img, lang, token₁...N] → Gemma → token_{N+1}"]
+        T0 --&gt; T1 --&gt; T2 --&gt; DOTS --&gt; TN
+    end
+
+    style NaiveLoop fill:#ffebee,stroke:#f44336
+</div>
+<ul>
+<li>每步重新计算完整序列（无缓存复用）</li>
+<li>序列逐步增长，注意力掩码动态扩展</li>
+<li>仅作为参考实现，实际使用 KV 缓存版本</li>
+</ul>
+<hr />
+<h2 id="5-与-pi0-的关键区别">5. 与 Pi0 的关键区别<a class="headerlink" href="03.Pi0-FAST_Architecture.html#5-与-pi0-的关键区别" title="Permanent link">#</a></h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>特性</th>
+<th>Pi0</th>
+<th>Pi0-FAST</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>动作表示</strong></td>
+<td>连续值 (Flow Matching)</td>
+<td>离散 token (FAST Tokenizer)</td>
+</tr>
+<tr>
+<td><strong>动作生成方式</strong></td>
+<td>迭代去噪 (10 步)</td>
+<td>自回归 next-token 预测</td>
+</tr>
+<tr>
+<td><strong>Action Expert</strong></td>
+<td>独立 Gemma 300M</td>
+<td>无（复用 PaliGemma）</td>
+</tr>
+<tr>
+<td><strong>模型结构</strong></td>
+<td>双流 (PaliGemma + Expert)</td>
+<td>单流 (仅 PaliGemma)</td>
+</tr>
+<tr>
+<td><strong>训练损失</strong></td>
+<td>MSE (flow matching)</td>
+<td>CrossEntropy (next-token)</td>
+</tr>
+<tr>
+<td><strong>推理速度</strong></td>
+<td>10 次完整前向传播</td>
+<td>~256 次轻量解码步 (KV cache)</td>
+</tr>
+<tr>
+<td><strong>状态输入</strong></td>
+<td>投影到隐藏维 → suffix</td>
+<td>不直接使用（通过语言描述）</td>
+</tr>
+<tr>
+<td><strong>归一化敏感性</strong></td>
+<td>高（MEAN_STD + padding 不稳定）</td>
+<td>低（token 化天然规避）</td>
+</tr>
+<tr>
+<td><strong>Padding 问题</strong></td>
+<td>严重（30 维零值影响 flow matching）</td>
+<td>无（token 化后无连续 padding）</td>
+</tr>
+</tbody>
+</table></div>
+<div class="mermaid">
+graph LR
+    subgraph Pi0Path["Pi0: Flow Matching 路径"]
+        P_IN["连续动作"] --&gt; P_NOISE["加噪 x_t"] --&gt; P_DIT["双流 Transformer&lt;br/&gt;× 10 步去噪"] --&gt; P_OUT["连续动作"]
+    end
+
+    subgraph FastPath["Pi0-FAST: Token 路径"]
+        F_IN["连续动作"] --&gt; F_DCT["DCT"] --&gt; F_BPE["BPE"] --&gt; F_AR["单流 Transformer&lt;br/&gt;自回归解码"] --&gt; F_IDCT["IDCT"] --&gt; F_OUT["连续动作"]
+    end
+
+    style Pi0Path fill:#e3f2fd,stroke:#2196F3
+    style FastPath fill:#e8f5e9,stroke:#4CAF50
+</div>
+<hr />
+<h2 id="6-关键超参数">6. 关键超参数<a class="headerlink" href="03.Pi0-FAST_Architecture.html#6-关键超参数" title="Permanent link">#</a></h2>
+<h3 id="模型结构">模型结构<a class="headerlink" href="03.Pi0-FAST_Architecture.html#模型结构" title="Permanent link">#</a></h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>参数</th>
+<th>值</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>paligemma_variant</code></td>
+<td><code>gemma_2b</code></td>
+<td>PaliGemma 使用 Gemma 2B</td>
+</tr>
+<tr>
+<td>Gemma 2B width</td>
+<td>2048</td>
+<td>隐藏层维度</td>
+</tr>
+<tr>
+<td>Gemma 2B depth</td>
+<td>18</td>
+<td>Transformer 层数</td>
+</tr>
+<tr>
+<td>Gemma 2B mlp_dim</td>
+<td>16,384</td>
+<td>FFN 中间层维度</td>
+</tr>
+<tr>
+<td>Gemma 2B num_heads</td>
+<td>8</td>
+<td>注意力头数</td>
+</tr>
+<tr>
+<td>Gemma 2B head_dim</td>
+<td>256</td>
+<td>每头维度</td>
+</tr>
+<tr>
+<td>Gemma 2B num_kv_heads</td>
+<td>1</td>
+<td>GQA KV 头数</td>
+</tr>
+<tr>
+<td>词表大小</td>
+<td>257,152</td>
+<td>Gemma 原始词表</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="动作空间">动作空间<a class="headerlink" href="03.Pi0-FAST_Architecture.html#动作空间" title="Permanent link">#</a></h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>参数</th>
+<th>值</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>chunk_size</code></td>
+<td>50</td>
+<td>预测动作步数</td>
+</tr>
+<tr>
+<td><code>n_action_steps</code></td>
+<td>50</td>
+<td>执行动作步数</td>
+</tr>
+<tr>
+<td><code>max_state_dim</code></td>
+<td>32</td>
+<td>状态向量填充维度</td>
+</tr>
+<tr>
+<td><code>max_action_dim</code></td>
+<td>32</td>
+<td>动作向量填充维度</td>
+</tr>
+<tr>
+<td><code>max_action_tokens</code></td>
+<td>256</td>
+<td>最大离散动作 token 数</td>
+</tr>
+<tr>
+<td><code>fast_skip_tokens</code></td>
+<td>128</td>
+<td>跳过词表前 128 个 token</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="推理参数">推理参数<a class="headerlink" href="03.Pi0-FAST_Architecture.html#推理参数" title="Permanent link">#</a></h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>参数</th>
+<th>值</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>temperature</code></td>
+<td>0.0</td>
+<td>采样温度 (0=argmax)</td>
+</tr>
+<tr>
+<td><code>max_decoding_steps</code></td>
+<td>256</td>
+<td>最大自回归步数</td>
+</tr>
+<tr>
+<td><code>use_kv_cache</code></td>
+<td>True</td>
+<td>启用 KV 缓存加速</td>
+</tr>
+<tr>
+<td><code>validate_action_token_prefix</code></td>
+<td>True</td>
+<td>验证 "Action: " 前缀</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="训练参数">训练参数<a class="headerlink" href="03.Pi0-FAST_Architecture.html#训练参数" title="Permanent link">#</a></h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>参数</th>
+<th>值</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>optimizer_lr</code></td>
+<td>2.5e-5</td>
+<td>AdamW 学习率</td>
+</tr>
+<tr>
+<td><code>optimizer_betas</code></td>
+<td>(0.9, 0.95)</td>
+<td>Adam β 参数</td>
+</tr>
+<tr>
+<td><code>optimizer_weight_decay</code></td>
+<td>0.01</td>
+<td>权重衰减</td>
+</tr>
+<tr>
+<td><code>optimizer_grad_clip_norm</code></td>
+<td>1.0</td>
+<td>梯度裁剪阈值</td>
+</tr>
+<tr>
+<td><code>scheduler_warmup_steps</code></td>
+<td>1,000</td>
+<td>预热步数</td>
+</tr>
+<tr>
+<td><code>scheduler_decay_steps</code></td>
+<td>30,000</td>
+<td>余弦衰减总步数</td>
+</tr>
+<tr>
+<td><code>scheduler_decay_lr</code></td>
+<td>2.5e-6</td>
+<td>最终学习率</td>
+</tr>
+<tr>
+<td><code>tokenizer_max_length</code></td>
+<td>200</td>
+<td>语言 token 最大长度</td>
+</tr>
+<tr>
+<td><code>image_resolution</code></td>
+<td>(224, 224)</td>
+<td>输入图像分辨率</td>
+</tr>
+</tbody>
+</table></div>
+<hr />
+<h2 id="7-关键源文件">7. 关键源文件<a class="headerlink" href="03.Pi0-FAST_Architecture.html#7-关键源文件" title="Permanent link">#</a></h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>组件</th>
+<th>类名</th>
+<th>文件</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>策略封装</td>
+<td><code>PI0FastPolicy</code></td>
+<td><code>lerobot/policies/pi0_fast/modeling_pi0_fast.py:804</code></td>
+</tr>
+<tr>
+<td>核心模型</td>
+<td><code>PI0FastPytorch</code></td>
+<td><code>lerobot/policies/pi0_fast/modeling_pi0_fast.py:278</code></td>
+</tr>
+<tr>
+<td>PaliGemma 封装</td>
+<td><code>PI0FastPaliGemma</code></td>
+<td><code>lerobot/policies/pi0_fast/modeling_pi0_fast.py:186</code></td>
+</tr>
+<tr>
+<td>Gemma 配置</td>
+<td><code>GemmaConfig</code> / <code>get_gemma_config</code></td>
+<td><code>lerobot/policies/pi0_fast/modeling_pi0_fast.py:150</code></td>
+</tr>
+<tr>
+<td>配置类</td>
+<td><code>PI0FastConfig</code></td>
+<td><code>lerobot/policies/pi0_fast/configuration_pi0_fast.py:31</code></td>
+</tr>
+<tr>
+<td>嵌入构建</td>
+<td><code>embed_prefix_fast()</code></td>
+<td><code>lerobot/policies/pi0_fast/modeling_pi0_fast.py:355</code></td>
+</tr>
+<tr>
+<td>注意力掩码</td>
+<td><code>_create_custom_attention_mask_fast()</code></td>
+<td><code>lerobot/policies/pi0_fast/modeling_pi0_fast.py:443</code></td>
+</tr>
+<tr>
+<td>训练前向</td>
+<td><code>forward()</code></td>
+<td><code>lerobot/policies/pi0_fast/modeling_pi0_fast.py:484</code></td>
+</tr>
+<tr>
+<td>推理 (无缓存)</td>
+<td><code>sample_actions_fast()</code></td>
+<td><code>lerobot/policies/pi0_fast/modeling_pi0_fast.py:583</code></td>
+</tr>
+<tr>
+<td>推理 (KV 缓存)</td>
+<td><code>sample_actions_fast_kv_cache()</code></td>
+<td><code>lerobot/policies/pi0_fast/modeling_pi0_fast.py:680</code></td>
+</tr>
+<tr>
+<td>图像预处理</td>
+<td><code>resize_with_pad_torch()</code></td>
+<td><code>lerobot/policies/pi0_fast/modeling_pi0_fast.py:76</code></td>
+</tr>
+<tr>
+<td>FAST 分词器</td>
+<td><code>physical-intelligence/fast</code></td>
+<td>HuggingFace Hub (外部)</td>
+</tr>
+<tr>
+<td>文本分词器</td>
+<td><code>google/paligemma-3b-pt-224</code></td>
+<td>HuggingFace Hub (外部)</td>
+</tr>
+</tbody>
+</table></div>
+      </div>
+    </main>
+        <aside class="toc">
+            <div class="toc-title">本页目录</div>
+            <ul>
+                <li><a href="03.Pi0-FAST_Architecture.html#1-整体架构概览" class="toc-h2">1. 整体架构概览</a></li>
+                <li><a href="03.Pi0-FAST_Architecture.html#2-核心组件详解" class="toc-h2">2. 核心组件详解</a></li>
+                <li><a href="03.Pi0-FAST_Architecture.html#21-paligemma-视觉语言模型" class="toc-h3">2.1 PaliGemma 视觉语言模型</a></li>
+                <li><a href="03.Pi0-FAST_Architecture.html#22-fast-动作分词器-action-tokenizer" class="toc-h3">2.2 FAST 动作分词器 (Action Tokenizer)</a></li>
+                <li><a href="03.Pi0-FAST_Architecture.html#23-自定义注意力掩码" class="toc-h3">2.3 自定义注意力掩码</a></li>
+                <li><a href="03.Pi0-FAST_Architecture.html#3-训练流水线" class="toc-h2">3. 训练流水线</a></li>
+                <li><a href="03.Pi0-FAST_Architecture.html#4-推理流水线" class="toc-h2">4. 推理流水线</a></li>
+                <li><a href="03.Pi0-FAST_Architecture.html#41-kv-缓存推理默认高效" class="toc-h3">4.1 KV 缓存推理（默认，高效）</a></li>
+                <li><a href="03.Pi0-FAST_Architecture.html#42-无缓存推理简单但慢" class="toc-h3">4.2 无缓存推理（简单但慢）</a></li>
+                <li><a href="03.Pi0-FAST_Architecture.html#5-与-pi0-的关键区别" class="toc-h2">5. 与 Pi0 的关键区别</a></li>
+                <li><a href="03.Pi0-FAST_Architecture.html#6-关键超参数" class="toc-h2">6. 关键超参数</a></li>
+                <li><a href="03.Pi0-FAST_Architecture.html#模型结构" class="toc-h3">模型结构</a></li>
+                <li><a href="03.Pi0-FAST_Architecture.html#动作空间" class="toc-h3">动作空间</a></li>
+                <li><a href="03.Pi0-FAST_Architecture.html#推理参数" class="toc-h3">推理参数</a></li>
+                <li><a href="03.Pi0-FAST_Architecture.html#训练参数" class="toc-h3">训练参数</a></li>
+                <li><a href="03.Pi0-FAST_Architecture.html#7-关键源文件" class="toc-h2">7. 关键源文件</a></li>
+            </ul>
+        </aside>
+
+    <button class="back-to-top" onclick="window.scrollTo({top:0,behavior:'smooth'})">&#8593;</button>
+
+    <script src="assets/vendor/mermaid/mermaid.min.js"></script>
+    <script defer src="assets/vendor/katex/katex.min.js"></script>
+    <script defer src="assets/vendor/katex/auto-render.min.js"
+            onload="renderMathInElement(document.querySelector('.content-inner'), {
+                delimiters: [
+                    { left: '$$', right: '$$', display: true },
+                    { left: '$', right: '$', display: false }
+                ],
+                ignoredTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code', 'option'],
+                ignoredClasses: ['mermaid', 'diagram'],
+                throwOnError: false
+            });"></script>
+    <script>
+        // Mermaid destroys the source text when it renders, so keep a copy in
+        // order to re-render on theme change.
+        document.querySelectorAll('.mermaid').forEach(el => {
+            el.dataset.src = el.textContent;
+        });
+
+        const prefersDark = window.matchMedia('(prefers-color-scheme: dark)');
+        function currentTheme() {
+            const forced = document.documentElement.getAttribute('data-theme');
+            if (forced) return forced;
+            return prefersDark.matches ? 'dark' : 'light';
+        }
+
+        function initMermaid() {
+            mermaid.initialize({
+                startOnLoad: false,
+                theme: currentTheme() === 'dark' ? 'dark' : 'default',
+                flowchart: { useMaxWidth: true, htmlLabels: true },
+                securityLevel: 'loose'
+            });
+        }
+
+        function renderMermaid() {
+            const nodes = document.querySelectorAll('.mermaid');
+            nodes.forEach(el => {
+                el.removeAttribute('data-processed');
+                el.textContent = el.dataset.src;
+            });
+            // mermaid.run rejects on its internal font probe in some browsers;
+            // the diagrams still render, so swallow it rather than surfacing an
+            // unhandled rejection.
+            if (!nodes.length) return;
+            Promise.resolve(mermaid.run({ nodes: nodes }))
+                .catch(() => {})
+                .then(() => nodes.forEach(applyZoom));
+        }
+
+        /* ---------- Diagram zoom ----------
+           Scale is tracked as a factor of the diagram's NATURAL size (its
+           viewBox), so 100% means 1:1 and one font size looks identical in
+           every diagram on the site. Left to itself mermaid's useMaxWidth
+           stretches each svg to the container, which blows a 3-node diagram
+           up to 3.4x and shrinks a wide one to 0.34x — a 10x spread in
+           apparent font size. FIT_MAX caps the auto-fit at 1:1 (never
+           upscale) and FIT_MIN stops wide diagrams from shrinking to
+           unreadable; anything past that overflows and scrolls/pans. */
+        const MIN_Z = 0.3, MAX_Z = 6, STEP = 1.25;
+        const FIT_MIN = 0.55, FIT_MAX = 1;
+        const PAD = 40;               // .mermaid horizontal padding (20px each side)
+        const zoom = new WeakMap();   // .mermaid -> explicit scale; absent = auto-fit
+
+        function naturalSize(svg) {
+            const vb = svg.viewBox && svg.viewBox.baseVal;
+            if (vb && vb.width) return { w: vb.width, h: vb.height };
+            const r = svg.getBoundingClientRect();
+            return { w: r.width, h: r.height };
+        }
+
+        function fitScale(el, nat) {
+            const avail = el.clientWidth - PAD;
+            if (!nat.w || avail <= 0) return 1;
+            return Math.min(FIT_MAX, Math.max(FIT_MIN, avail / nat.w));
+        }
+
+        function scaleOf(el, nat) {
+            const k = zoom.get(el);
+            return k === undefined ? fitScale(el, nat) : k;
+        }
+
+        function applyZoom(el) {
+            const svg = el.querySelector('svg');
+            if (!svg) return;
+            const nat = naturalSize(svg);
+            if (!nat.w) return;
+            const k = scaleOf(el, nat);
+
+            const label = el.closest('.diagram')?.querySelector('.diagram-zoom');
+            if (label) label.textContent = Math.round(k * 100) + '%';
+
+            // Size the svg explicitly instead of leaving it to useMaxWidth,
+            // so the container gets real scrollbars when the diagram overflows.
+            svg.style.maxWidth = 'none';
+            svg.style.width = (nat.w * k) + 'px';
+            svg.style.height = (nat.h * k) + 'px';
+
+            const overflows = nat.w * k > el.clientWidth - PAD + 1;
+            el.classList.toggle('is-zoomed', overflows);
+            if (!overflows) el.scrollLeft = el.scrollTop = 0;
+        }
+
+        function setZoom(el, k, anchor) {
+            const svg = el.querySelector('svg');
+            if (!svg) return;
+            const nat = naturalSize(svg);
+            const prev = scaleOf(el, nat);
+            if (k !== null) k = Math.min(MAX_Z, Math.max(MIN_Z, k));
+            const next = k === null ? fitScale(el, nat) : k;
+            if (next === prev) return;
+            // Keep the point under the cursor (or the viewport centre) put.
+            const ax = anchor ? anchor.x : el.clientWidth / 2;
+            const ay = anchor ? anchor.y : el.clientHeight / 2;
+            const rx = (el.scrollLeft + ax) / prev;
+            const ry = (el.scrollTop + ay) / prev;
+            if (k === null) zoom.delete(el); else zoom.set(el, k);
+            applyZoom(el);
+            el.scrollLeft = rx * next - ax;
+            el.scrollTop = ry * next - ay;
+        }
+
+        function currentScale(el) {
+            const svg = el.querySelector('svg');
+            return svg ? scaleOf(el, naturalSize(svg)) : 1;
+        }
+
+        function setupDiagrams() {
+            document.querySelectorAll('.mermaid').forEach(el => {
+                const wrap = document.createElement('div');
+                wrap.className = 'diagram';
+                el.parentNode.insertBefore(wrap, el);
+                wrap.appendChild(el);
+
+                const tools = document.createElement('div');
+                tools.className = 'diagram-tools';
+                tools.innerHTML =
+                    '<button type="button" data-act="out" title="缩小">&minus;</button>' +
+                    '<span class="diagram-zoom">100%</span>' +
+                    '<button type="button" data-act="in" title="放大">+</button>' +
+                    '<button type="button" data-act="reset" title="适应宽度">&#9633;</button>' +
+                    '<button type="button" data-act="full" title="全屏">&#10530;</button>';
+                wrap.appendChild(tools);
+
+                tools.addEventListener('click', e => {
+                    const act = e.target.closest('button')?.dataset.act;
+                    if (!act) return;
+                    const k = currentScale(el);
+                    if (act === 'in') setZoom(el, k * STEP);
+                    else if (act === 'out') setZoom(el, k / STEP);
+                    else if (act === 'reset') setZoom(el, null);
+                    else if (act === 'full') {
+                        if (document.fullscreenElement === wrap) document.exitFullscreen();
+                        else wrap.requestFullscreen?.();
+                    }
+                });
+
+                // Ctrl/⌘ + wheel zooms; a plain wheel keeps scrolling the page.
+                el.addEventListener('wheel', e => {
+                    if (!e.ctrlKey && !e.metaKey) return;
+                    e.preventDefault();
+                    const r = el.getBoundingClientRect();
+                    setZoom(el, currentScale(el) * (e.deltaY < 0 ? STEP : 1 / STEP),
+                            { x: e.clientX - r.left, y: e.clientY - r.top });
+                }, { passive: false });
+
+                // Drag to pan once zoomed in.
+                let drag = null;
+                el.addEventListener('pointerdown', e => {
+                    // Pan only matters once the diagram actually overflows.
+                    if (e.button !== 0 || !el.classList.contains('is-zoomed')) return;
+                    drag = { x: e.clientX, y: e.clientY, l: el.scrollLeft, t: el.scrollTop };
+                    el.setPointerCapture(e.pointerId);
+                    el.classList.add('is-panning');
+                });
+                el.addEventListener('pointermove', e => {
+                    if (!drag) return;
+                    el.scrollLeft = drag.l - (e.clientX - drag.x);
+                    el.scrollTop = drag.t - (e.clientY - drag.y);
+                });
+                const endDrag = () => { drag = null; el.classList.remove('is-panning'); };
+                el.addEventListener('pointerup', endDrag);
+                el.addEventListener('pointercancel', endDrag);
+
+                // Double click toggles between auto-fit and true 1:1.
+                el.addEventListener('dblclick', () => setZoom(el, zoom.has(el) ? null : 1));
+            });
+        }
+
+        setupDiagrams();
+        initMermaid();
+        renderMermaid();
+
+        const remeasure = () => document.querySelectorAll('.mermaid').forEach(applyZoom);
+        document.addEventListener('fullscreenchange', remeasure);
+        window.addEventListener('resize', remeasure);
+
+        // Theme toggle
+        const toggle = document.getElementById('theme-toggle');
+        toggle.addEventListener('click', () => {
+            const next = currentTheme() === 'dark' ? 'light' : 'dark';
+            document.documentElement.setAttribute('data-theme', next);
+            try { localStorage.setItem('theme', next); } catch (e) {}
+            initMermaid();
+            renderMermaid();
+        });
+
+        // Follow the OS while the user hasn't made an explicit choice
+        prefersDark.addEventListener('change', () => {
+            if (!document.documentElement.getAttribute('data-theme')) {
+                initMermaid();
+                renderMermaid();
+            }
+        });
+
+        // Back to top button
+        const btn = document.querySelector('.back-to-top');
+        window.addEventListener('scroll', () => {
+            btn.classList.toggle('visible', window.scrollY > 300);
+        });
+
+        // Close sidebar on mobile when clicking a link
+        document.querySelectorAll('.sidebar nav a').forEach(a => {
+            a.addEventListener('click', () => {
+                document.querySelector('.sidebar').classList.remove('open');
+            });
+        });
+
+        // Highlight the TOC entry for the heading currently in view
+        const tocLinks = Array.from(document.querySelectorAll('.toc a'));
+        if (tocLinks.length) {
+            const targets = tocLinks
+                .map(a => document.getElementById(decodeURIComponent(a.hash.slice(1))))
+                .filter(Boolean);
+            const setActive = () => {
+                let current = targets[0];
+                for (const t of targets) {
+                    if (t.getBoundingClientRect().top <= 120) current = t;
+                    else break;
+                }
+                tocLinks.forEach(a => a.classList.toggle(
+                    'active',
+                    current && decodeURIComponent(a.hash.slice(1)) === current.id
+                ));
+            };
+            setActive();
+            let queued = false;
+            window.addEventListener('scroll', () => {
+                if (queued) return;
+                queued = true;
+                requestAnimationFrame(() => { setActive(); queued = false; });
+            });
+        }
+    </script>
+</body>
+</html>

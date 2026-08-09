@@ -1,0 +1,841 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GR00T-WBC 总览 - Robotics Knowledge Base</title>
+    <link rel="icon" href="favicon.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="assets/vendor/katex/katex.min.css">
+    <script>
+        // Applied before first paint so the saved theme doesn't flash.
+        (function () {
+            try {
+                var t = localStorage.getItem('theme');
+                if (t === 'dark' || t === 'light') {
+                    document.documentElement.setAttribute('data-theme', t);
+                }
+            } catch (e) {}
+        })();
+    </script>
+</head>
+<body>
+    <button class="menu-toggle" onclick="document.querySelector('.sidebar').classList.toggle('open')">&#9776;</button>
+    <button class="theme-toggle" id="theme-toggle" title="切换日夜模式" aria-label="切换日夜模式">
+        <span class="icon-light">&#9790;</span><span class="icon-dark">&#9728;</span>
+    </button>
+
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <h2>Robotics Knowledge Base</h2>
+            <p>机器人模型架构知识库</p>
+        </div>
+        <nav>
+            <a href="index.html">Overview</a>
+            <div class="nav-group">VLA 模型</div>
+            <a href="01.Pi0_Architecture.html">Pi0</a>
+            <a href="02.Pi0.5_Architecture.html">Pi0.5</a>
+            <a href="03.Pi0-FAST_Architecture.html">Pi0-FAST</a>
+            <a href="04.Pi-Star-0.6_Architecture.html">π*₀.₆ (Pi-Star-0.6)</a>
+            <a href="05.Pi0.7_Architecture.html">π₀.₇ (Pi-0.7)</a>
+            <a href="06.Isaac-GR00T-N1.6_Architecture.html">Isaac-GR00T N1.6</a>
+            <a href="07.Isaac-GR00T-N1.5_Architecture.html">Isaac-GR00T N1.5</a>
+            <a href="08.ACT_Architecture.html">ACT</a>
+            <a href="09.SmolVLA_Architecture.html">SmolVLA</a>
+            <a href="10.WALL-OSS_Architecture.html">WALL-OSS / WALL-X</a>
+            <a href="11.X-VLA_Architecture.html">X-VLA</a>
+            <a href="12.Psi0_Architecture.html">Psi0 (ψ₀)</a>
+            <a href="13.DreamZero_Architecture.html">DreamZero</a>
+            <a href="14.FastWAM_Architecture.html">Fast-WAM</a>
+            <div class="nav-group">全身控制 (WBC)</div>
+            <a href="15.GR00T-WBC_Overview.html" class="active">GR00T-WBC 总览</a>
+            <a href="16.Decoupled-WBC_Architecture.html" class="nav-child">Decoupled WBC</a>
+            <a href="17.GEAR-SONIC_Architecture.html" class="nav-child">GEAR-SONIC</a>
+            <a href="18.MotionBricks_Architecture.html" class="nav-child">MotionBricks</a>
+            <div class="nav-group">3D 视觉与 VLM</div>
+            <a href="19.VLM3_Architecture.html">VLM³</a>
+        </nav>
+    </aside>
+
+    <main class="content">
+      <div class="content-inner">
+        <h1 id="gr00t-wholebodycontrol-总览">GR00T-WholeBodyControl 总览<a class="headerlink" href="15.GR00T-WBC_Overview.html#gr00t-wholebodycontrol-总览" title="Permanent link">#</a></h1>
+<h2 id="1-这个仓库是什么">1. 这个仓库是什么<a class="headerlink" href="15.GR00T-WBC_Overview.html#1-这个仓库是什么" title="Permanent link">#</a></h2>
+<p><code>GR00T-WholeBodyControl</code> 是 NVIDIA GEAR 团队的人形机器人<strong>全身控制</strong>代码库,目标平台是 Unitree G1(29 DoF,带灵巧手时 43 DoF)。它不是一个单一模型,而是<strong>三条并列的技术路线</strong>外加一套共享的部署/遥操作基础设施:</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>子项目</th>
+<th>定位</th>
+<th>状态</th>
+<th>详细文档</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Decoupled WBC</strong></td>
+<td>下半身 RL + 上半身 IK 的解耦控制器,GR00T N1.5 / N1.6 实际使用的方案</td>
+<td>2025-11 首发</td>
+<td><a href="16.Decoupled-WBC_Architecture.html">Decoupled WBC 架构</a></td>
+</tr>
+<tr>
+<td><strong>GEAR-SONIC</strong></td>
+<td>通用 token 全身控制器,单一策略统管全身,兼作 VLA 的动作空间</td>
+<td>2026-02 发布,训练码 2026-04 开源</td>
+<td><a href="17.GEAR-SONIC_Architecture.html">GEAR-SONIC 架构</a></td>
+</tr>
+<tr>
+<td><strong>MotionBricks</strong></td>
+<td>实时隐式生成模型,15,000 FPS 零样本运动合成</td>
+<td>2026-04-27 预览</td>
+<td><a href="18.MotionBricks_Architecture.html">MotionBricks 架构</a></td>
+</tr>
+</tbody>
+</table></div>
+<p>理解这个仓库的关键是抓住<strong>分层</strong>:MotionBricks 生成"要做什么运动",SONIC 或 Decoupled WBC 负责"把这个运动执行出来",最上层还可以挂一个 VLA(GR00T N1.7)来决定"该做什么任务"。</p>
+<div class="mermaid">
+graph TB
+    subgraph L3["任务层"]
+        VLA["Isaac-GR00T N1.7 (VLA)&lt;br/&gt;2.5 Hz · 78 维动作&lt;br/&gt;= 64 token + 7 左手 + 7 右手"]
+        HUMAN["人类遥操作&lt;br/&gt;VR / Pico / 键盘 · 20 Hz"]
+    end
+
+    subgraph L2["运动生成层"]
+        MB["MotionBricks&lt;br/&gt;VQVAE + Root + Pose&lt;br/&gt;PyTorch, 研究/离线"]
+        PLANNER["SONIC Kinematic Planner&lt;br/&gt;ONNX, C++ 部署形态"]
+    end
+
+    subgraph L1["全身控制层 (二选一)"]
+        SONIC["GEAR-SONIC&lt;br/&gt;Universal Token 策略&lt;br/&gt;50 Hz · 单一策略管全身"]
+        DWBC["Decoupled WBC&lt;br/&gt;下半身 RL + 上半身 IK&lt;br/&gt;50 Hz · 上下分治"]
+    end
+
+    subgraph L0["机器人"]
+        G1["Unitree G1&lt;br/&gt;29 DoF (+14 手指)&lt;br/&gt;PD 控制 · DDS / MuJoCo"]
+    end
+
+    VLA --&gt;|64 维 token| SONIC
+    HUMAN --&gt;|SMPL / VR-3pt| SONIC
+    HUMAN --&gt;|IK 目标 + 速度指令| DWBC
+    MB --&gt;|qpos 序列| SONIC
+    PLANNER --&gt;|qpos 序列| SONIC
+    SONIC --&gt; G1
+    DWBC --&gt; G1
+
+    style SONIC fill:#e8f5e9
+    style DWBC fill:#e1f5ff
+    style MB fill:#fff4e1
+</div>
+<hr />
+<h2 id="2-两条控制路线的分野">2. 两条控制路线的分野<a class="headerlink" href="15.GR00T-WBC_Overview.html#2-两条控制路线的分野" title="Permanent link">#</a></h2>
+<p>Decoupled WBC 和 GEAR-SONIC 解决的是同一个问题,但假设完全不同。</p>
+<h3 id="21-核心差异">2.1 核心差异<a class="headerlink" href="15.GR00T-WBC_Overview.html#21-核心差异" title="Permanent link">#</a></h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>维度</th>
+<th>Decoupled WBC</th>
+<th>GEAR-SONIC</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>控制结构</strong></td>
+<td>腰部劈开:下半身 RL(ONNX)+ 上半身 QP-IK</td>
+<td>单一 RL 策略输出全部 29 DoF</td>
+</tr>
+<tr>
+<td><strong>上半身反馈</strong></td>
+<td><strong>无</strong> —— 开环插值 IK 目标</td>
+<td>有 —— 全身状态进策略观测</td>
+</tr>
+<tr>
+<td><strong>上下耦合</strong></td>
+<td>4 个显式通道:<code>q_arms</code>、<code>base_height_command</code>、躯干相对腰部 RPY、<code>navigate_cmd</code></td>
+<td>隐式,统一潜空间</td>
+</tr>
+<tr>
+<td><strong>指令接口</strong></td>
+<td>关节角目标 + (vx, vy, ωz) 速度指令</td>
+<td><strong>64 维运动 token</strong></td>
+</tr>
+<tr>
+<td><strong>观测维度</strong></td>
+<td>86 × 6 = 516</td>
+<td>因配置而异,token 版策略约 154 维</td>
+</tr>
+<tr>
+<td><strong>策略数量</strong></td>
+<td>2 个(<code>‖cmd‖ &lt; 0.05</code> 时切站立,否则切行走)</td>
+<td>1 个</td>
+</tr>
+<tr>
+<td><strong>训练码</strong></td>
+<td>不在仓库内(仅发布 ONNX)</td>
+<td><strong>开源</strong>,Isaac Lab + PPO,4096 环境</td>
+</tr>
+<tr>
+<td><strong>运动能力</strong></td>
+<td>稳态操作、行走 + 手臂作业</td>
+<td>走、爬、大幅度全身动态动作</td>
+</tr>
+<tr>
+<td><strong>末端精度</strong></td>
+<td>高 —— 由 QP 求解器直接保证</td>
+<td>较低 —— 受策略跟踪误差影响</td>
+</tr>
+<tr>
+<td><strong>可解释性</strong></td>
+<td>高 —— 每层都能单独观察</td>
+<td>低 —— token 不可直接解读</td>
+</tr>
+<tr>
+<td><strong>用于 GR00T</strong></td>
+<td>N1.5 / N1.6</td>
+<td>N1.7 及之后的 VLA 动作空间</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="22-该选哪个">2.2 该选哪个<a class="headerlink" href="15.GR00T-WBC_Overview.html#22-该选哪个" title="Permanent link">#</a></h3>
+<ul>
+<li><strong>要把手准确送到某个位姿</strong>(装配、抓取、精细遥操作数据采集)→ <strong>Decoupled WBC</strong>。QP-IK 的末端误差不受 RL 探索噪声污染,腰部权重(<code>waist_pitch/roll</code> posture 权重 10)还会主动抑制身体晃动。</li>
+<li><strong>要机器人做出某种整体运动</strong>(行走、爬行、模仿人类动捕、跟随生成的运动)→ <strong>GEAR-SONIC</strong>。它天然吃三种运动来源,且能跟踪训练分布之外的运动。</li>
+<li><strong>要接 VLA</strong> → <strong>GEAR-SONIC</strong>。64 维 token 已经是标准化的动作空间,VLA 只需要以 2.5 Hz 输出 40 步 token chunk,平衡与协调由预训练策略免费提供。</li>
+</ul>
+<p>两者不是迭代替换关系,在仓库里是并列维护的。</p>
+<hr />
+<h2 id="3-三个子项目的关键数字速查">3. 三个子项目的关键数字速查<a class="headerlink" href="15.GR00T-WBC_Overview.html#3-三个子项目的关键数字速查" title="Permanent link">#</a></h2>
+<h3 id="31-decoupled-wbc">3.1 Decoupled WBC<a class="headerlink" href="15.GR00T-WBC_Overview.html#31-decoupled-wbc" title="Permanent link">#</a></h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>项</th>
+<th>值</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>控制频率 / 仿真频率 / 遥操作频率</td>
+<td>50 / 200 / 20 Hz</td>
+</tr>
+<tr>
+<td>单帧观测</td>
+<td>86 维(3 cmd + 1 height + 3 躯干 RPY + 3 ω + 3 gravity + 29 q + 29 dq + 15 last action)</td>
+</tr>
+<tr>
+<td>观测历史</td>
+<td>6 帧 → 516 维</td>
+</tr>
+<tr>
+<td>动作</td>
+<td>15 维(12 腿 + 3 腰)× <code>action_scale 0.25</code> + <code>default_angles</code></td>
+</tr>
+<tr>
+<td>ONNX 策略</td>
+<td><code>GR00T-WholeBodyControl-Balance.onnx</code> / <code>-Walk.onnx</code>(配置里为 <code>ft92.onnx</code> / <code>ft109.onnx</code>)</td>
+</tr>
+<tr>
+<td>策略切换阈值</td>
+<td><code>‖cmd‖ &lt; 0.05</code></td>
+</tr>
+<tr>
+<td>默认基座高度</td>
+<td>0.74 m</td>
+</tr>
+<tr>
+<td>IK 求解</td>
+<td>pink + pinocchio + qpsolvers(quadprog),<code>dt 0.05</code>,3 步/帧</td>
+</tr>
+<tr>
+<td>IK 代价</td>
+<td>手部 <code>position 8.0</code> / <code>orientation 2.0</code> / <code>lm_damping 3.0</code>,<code>posture_cost 0.01</code></td>
+</tr>
+<tr>
+<td>数据导出</td>
+<td>43 维(29 身体 + 14 手指),LeRobot 格式</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="32-gear-sonic">3.2 GEAR-SONIC<a class="headerlink" href="15.GR00T-WBC_Overview.html#32-gear-sonic" title="Permanent link">#</a></h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>项</th>
+<th>值</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Token</td>
+<td>2 个 × 32 维 = <strong>64</strong>,每维 FSQ 量化 32 级</td>
+</tr>
+<tr>
+<td>编码器</td>
+<td>3 个(<code>g1_mf_mlp</code> / <code>teleop_mlp</code> / <code>smpl_mlp</code>),均 MLP <code>[2048,1024,512,512]</code> + SiLU</td>
+</tr>
+<tr>
+<td>解码器</td>
+<td><code>g1_dyn_mlp</code>(上真机,6 层最宽 2048)、<code>g1_kin_mf_mlp</code>(仅辅助损失)</td>
+</tr>
+<tr>
+<td>辅助损失</td>
+<td><code>g1_recon</code> 0.01;4 项潜空间对齐各 1.0</td>
+</tr>
+<tr>
+<td>训练</td>
+<td>Isaac Lab <code>ManagerBasedRLEnv</code>,4096 环境,PPO,100k iter</td>
+</tr>
+<tr>
+<td>学习率</td>
+<td>actor 2e-5 / critic 1e-3,adaptive <code>desired_kl 0.01</code></td>
+</tr>
+<tr>
+<td>前瞻</td>
+<td>默认 10 帧 × 20 ms ≈ 200 ms;低延迟版 4 帧 ≈ 80 ms</td>
+</tr>
+<tr>
+<td>跟踪奖励参考点</td>
+<td><code>torso_link</code>(+0.5 m)、双 <code>wrist_yaw_link</code></td>
+</tr>
+<tr>
+<td>部署</td>
+<td>C++ / TensorRT,<code>model_encoder.onnx</code> + <code>model_decoder.onnx</code> + <code>observation_config.yaml</code></td>
+</tr>
+<tr>
+<td>输入接口</td>
+<td>keyboard / gamepad / zmq / ros2 / manager</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="33-motionbricks">3.3 MotionBricks<a class="headerlink" href="15.GR00T-WBC_Overview.html#33-motionbricks" title="Permanent link">#</a></h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>项</th>
+<th>值</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>合成吞吐</td>
+<td><strong>15,000 FPS</strong> 零样本</td>
+</tr>
+<tr>
+<td>运动表征</td>
+<td><code>DualRootGlobalJoints</code> 418 维 = 409 body + 5 global root + 4 local root</td>
+</tr>
+<tr>
+<td>骨架</td>
+<td><code>G1Skeleton34</code>(32 G1 关节 + 2 虚拟脚趾)</td>
+</tr>
+<tr>
+<td>VQVAE 码本</td>
+<td><code>nb_code = 1e8</code> = 每头 10 码 × 8 头,<code>code_dim 256</code> → 每头 32 维</td>
+</tr>
+<tr>
+<td>Token 数范围</td>
+<td>6 – 16</td>
+</tr>
+<tr>
+<td>Root 模型</td>
+<td><code>n_embd 512</code>,3 层共享 + 3 层 root-token,<strong>不看文本</strong></td>
+</tr>
+<tr>
+<td>Pose 模型</td>
+<td><code>n_embd 1024</code>,16 层,<code>masked_token_ratio 0.8</code>,文本概率 0.2</td>
+</tr>
+<tr>
+<td>Checkpoint</td>
+<td>合计 ~2.2 GB(pose 1.6 GB 占大头)</td>
+</tr>
+<tr>
+<td>论文</td>
+<td>arXiv:2604.24833</td>
+</tr>
+</tbody>
+</table></div>
+<hr />
+<h2 id="4-共享基础设施">4. 共享基础设施<a class="headerlink" href="15.GR00T-WBC_Overview.html#4-共享基础设施" title="Permanent link">#</a></h2>
+<p>三条路线共用同一套外围,理解它们能省很多调试时间。</p>
+<h3 id="41-坐标系与关节序">4.1 坐标系与关节序<a class="headerlink" href="15.GR00T-WBC_Overview.html#41-坐标系与关节序" title="Permanent link">#</a></h3>
+<p>这是跨子项目最容易踩的坑:</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>空间</th>
+<th>Up</th>
+<th>Forward</th>
+<th>四元数</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Isaac Lab / MuJoCo</td>
+<td>Z</td>
+<td>X</td>
+<td><strong>wxyz</strong></td>
+</tr>
+<tr>
+<td>SMPL / BVH</td>
+<td>Y</td>
+<td>—</td>
+<td>—</td>
+</tr>
+<tr>
+<td>scipy <code>Rotation</code></td>
+<td>—</td>
+<td>—</td>
+<td><strong>xyzw</strong></td>
+</tr>
+<tr>
+<td>MotionBricks 运动空间</td>
+<td><strong>Y</strong></td>
+<td><strong>Z</strong></td>
+<td>—</td>
+</tr>
+</tbody>
+</table></div>
+<ul>
+<li>代码里 <code>w_last=False</code> 即 wxyz。</li>
+<li><code>pose_aa</code> 是轴角,按 <strong>MuJoCo body 顺序</strong>。</li>
+<li>Isaac Lab 与 MuJoCo 的关节序不同,由 <code>G1_ISAACLAB_TO_MUJOCO_DOF</code> / <code>G1_MUJOCO_TO_ISAACLAB_DOF</code> 映射;运动 PKL 存 MuJoCo 序,<code>order_converter.py</code> 负责转换。</li>
+<li>MotionBricks ↔ MuJoCo:<code>Motion X = MuJoCo Y</code>,<code>Motion Y = MuJoCo Z</code>,<code>Motion Z = MuJoCo X</code>。</li>
+</ul>
+<p>详见 <code>docs/source/references/conventions.md</code>。</p>
+<h3 id="42-mujoco-qpos-36-维">4.2 MuJoCo <code>qpos</code> 36 维<a class="headerlink" href="15.GR00T-WBC_Overview.html#42-mujoco-qpos-36-维" title="Permanent link">#</a></h3>
+<p>贯穿 MotionBricks 输出、SONIC 规划器输入输出的通用格式:</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>索引</th>
+<th>内容</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0–2</td>
+<td>根平移 (x, y, z),Z-up 世界系</td>
+</tr>
+<tr>
+<td>3–6</td>
+<td>根四元数 (w, x, y, z)</td>
+</tr>
+<tr>
+<td>7–35</td>
+<td>29 个关节角(弧度,MuJoCo body 树序)</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="43-遥操作栈">4.3 遥操作栈<a class="headerlink" href="15.GR00T-WBC_Overview.html#43-遥操作栈" title="Permanent link">#</a></h3>
+<p>VR(Apple Vision Pro / Pico / CloudXR)→ 头 + 双手 6D 位姿 + 手指 <code>(25, 4, 4)</code>。两条路线的用法不同:</p>
+<ul>
+<li><strong>Decoupled WBC</strong>:位姿 → QP-IK → 关节目标 → 插值 → 机器人。</li>
+<li><strong>GEAR-SONIC</strong>:位姿 → <code>teleop_mlp</code> 编码器 → token → 策略。</li>
+</ul>
+<p>激活流程一致:按 <code>l</code> 或 <code>toggle_activation</code> → 倒计时 → <code>calibrate()</code> 记录基准姿态;按 <code>k</code> 重置。</p>
+<h3 id="44-数据采集与-vla-工作流">4.4 数据采集与 VLA 工作流<a class="headerlink" href="15.GR00T-WBC_Overview.html#44-数据采集与-vla-工作流" title="Permanent link">#</a></h3>
+<div class="mermaid">
+graph LR
+    A["1. 采集&lt;br/&gt;VR 遥操作&lt;br/&gt;launch_data_collection.py"] --&gt; A2["process_dataset.py&lt;br/&gt;清洗丢弃 episode"]
+    A2 --&gt; B["2. 微调&lt;br/&gt;Isaac-GR00T N1.7"]
+    B --&gt; C["3. 部署&lt;br/&gt;launch_inference.py&lt;br/&gt;PolicyServer + SONIC"]
+</div>
+<p>产出标准 <strong>LeRobot v2.1</strong> 数据集:</p>
+<div class="highlight"><pre><span></span><code>outputs/&lt;timestamp&gt;-G1-robot01/
+├── data/train-00000.parquet
+├── videos/observation.images.ego_view/episode_000000.mp4
+└── meta/{info,modality,episodes,tasks}.json(l)
+</code></pre></div>
+
+<p>官方建议单任务 <strong>50–100 条</strong>演示。采集时按 <code>x</code> 标记丢弃,采集后必须跑 <code>process_dataset.py</code> 清掉这些 episode 和残留的 SMPL 帧。</p>
+<p>VLA 的动作空间是 <strong>78 维 = 64 维 SONIC token + 7 维左手 + 7 维右手</strong>,推理 2.5 Hz、每次出 40 步,由 SONIC 以 50 Hz 解码 —— 正好填满 20 倍频率差。</p>
+<h3 id="45-真机部署要点">4.5 真机部署要点<a class="headerlink" href="15.GR00T-WBC_Overview.html#45-真机部署要点" title="Permanent link">#</a></h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>项</th>
+<th>值</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Docker 镜像</td>
+<td><code>docker.io/nvgear</code></td>
+</tr>
+<tr>
+<td>机器人静态 IP</td>
+<td><code>192.168.123.222 / 255.255.255.0</code></td>
+</tr>
+<tr>
+<td>相机服务器</td>
+<td><code>192.168.123.164</code></td>
+</tr>
+<tr>
+<td>tmux 会话</td>
+<td><code>g1_deployment</code>(<code>scripts/deploy_g1.py</code> 分窗格拉起)</td>
+</tr>
+<tr>
+<td>SONIC 构建</td>
+<td><code>just build</code>,<code>just run g1_deploy_onnx_ref &lt;iface&gt; &lt;model&gt; &lt;motion_dir&gt;</code></td>
+</tr>
+<tr>
+<td>日志</td>
+<td>CSV @50 Hz:<code>base_quat</code> / <code>base_ang_vel</code> / <code>torso_quat</code> / <code>torso_ang_vel</code> / <code>q</code> / <code>dq</code> / <code>action</code></td>
+</tr>
+<tr>
+<td>可视化</td>
+<td><code>visualize_motion.py --realtime_debug_url tcp://localhost:5557</code>(4 个机器人:目标彩色 / 零平移绿 / 实测红 / 温度热力图)</td>
+</tr>
+</tbody>
+</table></div>
+<hr />
+<h2 id="5-仓库结构">5. 仓库结构<a class="headerlink" href="15.GR00T-WBC_Overview.html#5-仓库结构" title="Permanent link">#</a></h2>
+<div class="highlight"><pre><span></span><code>GR00T-WholeBodyControl/
+├── decoupled_wbc/          # 路线一:RL 下半身 + IK 上半身
+│   ├── control/
+│   │   ├── policy/         # 解耦策略、ONNX RL、插值、遥操作
+│   │   ├── teleop/         # IK 求解器栈 (pink/pinocchio)
+│   │   ├── envs/g1/        # G1Env
+│   │   └── main/teleop/    # ROS 控制循环 + 配置
+│   └── sim2mujoco/         # MuJoCo 资产与**实际加载的** RL 配置
+├── gear_sonic/             # 路线二:训练侧 (Python / Isaac Lab)
+│   ├── config/             # Hydra 配置树 (exp / actor_critic / encoder / decoder / algo)
+│   ├── trl/modules/        # UniversalTokenModule 等
+│   └── scripts/            # 数据采集、评估、推理启动
+├── gear_sonic_deploy/      # 路线二:部署侧 (C++ / TensorRT / ONNX)
+├── motionbricks/           # 路线三:运动生成
+│   ├── motionbricks/       # 模型代码 (vqvae / motion_backbone)
+│   ├── out/                # 三个 checkpoint 及其 config.yaml
+│   ├── docs/               # 运动表征文档
+│   └── scripts/            # 交互式 demo
+├── docs/source/            # Sphinx 文档 (references / tutorials / user_guide)
+├── external_dependencies/  # 外部依赖
+├── install_scripts/        # 环境安装
+└── download_from_hf.py     # 从 HuggingFace 拉模型
+</code></pre></div>
+
+<hr />
+<h2 id="6-阅读顺序建议">6. 阅读顺序建议<a class="headerlink" href="15.GR00T-WBC_Overview.html#6-阅读顺序建议" title="Permanent link">#</a></h2>
+<p>如果是第一次看这个仓库:</p>
+<ol>
+<li><strong>先读 <a href="16.Decoupled-WBC_Architecture.html">Decoupled WBC</a></strong> —— 结构最简单、每一层都能对应到具体的物理量,读完就理解了 G1 的观测/动作接口、PD 控制、遥操作 IK 这些共性概念。</li>
+<li><strong>再读 <a href="17.GEAR-SONIC_Architecture.html">GEAR-SONIC</a></strong> —— 带着上一步建立的接口直觉,去看"如果不分治、全部交给一个策略,该怎么设计潜空间"。重点是 §2.4 的辅助损失表(对齐 1.0 vs 重建 0.01)。</li>
+<li><strong>最后读 <a href="18.MotionBricks_Architecture.html">MotionBricks</a></strong> —— 它与控制无关,是纯生成模型;但它的 <code>qpos</code> 输出格式和 SONIC 规划器完全一致,读完能把整条"生成 → 跟踪"链路串起来。</li>
+</ol>
+<p>如果目标是<strong>接 VLA</strong>,可以跳过 Decoupled WBC,直接读 GEAR-SONIC 的 §2.1(token 从哪来)和 §5(与 VLA 的连接)。</p>
+<hr />
+<h2 id="7-与其他-vla-工作的关系">7. 与其他 VLA 工作的关系<a class="headerlink" href="15.GR00T-WBC_Overview.html#7-与其他-vla-工作的关系" title="Permanent link">#</a></h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>项目</th>
+<th>与 GR00T-WBC 的关系</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Isaac-GR00T N1.5 / N1.6</strong></td>
+<td>用 Decoupled WBC 作为全身控制器</td>
+</tr>
+<tr>
+<td><strong>Isaac-GR00T N1.7</strong></td>
+<td>用 SONIC token 作动作空间,见 <a href="07.Isaac-GR00T-N1.5_Architecture.html">GR00T N1.5 架构</a> / <a href="06.Isaac-GR00T-N1.6_Architecture.html">N1.6 架构</a></td>
+</tr>
+<tr>
+<td><strong>BONES-SEED</strong></td>
+<td>训练语料。<code>motionbricks/README.md</code> 称 35 万条产品级动捕片段;主 README 的开源公告为 14.2 万+ 条(约 288 小时)并附 G1 MuJoCo 轨迹</td>
+</tr>
+<tr>
+<td><strong>SOMA Retargeter</strong></td>
+<td>人体动捕 → G1 骨架重定向</td>
+</tr>
+<tr>
+<td><strong>Kimodo</strong></td>
+<td>同系列文生运动模型,SONIC 的网页 demo 用它做文本入口</td>
+</tr>
+</tbody>
+</table></div>
+<p>许可:代码 Apache 2.0,模型权重 NVIDIA Open Model License。</p>
+      </div>
+    </main>
+        <aside class="toc">
+            <div class="toc-title">本页目录</div>
+            <ul>
+                <li><a href="15.GR00T-WBC_Overview.html#1-这个仓库是什么" class="toc-h2">1. 这个仓库是什么</a></li>
+                <li><a href="15.GR00T-WBC_Overview.html#2-两条控制路线的分野" class="toc-h2">2. 两条控制路线的分野</a></li>
+                <li><a href="15.GR00T-WBC_Overview.html#21-核心差异" class="toc-h3">2.1 核心差异</a></li>
+                <li><a href="15.GR00T-WBC_Overview.html#22-该选哪个" class="toc-h3">2.2 该选哪个</a></li>
+                <li><a href="15.GR00T-WBC_Overview.html#3-三个子项目的关键数字速查" class="toc-h2">3. 三个子项目的关键数字速查</a></li>
+                <li><a href="15.GR00T-WBC_Overview.html#31-decoupled-wbc" class="toc-h3">3.1 Decoupled WBC</a></li>
+                <li><a href="15.GR00T-WBC_Overview.html#32-gear-sonic" class="toc-h3">3.2 GEAR-SONIC</a></li>
+                <li><a href="15.GR00T-WBC_Overview.html#33-motionbricks" class="toc-h3">3.3 MotionBricks</a></li>
+                <li><a href="15.GR00T-WBC_Overview.html#4-共享基础设施" class="toc-h2">4. 共享基础设施</a></li>
+                <li><a href="15.GR00T-WBC_Overview.html#41-坐标系与关节序" class="toc-h3">4.1 坐标系与关节序</a></li>
+                <li><a href="15.GR00T-WBC_Overview.html#42-mujoco-qpos-36-维" class="toc-h3">4.2 MuJoCo qpos 36 维</a></li>
+                <li><a href="15.GR00T-WBC_Overview.html#43-遥操作栈" class="toc-h3">4.3 遥操作栈</a></li>
+                <li><a href="15.GR00T-WBC_Overview.html#44-数据采集与-vla-工作流" class="toc-h3">4.4 数据采集与 VLA 工作流</a></li>
+                <li><a href="15.GR00T-WBC_Overview.html#45-真机部署要点" class="toc-h3">4.5 真机部署要点</a></li>
+                <li><a href="15.GR00T-WBC_Overview.html#5-仓库结构" class="toc-h2">5. 仓库结构</a></li>
+                <li><a href="15.GR00T-WBC_Overview.html#6-阅读顺序建议" class="toc-h2">6. 阅读顺序建议</a></li>
+                <li><a href="15.GR00T-WBC_Overview.html#7-与其他-vla-工作的关系" class="toc-h2">7. 与其他 VLA 工作的关系</a></li>
+            </ul>
+        </aside>
+
+    <button class="back-to-top" onclick="window.scrollTo({top:0,behavior:'smooth'})">&#8593;</button>
+
+    <script src="assets/vendor/mermaid/mermaid.min.js"></script>
+    <script defer src="assets/vendor/katex/katex.min.js"></script>
+    <script defer src="assets/vendor/katex/auto-render.min.js"
+            onload="renderMathInElement(document.querySelector('.content-inner'), {
+                delimiters: [
+                    { left: '$$', right: '$$', display: true },
+                    { left: '$', right: '$', display: false }
+                ],
+                ignoredTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code', 'option'],
+                ignoredClasses: ['mermaid', 'diagram'],
+                throwOnError: false
+            });"></script>
+    <script>
+        // Mermaid destroys the source text when it renders, so keep a copy in
+        // order to re-render on theme change.
+        document.querySelectorAll('.mermaid').forEach(el => {
+            el.dataset.src = el.textContent;
+        });
+
+        const prefersDark = window.matchMedia('(prefers-color-scheme: dark)');
+        function currentTheme() {
+            const forced = document.documentElement.getAttribute('data-theme');
+            if (forced) return forced;
+            return prefersDark.matches ? 'dark' : 'light';
+        }
+
+        function initMermaid() {
+            mermaid.initialize({
+                startOnLoad: false,
+                theme: currentTheme() === 'dark' ? 'dark' : 'default',
+                flowchart: { useMaxWidth: true, htmlLabels: true },
+                securityLevel: 'loose'
+            });
+        }
+
+        function renderMermaid() {
+            const nodes = document.querySelectorAll('.mermaid');
+            nodes.forEach(el => {
+                el.removeAttribute('data-processed');
+                el.textContent = el.dataset.src;
+            });
+            // mermaid.run rejects on its internal font probe in some browsers;
+            // the diagrams still render, so swallow it rather than surfacing an
+            // unhandled rejection.
+            if (!nodes.length) return;
+            Promise.resolve(mermaid.run({ nodes: nodes }))
+                .catch(() => {})
+                .then(() => nodes.forEach(applyZoom));
+        }
+
+        /* ---------- Diagram zoom ----------
+           Scale is tracked as a factor of the diagram's NATURAL size (its
+           viewBox), so 100% means 1:1 and one font size looks identical in
+           every diagram on the site. Left to itself mermaid's useMaxWidth
+           stretches each svg to the container, which blows a 3-node diagram
+           up to 3.4x and shrinks a wide one to 0.34x — a 10x spread in
+           apparent font size. FIT_MAX caps the auto-fit at 1:1 (never
+           upscale) and FIT_MIN stops wide diagrams from shrinking to
+           unreadable; anything past that overflows and scrolls/pans. */
+        const MIN_Z = 0.3, MAX_Z = 6, STEP = 1.25;
+        const FIT_MIN = 0.55, FIT_MAX = 1;
+        const PAD = 40;               // .mermaid horizontal padding (20px each side)
+        const zoom = new WeakMap();   // .mermaid -> explicit scale; absent = auto-fit
+
+        function naturalSize(svg) {
+            const vb = svg.viewBox && svg.viewBox.baseVal;
+            if (vb && vb.width) return { w: vb.width, h: vb.height };
+            const r = svg.getBoundingClientRect();
+            return { w: r.width, h: r.height };
+        }
+
+        function fitScale(el, nat) {
+            const avail = el.clientWidth - PAD;
+            if (!nat.w || avail <= 0) return 1;
+            return Math.min(FIT_MAX, Math.max(FIT_MIN, avail / nat.w));
+        }
+
+        function scaleOf(el, nat) {
+            const k = zoom.get(el);
+            return k === undefined ? fitScale(el, nat) : k;
+        }
+
+        function applyZoom(el) {
+            const svg = el.querySelector('svg');
+            if (!svg) return;
+            const nat = naturalSize(svg);
+            if (!nat.w) return;
+            const k = scaleOf(el, nat);
+
+            const label = el.closest('.diagram')?.querySelector('.diagram-zoom');
+            if (label) label.textContent = Math.round(k * 100) + '%';
+
+            // Size the svg explicitly instead of leaving it to useMaxWidth,
+            // so the container gets real scrollbars when the diagram overflows.
+            svg.style.maxWidth = 'none';
+            svg.style.width = (nat.w * k) + 'px';
+            svg.style.height = (nat.h * k) + 'px';
+
+            const overflows = nat.w * k > el.clientWidth - PAD + 1;
+            el.classList.toggle('is-zoomed', overflows);
+            if (!overflows) el.scrollLeft = el.scrollTop = 0;
+        }
+
+        function setZoom(el, k, anchor) {
+            const svg = el.querySelector('svg');
+            if (!svg) return;
+            const nat = naturalSize(svg);
+            const prev = scaleOf(el, nat);
+            if (k !== null) k = Math.min(MAX_Z, Math.max(MIN_Z, k));
+            const next = k === null ? fitScale(el, nat) : k;
+            if (next === prev) return;
+            // Keep the point under the cursor (or the viewport centre) put.
+            const ax = anchor ? anchor.x : el.clientWidth / 2;
+            const ay = anchor ? anchor.y : el.clientHeight / 2;
+            const rx = (el.scrollLeft + ax) / prev;
+            const ry = (el.scrollTop + ay) / prev;
+            if (k === null) zoom.delete(el); else zoom.set(el, k);
+            applyZoom(el);
+            el.scrollLeft = rx * next - ax;
+            el.scrollTop = ry * next - ay;
+        }
+
+        function currentScale(el) {
+            const svg = el.querySelector('svg');
+            return svg ? scaleOf(el, naturalSize(svg)) : 1;
+        }
+
+        function setupDiagrams() {
+            document.querySelectorAll('.mermaid').forEach(el => {
+                const wrap = document.createElement('div');
+                wrap.className = 'diagram';
+                el.parentNode.insertBefore(wrap, el);
+                wrap.appendChild(el);
+
+                const tools = document.createElement('div');
+                tools.className = 'diagram-tools';
+                tools.innerHTML =
+                    '<button type="button" data-act="out" title="缩小">&minus;</button>' +
+                    '<span class="diagram-zoom">100%</span>' +
+                    '<button type="button" data-act="in" title="放大">+</button>' +
+                    '<button type="button" data-act="reset" title="适应宽度">&#9633;</button>' +
+                    '<button type="button" data-act="full" title="全屏">&#10530;</button>';
+                wrap.appendChild(tools);
+
+                tools.addEventListener('click', e => {
+                    const act = e.target.closest('button')?.dataset.act;
+                    if (!act) return;
+                    const k = currentScale(el);
+                    if (act === 'in') setZoom(el, k * STEP);
+                    else if (act === 'out') setZoom(el, k / STEP);
+                    else if (act === 'reset') setZoom(el, null);
+                    else if (act === 'full') {
+                        if (document.fullscreenElement === wrap) document.exitFullscreen();
+                        else wrap.requestFullscreen?.();
+                    }
+                });
+
+                // Ctrl/⌘ + wheel zooms; a plain wheel keeps scrolling the page.
+                el.addEventListener('wheel', e => {
+                    if (!e.ctrlKey && !e.metaKey) return;
+                    e.preventDefault();
+                    const r = el.getBoundingClientRect();
+                    setZoom(el, currentScale(el) * (e.deltaY < 0 ? STEP : 1 / STEP),
+                            { x: e.clientX - r.left, y: e.clientY - r.top });
+                }, { passive: false });
+
+                // Drag to pan once zoomed in.
+                let drag = null;
+                el.addEventListener('pointerdown', e => {
+                    // Pan only matters once the diagram actually overflows.
+                    if (e.button !== 0 || !el.classList.contains('is-zoomed')) return;
+                    drag = { x: e.clientX, y: e.clientY, l: el.scrollLeft, t: el.scrollTop };
+                    el.setPointerCapture(e.pointerId);
+                    el.classList.add('is-panning');
+                });
+                el.addEventListener('pointermove', e => {
+                    if (!drag) return;
+                    el.scrollLeft = drag.l - (e.clientX - drag.x);
+                    el.scrollTop = drag.t - (e.clientY - drag.y);
+                });
+                const endDrag = () => { drag = null; el.classList.remove('is-panning'); };
+                el.addEventListener('pointerup', endDrag);
+                el.addEventListener('pointercancel', endDrag);
+
+                // Double click toggles between auto-fit and true 1:1.
+                el.addEventListener('dblclick', () => setZoom(el, zoom.has(el) ? null : 1));
+            });
+        }
+
+        setupDiagrams();
+        initMermaid();
+        renderMermaid();
+
+        const remeasure = () => document.querySelectorAll('.mermaid').forEach(applyZoom);
+        document.addEventListener('fullscreenchange', remeasure);
+        window.addEventListener('resize', remeasure);
+
+        // Theme toggle
+        const toggle = document.getElementById('theme-toggle');
+        toggle.addEventListener('click', () => {
+            const next = currentTheme() === 'dark' ? 'light' : 'dark';
+            document.documentElement.setAttribute('data-theme', next);
+            try { localStorage.setItem('theme', next); } catch (e) {}
+            initMermaid();
+            renderMermaid();
+        });
+
+        // Follow the OS while the user hasn't made an explicit choice
+        prefersDark.addEventListener('change', () => {
+            if (!document.documentElement.getAttribute('data-theme')) {
+                initMermaid();
+                renderMermaid();
+            }
+        });
+
+        // Back to top button
+        const btn = document.querySelector('.back-to-top');
+        window.addEventListener('scroll', () => {
+            btn.classList.toggle('visible', window.scrollY > 300);
+        });
+
+        // Close sidebar on mobile when clicking a link
+        document.querySelectorAll('.sidebar nav a').forEach(a => {
+            a.addEventListener('click', () => {
+                document.querySelector('.sidebar').classList.remove('open');
+            });
+        });
+
+        // Highlight the TOC entry for the heading currently in view
+        const tocLinks = Array.from(document.querySelectorAll('.toc a'));
+        if (tocLinks.length) {
+            const targets = tocLinks
+                .map(a => document.getElementById(decodeURIComponent(a.hash.slice(1))))
+                .filter(Boolean);
+            const setActive = () => {
+                let current = targets[0];
+                for (const t of targets) {
+                    if (t.getBoundingClientRect().top <= 120) current = t;
+                    else break;
+                }
+                tocLinks.forEach(a => a.classList.toggle(
+                    'active',
+                    current && decodeURIComponent(a.hash.slice(1)) === current.id
+                ));
+            };
+            setActive();
+            let queued = false;
+            window.addEventListener('scroll', () => {
+                if (queued) return;
+                queued = true;
+                requestAnimationFrame(() => { setActive(); queued = false; });
+            });
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,1324 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DreamZero - Robotics Knowledge Base</title>
+    <link rel="icon" href="favicon.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="assets/vendor/katex/katex.min.css">
+    <script>
+        // Applied before first paint so the saved theme doesn't flash.
+        (function () {
+            try {
+                var t = localStorage.getItem('theme');
+                if (t === 'dark' || t === 'light') {
+                    document.documentElement.setAttribute('data-theme', t);
+                }
+            } catch (e) {}
+        })();
+    </script>
+</head>
+<body>
+    <button class="menu-toggle" onclick="document.querySelector('.sidebar').classList.toggle('open')">&#9776;</button>
+    <button class="theme-toggle" id="theme-toggle" title="切换日夜模式" aria-label="切换日夜模式">
+        <span class="icon-light">&#9790;</span><span class="icon-dark">&#9728;</span>
+    </button>
+
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <h2>Robotics Knowledge Base</h2>
+            <p>机器人模型架构知识库</p>
+        </div>
+        <nav>
+            <a href="index.html">Overview</a>
+            <div class="nav-group">VLA 模型</div>
+            <a href="01.Pi0_Architecture.html">Pi0</a>
+            <a href="02.Pi0.5_Architecture.html">Pi0.5</a>
+            <a href="03.Pi0-FAST_Architecture.html">Pi0-FAST</a>
+            <a href="04.Pi-Star-0.6_Architecture.html">π*₀.₆ (Pi-Star-0.6)</a>
+            <a href="05.Pi0.7_Architecture.html">π₀.₇ (Pi-0.7)</a>
+            <a href="06.Isaac-GR00T-N1.6_Architecture.html">Isaac-GR00T N1.6</a>
+            <a href="07.Isaac-GR00T-N1.5_Architecture.html">Isaac-GR00T N1.5</a>
+            <a href="08.ACT_Architecture.html">ACT</a>
+            <a href="09.SmolVLA_Architecture.html">SmolVLA</a>
+            <a href="10.WALL-OSS_Architecture.html">WALL-OSS / WALL-X</a>
+            <a href="11.X-VLA_Architecture.html">X-VLA</a>
+            <a href="12.Psi0_Architecture.html">Psi0 (ψ₀)</a>
+            <a href="13.DreamZero_Architecture.html" class="active">DreamZero</a>
+            <a href="14.FastWAM_Architecture.html">Fast-WAM</a>
+            <div class="nav-group">全身控制 (WBC)</div>
+            <a href="15.GR00T-WBC_Overview.html">GR00T-WBC 总览</a>
+            <a href="16.Decoupled-WBC_Architecture.html" class="nav-child">Decoupled WBC</a>
+            <a href="17.GEAR-SONIC_Architecture.html" class="nav-child">GEAR-SONIC</a>
+            <a href="18.MotionBricks_Architecture.html" class="nav-child">MotionBricks</a>
+            <div class="nav-group">3D 视觉与 VLM</div>
+            <a href="19.VLM3_Architecture.html">VLM³</a>
+        </nav>
+    </aside>
+
+    <main class="content">
+      <div class="content-inner">
+        <h1 id="dreamzero-wam-模型架构">DreamZero (WAM) 模型架构<a class="headerlink" href="13.DreamZero_Architecture.html#dreamzero-wam-模型架构" title="Permanent link">#</a></h1>
+<h2 id="1-整体架构概览">1. 整体架构概览<a class="headerlink" href="13.DreamZero_Architecture.html#1-整体架构概览" title="Permanent link">#</a></h2>
+<p>DreamZero 是一个<strong>世界动作模型 (World Action Model, WAM)</strong>，通过联合预测未来视频帧与机器人动作序列，实现对未见任务的零样本泛化。其核心创新在于：基于 Wan2.1 视频扩散模型构建 Causal WAN DiT，以 Flow Matching 框架在视频 latent 空间和动作空间上<strong>同步去噪</strong>，配合 Category-specific MLP 构成的本体接口（state 编码 / action 编码 / action 解码三处）适配不同机器人平台，在 MolmoSpaces 和 RoboArena 双榜均位列第一（截至 2026 年 2 月）。</p>
+<div class="mermaid">
+graph TB
+    subgraph Input["输入"]
+        IMG["历史/当前视频帧&lt;br/&gt;[B, 1, C, H, W]&lt;br/&gt;320×176"]
+        TXT["语言指令&lt;br/&gt;(text prompt)"]
+        STATE["机器人本体状态 q_t&lt;br/&gt;[B, ·, max_state_dim]"]
+        EID["机器人本体 ID&lt;br/&gt;(embodiment_id, 一个整数)"]
+    end
+
+    subgraph Encoders["感知编码器"]
+        CLIP["CLIP ViT-H/14 图像编码器&lt;br/&gt;open-clip-xlm-roberta-large-vit-huge-14&lt;br/&gt;1280 → 5120"]
+        T5["umt5-xxl 文本编码器&lt;br/&gt;4096 → 5120"]
+    end
+
+    subgraph VAE["视频 VAE (Wan2.1)"]
+        ENC["VAE 编码器&lt;br/&gt;观测帧像素 → 观测 latent&lt;br/&gt;(仅压缩，无生成能力)"]
+        DEC["VAE 解码器&lt;br/&gt;预测 latent → 像素帧&lt;br/&gt;(仅解压，可视化用)"]
+    end
+
+    subgraph NoiseIn["双路噪声起点"]
+        NOISE_V["视频高斯噪声 ε_v&lt;br/&gt;→ 带噪 latent z_τ"]
+        NOISE_A["动作高斯噪声 ε_a&lt;br/&gt;→ 带噪动作 a_τ"]
+    end
+
+    subgraph Iface["本体专属接口 (CategorySpecific)"]
+        S_ENC["state_encoder&lt;br/&gt;状态编码器&lt;br/&gt;CategorySpecificMLP"]
+        A_ENC["action_encoder&lt;br/&gt;动作编码器&lt;br/&gt;MultiEmbodimentActionEncoder"]
+        A_DEC["action_decoder&lt;br/&gt;动作解码器&lt;br/&gt;CategorySpecificMLP"]
+    end
+
+    subgraph Core["Causal WAN DiT (核心，真正的生成模型)"]
+        DIT["40层因果扩散 Transformer&lt;br/&gt;dim=5120, 40 heads&lt;br/&gt;视频/动作/状态 token 同序列&lt;br/&gt;Flow Matching + RoPE + Flash Attn 3"]
+    end
+
+    subgraph Sched["Flow Matching 迭代去噪"]
+        SCH_V["视频 scheduler&lt;br/&gt;FlowUniPCMultistep"]
+        SCH_A["动作 scheduler&lt;br/&gt;FlowUniPCMultistep"]
+    end
+
+    subgraph Output["输出"]
+        ACT_OUT["动作序列&lt;br/&gt;[B, 24, action_dim]"]
+        VID_OUT["未来视频帧&lt;br/&gt;[B, 33, H, W, 3]&lt;br/&gt;(RGB 解码可选)"]
+    end
+
+    IMG --&gt; CLIP
+    TXT --&gt; T5
+    IMG --&gt; ENC
+    STATE --&gt; S_ENC
+    NOISE_A --&gt; A_ENC
+    EID -.-&gt;|"按 ID 索引出该本体专属的&lt;br/&gt;线性层权重 W_e, b_e (详见 2.4)"| Iface
+
+    CLIP --&gt;|"视觉条件(cross-attn)"| DIT
+    T5 --&gt;|"语言条件(cross-attn)"| DIT
+    ENC --&gt;|"观测 latent(条件,填KV Cache)"| DIT
+    NOISE_V --&gt;|"视频 token"| DIT
+    A_ENC --&gt;|"动作 token"| DIT
+    S_ENC --&gt;|"状态 token"| DIT
+
+    DIT --&gt;|"动作 flow v_a"| A_DEC --&gt; SCH_A
+    DIT --&gt;|"视频 flow v_z"| SCH_V
+    SCH_A --&gt;|"循环去噪 N 步"| ACT_OUT
+    SCH_V --&gt;|"循环去噪 N 步"| DEC --&gt; VID_OUT
+
+    style Input fill:#e8f4fd,stroke:#2196F3
+    style Encoders fill:#fff3e0,stroke:#FF9800
+    style VAE fill:#f3e5f5,stroke:#9C27B0
+    style NoiseIn fill:#fff8e1,stroke:#FBC02D
+    style Iface fill:#ede7f6,stroke:#673AB7
+    style Core fill:#e8f5e9,stroke:#4CAF50
+    style Sched fill:#e0f7fa,stroke:#00BCD4
+    style Output fill:#fce4ec,stroke:#E91E63
+</div>
+<blockquote>
+<p><strong>关于视频分支与控制的关系</strong>：只有「把最终 video latent 用 VAE 解码成 RGB 像素」这一步在部署时可以省略。视频分支本身<strong>是动作预测的核心组成部分</strong>——带噪视频 latent 与动作 token 处于同一 Transformer 序列、共享 self-attention，DiT 在同一次前向中同时输出视频 flow 和动作 flow。未来视频相当于隐式的视觉规划，视频预测出错时动作往往跟随错误的视觉计划。此外，省略 RGB 解码并不能显著降低推理耗时，主要计算量在 DiT blocks 与 diffusion steps。</p>
+</blockquote>
+<hr />
+<h2 id="2-核心组件详解">2. 核心组件详解<a class="headerlink" href="13.DreamZero_Architecture.html#2-核心组件详解" title="Permanent link">#</a></h2>
+<h3 id="21-感知编码器">2.1 感知编码器<a class="headerlink" href="13.DreamZero_Architecture.html#21-感知编码器" title="Permanent link">#</a></h3>
+<p>DreamZero 使用两个独立的预训练编码器提取视觉和语言条件。<strong>两者的原生输出维度并不相同</strong>，各自经过独立投影层后才对齐到 DiT 的 5120 维隐空间：</p>
+<ul>
+<li><strong>图像编码器</strong>：<code>open-clip-xlm-roberta-large-vit-huge-14</code>（CLIP ViT-H/14），输出 <strong>1280 维</strong> 视觉 token，经 <code>MLPProj(1280, 5120)</code> 投影</li>
+<li><strong>文本编码器</strong>：<code>umt5-xxl</code>（Google 多语言 T5），输出 <strong>4096 维</strong> 序列特征，经 <code>text_embedding</code>（<code>Linear(4096, 5120) → GELU → Linear(5120, 5120)</code>）投影</li>
+</ul>
+<blockquote>
+<p>⚠️ 配置文件 <code>wan_flow_matching_action_tf.yaml</code> 中的 <code>input_embedding_dim: 1536</code> <strong>不是这两个编码器的实际维度</strong>。该字段在代码中仅被赋值给 <code>self.input_embedding_dim</code>（<code>wan_flow_matching_action_tf.py:228</code>）后再未被引用，是从上层框架沿用下来的失效字段。</p>
+</blockquote>
+<div class="mermaid">
+graph LR
+    subgraph ImagePath["图像编码路径"]
+        VF["视频帧&lt;br/&gt;[B, T_img, C, H, W]"] --&gt; CLIP_ENC["CLIP ViT-H/14 编码&lt;br/&gt;wan_video_image_encoder.py"]
+        CLIP_ENC --&gt; CLIP_FEAT["图像特征&lt;br/&gt;[B, 257, 1280]"]
+        CLIP_FEAT --&gt; CLIP_PROJ["MLPProj&lt;br/&gt;1280 → 5120"]
+    end
+
+    subgraph TextPath["文本编码路径"]
+        PROMPT["语言提示&lt;br/&gt;(string)"] --&gt; T5_TOK["T5 分词器"]
+        T5_TOK --&gt; T5_ENC["umt5-xxl 编码&lt;br/&gt;wan_video_text_encoder.py"]
+        T5_ENC --&gt; TXT_FEAT["文本特征&lt;br/&gt;[B, T_txt, 4096]"]
+        TXT_FEAT --&gt; TXT_PROJ["text_embedding&lt;br/&gt;4096 → 5120"]
+    end
+
+    subgraph Fusion["特征融合 → DiT Cross-Attention"]
+        CLIP_PROJ --&gt; CAT["拼接为条件序列&lt;br/&gt;[B, ·, 5120]"]
+        TXT_PROJ --&gt; CAT
+        CAT --&gt; DIT_IN["输入 Causal WAN DiT&lt;br/&gt;(作为 K/V 供 cross-attn)"]
+    end
+
+    style ImagePath fill:#e3f2fd,stroke:#2196F3
+    style TextPath fill:#fff3e0,stroke:#FF9800
+    style Fusion fill:#e8f5e9,stroke:#4CAF50
+</div>
+<hr />
+<h3 id="22-视频-vae">2.2 视频 VAE<a class="headerlink" href="13.DreamZero_Architecture.html#22-视频-vae" title="Permanent link">#</a></h3>
+<p>沿用 Wan2.1 的视频 VAE，作为<strong>压缩/解压工具</strong>（无生成能力），让 DiT 在低维 latent 空间工作以降低计算量。VAE 编码器和解码器服务于两个完全不同的目的，输入输出的 latent 含义不同。</p>
+<div class="mermaid">
+graph LR
+    subgraph Encode["VAE 编码器（输入侧）"]
+        V_IN["观测帧像素&lt;br/&gt;[B, T, H, W, 3]"] --&gt; VAE_E["VAE 编码器&lt;br/&gt;wan_video_vae.py"]
+        VAE_E --&gt; LAT["观测 latent（条件）&lt;br/&gt;[B, 16, T, h, w]&lt;br/&gt;用途：填入 KV Cache，作为 DiT 生成的历史条件"]
+    end
+
+    subgraph Decode["VAE 解码器（输出侧）"]
+        LAT2["预测 latent（生成目标）&lt;br/&gt;[B, 16, T, h, w]&lt;br/&gt;DiT 从纯噪声去噪得到"] --&gt; VAE_D["VAE 解码器"]
+        VAE_D --&gt; V_OUT["预测视频帧像素&lt;br/&gt;[B, T, H, W, 3]&lt;br/&gt;（仅用于可视化，不影响机器人控制）"]
+    end
+
+    subgraph Params["关键参数"]
+        P1["latent 通道数: 16"]
+        P2["时域压缩: 4×"]
+        P3["空域压缩: 8×"]
+    end
+
+    style Encode fill:#e3f2fd,stroke:#2196F3
+    style Decode fill:#e8f5e9,stroke:#4CAF50
+    style Params fill:#fff9c4,stroke:#FFC107
+</div>
+<hr />
+<h3 id="23-causal-wan-dit核心扩散模型">2.3 Causal WAN DiT（核心扩散模型）<a class="headerlink" href="13.DreamZero_Architecture.html#23-causal-wan-dit核心扩散模型" title="Permanent link">#</a></h3>
+<p>Causal WAN DiT 是 DreamZero 的核心，基于 Wan2.1 的 DiT 架构改造而来：<strong>40 层因果 Transformer</strong>，通过 Causal Masking 保证时序因果性，同时在 latent 序列中嵌入动作 token 与状态 token，实现视频与动作的联合生成。</p>
+<p><strong>序列排布</strong>：视频 token 在前，动作与状态 token 拼成 <code>action_register</code> 追加在后，构成 <code>[video tokens | action tokens | state tokens]</code> 一条序列。因此视频 token 与动作 token 在自注意力中可以相互访问——这是「视频分支影响控制」的机制来源，而非先生成视频、再用独立 IDM 从视频反推动作。</p>
+<div class="mermaid">
+graph TB
+    subgraph InputSeq["输入序列构建"]
+        direction LR
+        VL["含噪预测 latent z_τ&lt;br/&gt;[B, T_vid, 16]&lt;br/&gt;(去噪目标，从纯噪声出发)"]
+        AC["含噪动作 a_τ&lt;br/&gt;[B, 24, action_dim]"]
+        ST["本体状态 q_t&lt;br/&gt;[B, ·, max_state_dim]"]
+        VIS["视觉条件&lt;br/&gt;[B, 257, 5120]"]
+        LNG["语言条件&lt;br/&gt;[B, T_txt, 5120]"]
+        TS["时间步 t (视频/动作各一路)"]
+
+        VL --&gt; ROPE["RoPE 位置编码"]
+        AC --&gt; ACT_PROJ["action_encoder 动作编码器&lt;br/&gt;(含时间步正弦编码)"]
+        ST --&gt; ST_PROJ["state_encoder 状态编码器"]
+        TS --&gt; TIME_EMB["时间步嵌入&lt;br/&gt;(正弦编码)"]
+    end
+
+    subgraph Block["单层 Causal DiT Block (×40)"]
+        direction TB
+        IN_B["输入 [B, T, 5120]"] --&gt; LN1_B["RMSNorm"]
+        LN1_B --&gt; MOD1["Modulation&lt;br/&gt;(shift, scale by timestep emb)"]
+        MOD1 --&gt; CATTN["因果自注意力&lt;br/&gt;40 heads, Flash Attn 3&lt;br/&gt;Causal Mask"]
+        CATTN --&gt; ADD1["+ 残差"]
+        IN_B --&gt; ADD1
+        ADD1 --&gt; LN2_B["RMSNorm"]
+        LN2_B --&gt; XATTN["交叉注意力&lt;br/&gt;(视觉 + 语言条件)"]
+        XATTN --&gt; ADD2["+ 残差"]
+        ADD1 --&gt; ADD2
+        ADD2 --&gt; LN3_B["RMSNorm"]
+        LN3_B --&gt; FFN_B["FFN (SwiGLU)&lt;br/&gt;dim 5120 → 13824 → 5120"]
+        FFN_B --&gt; ADD3["+ 残差"]
+        ADD2 --&gt; ADD3
+        ADD3 --&gt; OUT_B["输出 [B, T, 5120]"]
+    end
+
+    subgraph Output["输出解码"]
+        OUT_B --&gt; SPLIT["按位置切分&lt;br/&gt;video / action / state token"]
+        SPLIT --&gt; VP["视频 flow 预测 v_z&lt;br/&gt;(head + unpatchify)"]
+        SPLIT --&gt; AP["动作 flow 预测 v_a&lt;br/&gt;action_decoder 动作解码器&lt;br/&gt;5120 → action_dim"]
+    end
+
+    ROPE --&gt; Block
+    ACT_PROJ --&gt; Block
+    ST_PROJ --&gt; Block
+    TIME_EMB --&gt; Block
+    VIS --&gt; Block
+    LNG --&gt; Block
+
+    style InputSeq fill:#e3f2fd,stroke:#2196F3
+    style Block fill:#e8f5e9,stroke:#4CAF50
+    style Output fill:#fce4ec,stroke:#E91E63
+</div>
+<p><strong>因果注意力掩码设计：</strong> 视频帧 token 只能 attend 到过去帧和当前帧，动作 token attend 到所有视频 token（全局条件），保证生成的时序一致性。</p>
+<div class="mermaid">
+graph LR
+    subgraph Mask["Causal Attention Mask 示意"]
+        direction LR
+        F0["帧 0 token"] --&gt;|"✓ attend"| F0S["自身"]
+        F1["帧 1 token"] --&gt;|"✓ attend"| F0_1["帧 0"]
+        F1 --&gt;|"✓ attend"| F1S["自身"]
+        F1 --&gt;|"✗ 不 attend"| F2_BLK["帧 2+ (未来)"]
+        AT["动作 token"] --&gt;|"✓ attend"| ALL["所有帧 token"]
+    end
+
+    style Mask fill:#fff9c4,stroke:#FFC107
+</div>
+<hr />
+<h3 id="24-本体适配机制embodiment-interface">2.4 本体适配机制（Embodiment Interface）<a class="headerlink" href="13.DreamZero_Architecture.html#24-本体适配机制embodiment-interface" title="Permanent link">#</a></h3>
+<p>DreamZero 的本体适配可以概括为：</p>
+<blockquote>
+<p><strong>共享 Causal DiT + 本体专属 state/action 接口</strong>（embodiment-specific state/action interface）</p>
+</blockquote>
+<p>而<strong>不是</strong>「共享 DiT + 一个 robot-ID prompt token」。</p>
+<h4 id="三个本体专属模块而非一个">三个本体专属模块，而非一个<a class="headerlink" href="13.DreamZero_Architecture.html#三个本体专属模块而非一个" title="Permanent link">#</a></h4>
+<p><code>embodiment_id</code> 不会被编码成向量再作为 token 喂给 Transformer。它的作用是<strong>从权重张量中索引出该本体专属的一组权重</strong>：</p>
+<div class="highlight"><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="nc">CategorySpecificLinear</span><span class="p">(</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">):</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">num_categories</span><span class="p">,</span> <span class="n">input_dim</span><span class="p">,</span> <span class="n">hidden_dim</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">W</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Parameter</span><span class="p">(</span><span class="mf">0.02</span> <span class="o">*</span> <span class="n">torch</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="n">num_categories</span><span class="p">,</span> <span class="n">input_dim</span><span class="p">,</span> <span class="n">hidden_dim</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">b</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Parameter</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">num_categories</span><span class="p">,</span> <span class="n">hidden_dim</span><span class="p">))</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">cat_ids</span><span class="p">):</span>
+        <span class="n">selected_W</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">W</span><span class="p">[</span><span class="n">cat_ids</span><span class="p">]</span>      <span class="c1"># 按本体 ID 选权重</span>
+        <span class="n">selected_b</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">b</span><span class="p">[</span><span class="n">cat_ids</span><span class="p">]</span>
+        <span class="k">return</span> <span class="n">torch</span><span class="o">.</span><span class="n">bmm</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">selected_W</span><span class="p">)</span> <span class="o">+</span> <span class="n">selected_b</span><span class="o">.</span><span class="n">unsqueeze</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+</code></pre></div>
+
+<p>即对本体 $e$ 执行 $y = x W_e + b_e$。</p>
+<h5 id="w_e-b_e-到底是什么从哪来"><code>W_e</code> / <code>b_e</code> 到底是什么、从哪来<a class="headerlink" href="13.DreamZero_Architecture.html#w_e-b_e-到底是什么从哪来" title="Permanent link">#</a></h5>
+<p>一句话：<strong>它们就是普通 <code>nn.Linear</code> 的权重和偏置，只不过被"每个本体存一份"地堆成了一个多出一维的大张量，<code>W_e</code> 是从中切出的第 e 片。</strong></p>
+<p>对比一下就很清楚——普通线性层与这里的差别只在最前面多了一个「本体」维：</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th></th>
+<th>普通 <code>nn.Linear</code></th>
+<th><code>CategorySpecificLinear</code></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>权重形状</td>
+<td><code>(input_dim, hidden_dim)</code></td>
+<td><code>(num_categories, input_dim, hidden_dim)</code></td>
+</tr>
+<tr>
+<td>偏置形状</td>
+<td><code>(hidden_dim,)</code></td>
+<td><code>(num_categories, hidden_dim)</code></td>
+</tr>
+<tr>
+<td>前向</td>
+<td><code>x @ W + b</code></td>
+<td><code>x @ W[e] + b[e]</code>，即 <code>W_e = W[e]</code></td>
+</tr>
+</tbody>
+</table></div>
+<p>所以：</p>
+<ul>
+<li><strong>是什么</strong>：<code>W</code> 和 <code>b</code> 是 <code>nn.Parameter</code>，即<strong>模型的可训练参数本身</strong>，和 DiT 里任何一个权重矩阵地位相同。<code>W_e</code> 不是运行时算出来的中间变量，只是对 <code>W</code> 沿第 0 维做一次索引 <code>W[e]</code>，切出来的 <code>(input_dim, hidden_dim)</code> 就是一个再普通不过的权重矩阵。</li>
+<li><strong>从哪来（初始化）</strong>：随机初始化，<strong>从零训起</strong> —— <code>W = 0.02 * torch.randn(...)</code>，<code>b = torch.zeros(...)</code>。这三个模块在 Wan2.1 预训练权重里<strong>根本不存在</strong>（Wan2.1 是纯视频生成模型，没有机器人状态/动作的概念），是 DreamZero 新增的部件，因此没有预训练权重可继承。</li>
+<li><strong>怎么训出来</strong>：靠正常的反向传播。注意 <code>W[cat_ids]</code> 是一次索引操作，梯度是<strong>稀疏</strong>的——某个 batch 里只出现了本体 3，那么只有 <code>W[3]</code> 这一片拿到梯度，其他本体的切片原封不动。这正是"各本体互不干扰"的来源。</li>
+<li><strong>LoRA 模式下也全量训练</strong>：<code>train_architecture=lora</code> 时先把所有参数冻结，注入 LoRA 后又显式把这三个模块解冻（<code>wan_flow_matching_action_tf.py:341-343</code>），它们走的是<strong>完整梯度更新，不是低秩分解</strong>。原因很直接：新本体的接口层没有预训练权重可微调，低秩增量无从谈起。</li>
+<li><strong><code>torch.bmm</code> 的意义</strong>：用 batch matmul 而非普通 matmul，是为了让<strong>同一个 batch 内不同样本可以用不同本体的权重</strong>，从而支持多本体数据混合训练。</li>
+</ul>
+<blockquote>
+<p>一个直观的类比：把 <code>W</code> 想成一本按机器人型号编号的「适配器手册」，<code>embodiment_id = e</code> 就是翻到第 e 页。手册本身（<code>W</code> 整体）是训练出来的，翻页（索引）不消耗任何计算，也不产生 token。</p>
+</blockquote>
+<p>这套机制分布在<strong>三个位置</strong>，而不只是动作输入端：</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>位置</th>
+<th>模块</th>
+<th>类型</th>
+<th>作用</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>状态输入</td>
+<td><code>state_encoder</code></td>
+<td><code>CategorySpecificMLP</code></td>
+<td>$q_t \rightarrow$ 状态 token（<code>max_state_dim → 5120</code>）</td>
+</tr>
+<tr>
+<td>动作输入</td>
+<td><code>action_encoder</code></td>
+<td><code>MultiEmbodimentActionEncoder</code></td>
+<td>带噪动作 $a_\tau$ + 扩散时间步 $\tau \rightarrow$ 动作 token</td>
+</tr>
+<tr>
+<td>动作输出</td>
+<td><code>action_decoder</code></td>
+<td><code>CategorySpecificMLP</code></td>
+<td>DiT 输出 $\rightarrow$ 本体动作空间的 flow（<code>5120 → action_dim</code>）</td>
+</tr>
+</tbody>
+</table></div>
+<p><code>MultiEmbodimentActionEncoder</code> 内部由 3 个 <code>CategorySpecificLinear</code>（W1/W2/W3）加正弦位置编码构成：动作先经 W1 升维，与时间步编码拼接后经 W2 + swish，再经 W3 输出。</p>
+<div class="mermaid">
+graph TB
+    subgraph InRobot["本体侧输入（每台机器人各不相同）"]
+        Q["本体状态 q_t&lt;br/&gt;关节角 / 夹爪开合等"]
+        A_NOISE["动作高斯噪声 ε_a"]
+        TAU["扩散时间步 τ"]
+        A_NOISE --&gt; A_TAU["带噪动作 a_τ&lt;br/&gt;待去噪的动作序列"]
+    end
+
+    subgraph Select["embodiment_id 的真实作用：查表选权重"]
+        EID2["embodiment_id = e&lt;br/&gt;本体编号，一个整数"]
+        BANK["权重库 W, b (nn.Parameter)&lt;br/&gt;W 形状 (本体数, in_dim, out_dim)&lt;br/&gt;b 形状 (本体数, out_dim)&lt;br/&gt;随机初始化，反向传播训练得到"]
+        EID2 --&gt; PICK["沿第 0 维索引出第 e 片&lt;br/&gt;W_e = W[e] → (in_dim, out_dim)&lt;br/&gt;b_e = b[e] → (out_dim,)&lt;br/&gt;&lt;b&gt;即该本体专属的一套线性层权重&lt;/b&gt;&lt;br/&gt;&lt;b&gt;不生成任何 token&lt;/b&gt;"]
+        BANK --&gt; PICK
+    end
+
+    subgraph IfaceIn["本体专属输入接口（把异构机器人对齐到统一维度）"]
+        Q --&gt; SE["state_encoder&lt;br/&gt;类型 CategorySpecificMLP&lt;br/&gt;状态编码器：max_state_dim → 5120"]
+        A_TAU --&gt; AE["action_encoder&lt;br/&gt;类型 MultiEmbodimentActionEncoder&lt;br/&gt;动作编码器：W1/W2/W3 + 正弦时间编码"]
+        TAU --&gt; AE
+    end
+
+    subgraph SharedDiT["共享主干（与本体无关，所有机器人复用同一套权重）"]
+        SE --&gt; SEQ["拼接为一条序列&lt;br/&gt;[视频 token | 动作 token | 状态 token]"]
+        AE --&gt; SEQ
+        VID_TOK["视频 token z_τ"] --&gt; SEQ
+        SEQ --&gt; DIT_PROC["Causal WAN DiT&lt;br/&gt;40 层 · 14B 参数&lt;br/&gt;世界模型先验就在这里"]
+    end
+
+    subgraph IfaceOut["本体专属输出接口（映射回该机器人的动作空间）"]
+        DIT_PROC --&gt; SLICE["从输出序列中切出动作 token"]
+        SLICE --&gt; AD["action_decoder&lt;br/&gt;类型 CategorySpecificMLP&lt;br/&gt;动作解码器：5120 → action_dim"]
+        AD --&gt; VA["动作 flow v_a&lt;br/&gt;交给 scheduler 迭代去噪"]
+    end
+
+    PICK -.-&gt;|"该层用 W_e, b_e 做 y = x·W_e + b_e"| SE
+    PICK -.-&gt;|"同上"| AE
+    PICK -.-&gt;|"同上"| AD
+
+    style InRobot fill:#e3f2fd,stroke:#2196F3
+    style Select fill:#fff8e1,stroke:#FBC02D
+    style IfaceIn fill:#ede7f6,stroke:#673AB7
+    style SharedDiT fill:#e8f5e9,stroke:#4CAF50
+    style IfaceOut fill:#fce4ec,stroke:#E91E63
+</div>
+<h4 id="当前公开实现并非单-checkpoint-多本体自由切换">⚠️ 当前公开实现并非「单 checkpoint 多本体自由切换」<a class="headerlink" href="13.DreamZero_Architecture.html#当前公开实现并非单-checkpoint-多本体自由切换" title="Permanent link">#</a></h4>
+<p>尽管类名（<code>MultiEmbodimentActionEncoder</code>）和字段（<code>max_num_embodiments</code>）都暗示多本体，<strong>当前公开主分支实际只有一个 category</strong>：</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># wan_video_dit_action_casual_chunk.py:1325，紧接在赋值 self.max_num_embodiments 之后</span>
+<span class="n">max_num_embodiments</span> <span class="o">=</span> <span class="mi">1</span>          <span class="c1"># 局部变量被硬覆盖为 1</span>
+
+<span class="bp">self</span><span class="o">.</span><span class="n">state_encoder</span>  <span class="o">=</span> <span class="n">CategorySpecificMLP</span><span class="p">(</span><span class="n">num_categories</span><span class="o">=</span><span class="n">max_num_embodiments</span><span class="p">,</span> <span class="o">...</span><span class="p">)</span>
+<span class="bp">self</span><span class="o">.</span><span class="n">action_encoder</span> <span class="o">=</span> <span class="n">MultiEmbodimentActionEncoder</span><span class="p">(</span><span class="n">num_embodiments</span><span class="o">=</span><span class="n">max_num_embodiments</span><span class="p">,</span> <span class="o">...</span><span class="p">)</span>
+<span class="bp">self</span><span class="o">.</span><span class="n">action_decoder</span> <span class="o">=</span> <span class="n">CategorySpecificMLP</span><span class="p">(</span><span class="n">num_categories</span><span class="o">=</span><span class="n">max_num_embodiments</span><span class="p">,</span> <span class="o">...</span><span class="p">)</span>
+</code></pre></div>
+
+<p>并且<strong>两条前向路径</strong>都会把传入的 <code>embodiment_id</code> 覆盖为 0：</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># :1715（常规前向）与 :2011（TensorRT 前向）</span>
+<span class="n">embodiment_id</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">([</span><span class="mi">0</span><span class="p">],</span> <span class="n">device</span><span class="o">=</span><span class="n">x</span><span class="o">.</span><span class="n">device</span><span class="p">)</span><span class="o">.</span><span class="n">repeat</span><span class="p">(</span><span class="n">x</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+</code></pre></div>
+
+<p>所以代码结构预留了多本体权重选择机制，但<strong>当前发布的权重并没有真正用一个 checkpoint 同时学习多个本体</strong>。论文的说法与之一致：</p>
+<ul>
+<li>AgiBot G1 与 Franka <strong>分别预训练</strong>；</li>
+<li>multi-embodiment joint training 列为未来工作；</li>
+<li>AgiBot → YAM 是拿 AgiBot checkpoint 在 YAM 约 30 分钟数据上继续 post-training，<strong>不是</strong>推理时把 <code>embodiment_id</code> 从 AgiBot 改成 YAM 就能直接部署。</li>
+</ul>
+<blockquote>
+<p>需要注意的是，数据侧的 <code>dreamzero_cotrain.py</code> 里确实存在完整的 embodiment 白名单（AGIBOT / OXE_DROID / GR1_UNIFIED / MECKA_HANDS / XDOF / YAM 等，见 <code>transform/base.yaml</code> 的 <code>embodiment_tag_to_projector_index</code>），但这些 ID 用于数据变换阶段的分发，模型侧最终仍被压到单一 category。</p>
+</blockquote>
+<h4 id="适配新本体实际需要做什么">适配新本体实际需要做什么<a class="headerlink" href="13.DreamZero_Architecture.html#适配新本体实际需要做什么" title="Permanent link">#</a></h4>
+<p>不能简化为「换个 ID 加个 MLP」。实际流程包含：</p>
+<ol>
+<li>训练新的 state / action interface（上表三个模块）；</li>
+<li>调整动作归一化与维度（<code>max_state_dim</code> / <code>max_action_dim</code>，如 AgiBot 配置为 64 / 32）；</li>
+<li>对共享 DiT 做 post-training——公开脚本提供<strong>两套</strong>：<code>droid_training_lora.sh</code>（<code>train_architecture=lora</code>）与 <code>droid_training_full_finetune.sh</code>（<code>train_architecture=full</code>）；AgiBot / YAM 脚本默认走 LoRA；</li>
+<li>LoRA 模式下三个 state/action adapter 仍保持可训练：</li>
+</ol>
+<div class="highlight"><pre><span></span><code><span class="c1"># wan_flow_matching_action_tf.py:343-345</span>
+<span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">state_encoder</span><span class="o">.</span><span class="n">requires_grad_</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+<span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">action_encoder</span><span class="o">.</span><span class="n">requires_grad_</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+<span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">action_decoder</span><span class="o">.</span><span class="n">requires_grad_</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+</code></pre></div>
+
+<ol>
+<li>依赖视频世界模型已有的视觉动力学先验完成迁移。</li>
+</ol>
+<p><strong>相对动作计算：</strong> 各机器人体在数据加载时将绝对动作转为相对值（<code>action - reference_state</code>），使模型学到的动作表示更加泛化。</p>
+<hr />
+<h2 id="3-训练流水线">3. 训练流水线<a class="headerlink" href="13.DreamZero_Architecture.html#3-训练流水线" title="Permanent link">#</a></h2>
+<p>DreamZero 基于 <strong>Flow Matching</strong> 框架进行训练，同时对视频 latent 和动作 token 施加扩散损失。训练使用 DeepSpeed ZeRO-2 分布式优化，并通过 LoRA 高效微调 14B 参数基础模型。</p>
+<div class="mermaid">
+graph TB
+    subgraph DataLoad["数据加载 (LeRobot 格式)"]
+        direction LR
+        PARQ["LeRobot parquet 文件"] --&gt; DS["lerobot.py / lerobot_sharded.py"]
+        DS --&gt; MOD["模态变换&lt;br/&gt;· 视频 resize → 320×176&lt;br/&gt;· 状态/动作归一化&lt;br/&gt;· 相对动作计算&lt;br/&gt;· 语言编码"]
+        MOD --&gt; BATCH_OUT["训练 Batch"]
+    end
+
+    subgraph Encode["编码阶段"]
+        BATCH_OUT --&gt; IMG_E["CLIP 图像编码&lt;br/&gt;→ 视觉特征"]
+        BATCH_OUT --&gt; TXT_E["T5 文本编码&lt;br/&gt;→ 语言特征"]
+        BATCH_OUT --&gt; VAE_E2["VAE 编码&lt;br/&gt;视频 → latent"]
+    end
+
+    subgraph FlowMatch["Flow Matching 加噪（视频/动作各一路）"]
+        NOISE_V2["视频噪声 ε_z ~ N(0,I)&lt;br/&gt;torch.randn_like(latents)"]
+        NOISE_A2["动作噪声 ε_a ~ N(0,I)&lt;br/&gt;torch.randn_like(actions)"]
+        VID_GT["真实视频 latent z_1"]
+        ACT_GT["真实动作 a_1"]
+
+        NOISE_V2 --&gt; INTERP_V["z_τ = (1-σ)·z_1 + σ·ε_z"]
+        VID_GT --&gt; INTERP_V
+        NOISE_A2 --&gt; INTERP_A["a_τ = (1-σ)·a_1 + σ·ε_a"]
+        ACT_GT --&gt; INTERP_A
+    end
+
+    subgraph Forward["前向传播"]
+        IMG_E --&gt; DIT_FWD["Causal WAN DiT&lt;br/&gt;[video | action | state] 同序列"]
+        TXT_E --&gt; DIT_FWD
+        VAE_E2 --&gt; DIT_FWD
+        INTERP_V --&gt; DIT_FWD
+        INTERP_A --&gt; DIT_FWD
+        DIT_FWD --&gt; PRED_ALL["联合预测&lt;br/&gt;视频 flow v_z + 动作 flow v_a"]
+    end
+
+    subgraph Loss["损失计算"]
+        PRED_ALL --&gt; L_VID["视频 Flow Matching Loss&lt;br/&gt;target = ε_z − z_1"]
+        PRED_ALL --&gt; L_ACT["动作 Flow Matching Loss&lt;br/&gt;target = ε_a − a_1"]
+        L_VID --&gt; L_TOTAL["总损失&lt;br/&gt;L = λ_vid · L_vid + λ_act · L_act&lt;br/&gt;(各自按 timestep 加权)"]
+        L_ACT --&gt; L_TOTAL
+    end
+
+    subgraph Optim["优化"]
+        L_TOTAL --&gt; BACK["反向传播"]
+        BACK --&gt; LORA["LoRA rank=4, alpha=4&lt;br/&gt;或 train_architecture=full 全量微调&lt;br/&gt;(两套脚本均已开源)"]
+        LORA --&gt; OPT["AdamW&lt;br/&gt;β₁=0.95, β₂=0.999&lt;br/&gt;Cosine LR + Warmup"]
+        OPT --&gt; DS_ZERO["DeepSpeed ZeRO-2&lt;br/&gt;梯度累积"]
+    end
+
+    DataLoad --&gt; Encode
+    Encode --&gt; FlowMatch
+    FlowMatch --&gt; Forward
+    Forward --&gt; Loss
+    Loss --&gt; Optim
+
+    style DataLoad fill:#e3f2fd,stroke:#2196F3
+    style Encode fill:#fff3e0,stroke:#FF9800
+    style FlowMatch fill:#f3e5f5,stroke:#9C27B0
+    style Forward fill:#e8f5e9,stroke:#4CAF50
+    style Loss fill:#fce4ec,stroke:#E91E63
+    style Optim fill:#e0f7fa,stroke:#00BCD4
+</div>
+<p><strong>训练模式：</strong> 公开仓库提供两套脚本。</p>
+<ul>
+<li><strong>LoRA</strong>（<code>droid_training_lora.sh</code> / <code>agibot_training.sh</code> / <code>yam_training.sh</code>，<code>train_architecture=lora</code>）：基础模型（Wan2.1，约 14B 参数）冻结，在 DiT 的 <code>q,k,v,o,ffn.0,ffn.2</code> 上插入 LoRA 适配器（rank=4, alpha=4），<strong>同时保持 <code>state_encoder</code> / <code>action_encoder</code> / <code>action_decoder</code> 三个本体接口全量可训练</strong>。</li>
+<li><strong>全量微调</strong>（<code>droid_training_full_finetune.sh</code>，<code>train_architecture=full</code>，<code>save_lora_only=false</code>）：更新全部 DiT blocks，对应论文中的主预训练设置。</li>
+</ul>
+<hr />
+<h2 id="4-推理流水线">4. 推理流水线<a class="headerlink" href="13.DreamZero_Architecture.html#4-推理流水线" title="Permanent link">#</a></h2>
+<p>推理时视频 latent 与动作<strong>都</strong>从各自的高斯噪声出发，在同一次 DiT 前向中得到两路 flow，再由<strong>两个独立的 scheduler</strong> 分别积分更新。动作不是 DiT 一次前向直接回归出来的干净值，而是多步去噪的结果。DreamZero 支持通过 WebSocket 的分布式多 GPU 推理服务。</p>
+<div class="mermaid">
+graph TB
+    subgraph Init["初始化"]
+        OBS["当前观测图像&lt;br/&gt;[B, 1, C, H, W]"]
+        LANG_IN["语言指令"]
+        Q_IN["本体状态 q_t"]
+        NV["视频噪声 ε_z → z_τ"]
+        NA["动作噪声 ε_a → a_τ"]
+    end
+
+    subgraph EncoderOnce["编码（仅执行一次）"]
+        OBS --&gt; CLIP_INF["CLIP 编码"]
+        LANG_IN --&gt; T5_INF["T5 编码"]
+        CLIP_INF --&gt; COND["条件特征缓存&lt;br/&gt;(+ KV Cache)"]
+        T5_INF --&gt; COND
+        Q_IN --&gt; SE_INF["state_encoder 状态编码器"]
+    end
+
+    subgraph DenoiseLoop["迭代去噪循环 (num_inference_timesteps 步)"]
+        direction TB
+        FWD["单次 DiT 前向 (cond + uncond)&lt;br/&gt;输入 [z_τ | a_τ | q]"]
+        FWD --&gt; VZ["视频 flow v_z&lt;br/&gt;uncond + s·(cond − uncond)&lt;br/&gt;← CFG 只作用于视频"]
+        FWD --&gt; ADEC["action_decoder 动作解码器&lt;br/&gt;→ 动作 flow v_a&lt;br/&gt;只取 cond 分支，不做 CFG"]
+        VZ --&gt; STEP_V["sample_scheduler.step&lt;br/&gt;更新 z_τ"]
+        ADEC --&gt; STEP_A["sample_scheduler_action.step&lt;br/&gt;更新 a_τ"]
+        STEP_V --&gt; FWD
+        STEP_A --&gt; FWD
+    end
+
+    subgraph PostProcess["后处理"]
+        STEP_A --&gt; ACT_POST["动作后处理&lt;br/&gt;(反归一化, 相对→绝对)"]
+        ACT_POST --&gt; ACT_EXEC["执行前 N 步动作&lt;br/&gt;(Action Chunking)"]
+        STEP_V --&gt; VAE_DEC2["VAE 解码 → RGB 视频帧&lt;br/&gt;(可选，仅可视化需要)"]
+    end
+
+    Init --&gt; EncoderOnce
+    COND --&gt; DenoiseLoop
+    SE_INF --&gt; DenoiseLoop
+    NV --&gt; DenoiseLoop
+    NA --&gt; DenoiseLoop
+
+    style Init fill:#e3f2fd,stroke:#2196F3
+    style EncoderOnce fill:#fff3e0,stroke:#FF9800
+    style DenoiseLoop fill:#e8f5e9,stroke:#4CAF50
+    style PostProcess fill:#fce4ec,stroke:#E91E63
+</div>
+<blockquote>
+<p>两个 scheduler 均为 <code>FlowUniPCMultistepScheduler</code>，用同样的步数、同样的 <code>sigma_shift</code>，但各自持有独立的 timestep 序列。开启 <code>decouple_inference_noise</code> 时，视频 sigma 序列会被重映射到 <code>[σ_max, video_inference_final_noise]</code>（默认 0.8，即视频<strong>故意不完全去噪</strong>），而<strong>动作始终按标准 1000→0 完整去噪</strong>——再次说明视频分支的价值在于它在 DiT 内部提供的世界模型先验，而不是最终那张图好不好看。</p>
+<p>另外循环里还有一个 <code>should_run_model()</code> 的跳步缓存：某些步会直接复用上一次的 <code>flow_pred</code>，不重跑 DiT，所以「去噪步数」不等于「DiT 前向次数」。</p>
+</blockquote>
+<h3 id="分布式推理服务">分布式推理服务<a class="headerlink" href="13.DreamZero_Architecture.html#分布式推理服务" title="Permanent link">#</a></h3>
+<div class="mermaid">
+graph LR
+    subgraph Client["客户端 (test_client_AR.py)"]
+        CLI["机器人控制程序"] --&gt; WS_CLI["WebSocket 客户端&lt;br/&gt;发送观测 + 指令"]
+    end
+
+    subgraph Server["推理服务器 (socket_test_optimized_AR.py)"]
+        WS_SRV["WebSocket 服务器&lt;br/&gt;(Flask-SocketIO)"]
+        REDIS["Redis&lt;br/&gt;会话状态管理"]
+        RAY_W["Ray Worker Pool&lt;br/&gt;多 GPU 并行推理"]
+        MODEL["DreamZero 模型&lt;br/&gt;(GB200 / H100)"]
+
+        WS_SRV --&gt; REDIS
+        WS_SRV --&gt; RAY_W
+        RAY_W --&gt; MODEL
+    end
+
+    WS_CLI --&gt;|"观测数据"| WS_SRV
+    MODEL --&gt;|"动作预测"| WS_SRV
+    WS_SRV --&gt;|"动作序列"| WS_CLI
+    WS_CLI --&gt;|"执行动作"| CLI
+
+    style Client fill:#e3f2fd,stroke:#2196F3
+    style Server fill:#e8f5e9,stroke:#4CAF50
+</div>
+<hr />
+<h2 id="5-关键超参数表">5. 关键超参数表<a class="headerlink" href="13.DreamZero_Architecture.html#5-关键超参数表" title="Permanent link">#</a></h2>
+<h3 id="51-架构常量由预训练权重固定不可改">5.1 架构常量（由预训练权重固定，不可改）<a class="headerlink" href="13.DreamZero_Architecture.html#51-架构常量由预训练权重固定不可改" title="Permanent link">#</a></h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>参数</th>
+<th>值</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>模型总参数</td>
+<td>~14B</td>
+<td>基于 Wan2.1-I2V-14B</td>
+</tr>
+<tr>
+<td>DiT 层数</td>
+<td>40</td>
+<td>Causal WAN DiT</td>
+</tr>
+<tr>
+<td>DiT hidden dim</td>
+<td>5120</td>
+<td><code>dim</code>，全部 token 统一到该维度</td>
+</tr>
+<tr>
+<td>注意力头数</td>
+<td>40</td>
+<td>head_dim = 128</td>
+</tr>
+<tr>
+<td>文本编码维度</td>
+<td>4096 → 5120</td>
+<td>UMT5 输出 <code>text_dim=4096</code>，经 <code>text_embedding</code> 两层 MLP 升维</td>
+</tr>
+<tr>
+<td>图像编码维度</td>
+<td>1280 → 5120</td>
+<td>CLIP ViT-H 输出 1280，经 <code>MLPProj(1280, dim)</code> 升维</td>
+</tr>
+<tr>
+<td>VAE latent 通道</td>
+<td>16</td>
+<td>视频压缩维度</td>
+</tr>
+<tr>
+<td>训练 timestep 桶数</td>
+<td>1000</td>
+<td><code>num_timestep_buckets</code></td>
+</tr>
+</tbody>
+</table></div>
+<blockquote>
+<p>⚠️ 配置里的 <code>input_embedding_dim: 1536</code> 是失效字段，<strong>不是</strong>任何编码器的真实维度，详见 <a href="13.DreamZero_Architecture.html#21-感知编码器">2.1 节</a>。</p>
+</blockquote>
+<h3 id="52-配置项随脚本数据集变化">5.2 配置项（随脚本/数据集变化）<a class="headerlink" href="13.DreamZero_Architecture.html#52-配置项随脚本数据集变化" title="Permanent link">#</a></h3>
+<p>下表左列是官方 <code>scripts/train/*.sh</code>（droid / agibot / yam / aloha_lekiwi / pen_right_arm 全部一致）里实际传入的值；右列是仓库内另一套数据配置 <code>base_48_wan_fine_aug_relative.yaml</code> 的取值。<strong>这些是配置而非架构常量</strong>——换数据集时会变。</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>参数</th>
+<th>训练脚本</th>
+<th><code>base_48_..._relative.yaml</code></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>视频帧数 <code>num_frames</code></td>
+<td>33</td>
+<td>49</td>
+</tr>
+<tr>
+<td><code>action_horizon</code></td>
+<td>24</td>
+<td>48</td>
+</tr>
+<tr>
+<td>图像分辨率</td>
+<td>320×176</td>
+<td>480×256</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="53-训练配置">5.3 训练配置<a class="headerlink" href="13.DreamZero_Architecture.html#53-训练配置" title="Permanent link">#</a></h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>参数</th>
+<th>值</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>训练模式</td>
+<td><code>lora</code> / <code>full</code></td>
+<td><code>droid_training_lora.sh</code> vs <code>droid_training_full_finetune.sh</code></td>
+</tr>
+<tr>
+<td>LoRA rank / alpha</td>
+<td>4 / 4</td>
+<td>默认值，作用于 <code>q,k,v,o,ffn.0,ffn.2</code></td>
+</tr>
+<tr>
+<td>LoRA 额外可训练模块</td>
+<td>三个本体接口</td>
+<td>state / action 编码器与 action 解码器始终 <code>requires_grad_(True)</code></td>
+</tr>
+<tr>
+<td>分布式策略</td>
+<td>DeepSpeed ZeRO-2</td>
+<td>分布式训练</td>
+</tr>
+<tr>
+<td>优化器</td>
+<td>AdamW</td>
+<td>β₁=0.95, β₂=0.999</td>
+</tr>
+<tr>
+<td>学习率调度</td>
+<td>Cosine + Warmup</td>
+<td>分布式多卡训练</td>
+</tr>
+<tr>
+<td>精度</td>
+<td>bfloat16</td>
+<td>混合精度训练</td>
+</tr>
+</tbody>
+</table></div>
+<hr />
+<h2 id="6-关键源文件表">6. 关键源文件表<a class="headerlink" href="13.DreamZero_Architecture.html#6-关键源文件表" title="Permanent link">#</a></h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>组件</th>
+<th>文件路径（相对 <code>/home/zhuyilong/dreamzero/</code>）</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>核心 VLA 模型</td>
+<td><code>groot/vla/model/dreamzero/base_vla.py</code></td>
+</tr>
+<tr>
+<td>Action Head (Flow Matching)</td>
+<td><code>groot/vla/model/dreamzero/action_head/wan_flow_matching_action_tf.py</code></td>
+</tr>
+<tr>
+<td>Causal WAN DiT</td>
+<td><code>groot/vla/model/dreamzero/modules/wan_video_dit_action_casual_chunk.py</code></td>
+</tr>
+<tr>
+<td>视频 VAE</td>
+<td><code>groot/vla/model/dreamzero/modules/wan_video_vae.py</code></td>
+</tr>
+<tr>
+<td>文本编码器</td>
+<td><code>groot/vla/model/dreamzero/modules/wan_video_text_encoder.py</code></td>
+</tr>
+<tr>
+<td>图像编码器</td>
+<td><code>groot/vla/model/dreamzero/modules/wan_video_image_encoder.py</code></td>
+</tr>
+<tr>
+<td>数据变换</td>
+<td><code>groot/vla/model/dreamzero/transform/</code></td>
+</tr>
+<tr>
+<td>数据集加载</td>
+<td><code>groot/vla/data/dataset/lerobot.py</code></td>
+</tr>
+<tr>
+<td>分片数据集</td>
+<td><code>groot/vla/data/dataset/lerobot_sharded.py</code></td>
+</tr>
+<tr>
+<td>训练器</td>
+<td><code>groot/vla/experiment/experiment.py</code></td>
+</tr>
+<tr>
+<td>训练基类</td>
+<td><code>groot/vla/experiment/base.py</code></td>
+</tr>
+<tr>
+<td>分布式推理服务</td>
+<td><code>socket_test_optimized_AR.py</code></td>
+</tr>
+<tr>
+<td>推理客户端</td>
+<td><code>test_client_AR.py</code></td>
+</tr>
+<tr>
+<td>Hydra 模型配置</td>
+<td><code>groot/vla/configs/model/</code></td>
+</tr>
+<tr>
+<td>训练脚本</td>
+<td><code>scripts/train/</code></td>
+</tr>
+</tbody>
+</table></div>
+<hr />
+<h2 id="7-attention-机制深入解析">7. Attention 机制深入解析<a class="headerlink" href="13.DreamZero_Architecture.html#7-attention-机制深入解析" title="Permanent link">#</a></h2>
+<h3 id="71-q-k-v-的本质分工">7.1 Q / K / V 的本质分工<a class="headerlink" href="13.DreamZero_Architecture.html#71-q-k-v-的本质分工" title="Permanent link">#</a></h3>
+<p>Attention 的计算分四步：</p>
+<div class="highlight"><pre><span></span><code>1. q = W_q(x)              # x 投影成 Q
+2. k = W_k(context)        # context 投影成 K
+3. v = W_v(context)        # context 投影成 V（同一原材料，不同矩阵）
+4. 权重 = softmax(q · kᵀ / √d)
+5. 输出 = 权重 · v
+</code></pre></div>
+
+<p>K 和 V 的原材料相同（都来自 context），但投影矩阵不同，作用完全不同：</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>矩阵</th>
+<th>参与哪一步</th>
+<th>对输出的影响</th>
+<th>学到的是</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>W_q</td>
+<td>步骤 4（点积）</td>
+<td>间接（通过权重）</td>
+<td>我该去找什么样的 K</td>
+</tr>
+<tr>
+<td>W_k</td>
+<td>步骤 4（点积）</td>
+<td>间接（通过权重）</td>
+<td>什么样的 Q 应该找到我</td>
+</tr>
+<tr>
+<td>W_v</td>
+<td>步骤 5（加权求和）</td>
+<td><strong>直接</strong>（构成输出）</td>
+<td>被选中后我该提供什么内容</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>K 是抽象意义上的索引</strong>——它不直接出现在输出里，只决定权重分布，告诉模型"哪些位置比较重要"。V 才是真正被读取的内容。</p>
+<div class="mermaid">
+graph LR
+    subgraph Input["输入"]
+        X["x（视频 token）"]
+        CTX["context（文本/图像特征）"]
+    end
+
+    subgraph Proj["投影"]
+        X --&gt; WQ["W_q"] --&gt; Q["Q\n寻址用"]
+        CTX --&gt; WK["W_k"] --&gt; K["K\n索引（被动等待匹配）"]
+        CTX --&gt; WV["W_v"] --&gt; V["V\n内容（直接构成输出）"]
+    end
+
+    subgraph Attn["Attention 计算"]
+        Q --&gt; DOT["q · kᵀ / √d\n点积"]
+        K --&gt; DOT
+        DOT --&gt; SM["softmax\n权重分布"]
+        SM --&gt; WV2["权重 · V\n加权求和"]
+        V --&gt; WV2
+        WV2 --&gt; OUT["输出\n[B, T_x, dim]"]
+    end
+
+    style Input fill:#e3f2fd,stroke:#2196F3
+    style Proj fill:#fff3e0,stroke:#FF9800
+    style Attn fill:#e8f5e9,stroke:#4CAF50
+</div>
+<hr />
+<h3 id="72-self-attention-vs-cross-attention">7.2 Self-Attention vs Cross-Attention<a class="headerlink" href="13.DreamZero_Architecture.html#72-self-attention-vs-cross-attention" title="Permanent link">#</a></h3>
+<p>区别只有一个：Q、K、V 的原材料从哪来。</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th></th>
+<th>Q 来自</th>
+<th>K、V 来自</th>
+<th>用途</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Self-Attention</strong></td>
+<td>序列自身 x</td>
+<td>序列自身 x</td>
+<td>序列内部 token 互相交流</td>
+</tr>
+<tr>
+<td><strong>Cross-Attention</strong></td>
+<td>序列自身 x</td>
+<td>另一个序列 context</td>
+<td>从外部条件（文本/图像）读取信息</td>
+</tr>
+</tbody>
+</table></div>
+<p>DreamZero 的每个 DiT Block 里两者都有：先 Self-Attention 让视频 token 内部交流，再 Cross-Attention 读取文本和图像条件。</p>
+<p><div class="mermaid">
+graph LR
+    subgraph ImagePath["图像编码路径"]
+        VF["视频帧&lt;br/&gt;[B, T_img, C, H, W]"] --&gt; CLIP_ENC["CLIP ViT-H/14 编码&lt;br/&gt;wan_video_image_encoder.py"]
+        CLIP_ENC --&gt; CLIP_FEAT["图像特征&lt;br/&gt;[B, 257, 1280]"]
+        CLIP_FEAT --&gt; CLIP_PROJ["MLPProj&lt;br/&gt;1280 → 5120"]
+    end
+
+    subgraph TextPath["文本编码路径"]
+        PROMPT["语言提示&lt;br/&gt;(string)"] --&gt; T5_TOK["T5 分词器"]
+        T5_TOK --&gt; T5_ENC["umt5-xxl 编码&lt;br/&gt;wan_video_text_encoder.py"]
+        T5_ENC --&gt; TXT_FEAT["文本特征&lt;br/&gt;[B, T_txt, 4096]"]
+        TXT_FEAT --&gt; TXT_PROJ["text_embedding&lt;br/&gt;4096 → 5120"]
+    end
+
+    subgraph Fusion["特征融合 → DiT Cross-Attention"]
+        CLIP_PROJ --&gt; CAT["拼接为条件序列&lt;br/&gt;[B, ·, 5120]"]
+        TXT_PROJ --&gt; CAT
+        CAT --&gt; DIT_IN["输入 Causal WAN DiT&lt;br/&gt;(作为 K/V 供 cross-attn)"]
+    end
+
+    style ImagePath fill:#e3f2fd,stroke:#2196F3
+    style TextPath fill:#fff3e0,stroke:#FF9800
+    style Fusion fill:#e8f5e9,stroke:#4CAF50
+</div>0</p>
+<hr />
+<h3 id="73-为什么-k-不能等于-q">7.3 为什么 K 不能等于 Q<a class="headerlink" href="13.DreamZero_Architecture.html#73-为什么-k-不能等于-q" title="Permanent link">#</a></h3>
+<p>K=Q 意味着 W_k = W_q，K 和 Q 是同一个向量。此时：</p>
+<div class="highlight"><pre><span></span><code>权重 = softmax(q · qᵀ / √d)   # x 和自身的相似度
+</code></pre></div>
+
+<p>权重退化成"找和自己像的"，模型只能检索与自身相似的 token，无法找到"内容上互补但方向不同"的信息。</p>
+<p><strong>类比</strong>：图书馆里每本书的索引标签直接写的是"我想找机器人抓取的书"——所有书都在大喊需求，没有一本书在说"我能提供什么"，检索系统完全失效。</p>
+<p>K 和 Q 必须用不同的投影矩阵，让"被检索"和"去检索"解耦。</p>
+<hr />
+<h3 id="74-多头注意力multi-head-attention">7.4 多头注意力（Multi-Head Attention）<a class="headerlink" href="13.DreamZero_Architecture.html#74-多头注意力multi-head-attention" title="Permanent link">#</a></h3>
+<p>多头就是把 dim 切成 h 份，并行跑 h 套独立的 Q/K/V：</p>
+<div class="highlight"><pre><span></span><code>head_i 输出 = softmax(Q_i · K_iᵀ / √d) · V_i
+最终输出 = Concat(head_0, ..., head_h-1) · W_o
+</code></pre></div>
+
+<p><strong>多头的价值来源于 Q 的多样性</strong>——每个头问不同的问题，从 context 里提取不同侧面的信息。</p>
+<p><div class="mermaid">
+graph LR
+    subgraph ImagePath["图像编码路径"]
+        VF["视频帧&lt;br/&gt;[B, T_img, C, H, W]"] --&gt; CLIP_ENC["CLIP ViT-H/14 编码&lt;br/&gt;wan_video_image_encoder.py"]
+        CLIP_ENC --&gt; CLIP_FEAT["图像特征&lt;br/&gt;[B, 257, 1280]"]
+        CLIP_FEAT --&gt; CLIP_PROJ["MLPProj&lt;br/&gt;1280 → 5120"]
+    end
+
+    subgraph TextPath["文本编码路径"]
+        PROMPT["语言提示&lt;br/&gt;(string)"] --&gt; T5_TOK["T5 分词器"]
+        T5_TOK --&gt; T5_ENC["umt5-xxl 编码&lt;br/&gt;wan_video_text_encoder.py"]
+        T5_ENC --&gt; TXT_FEAT["文本特征&lt;br/&gt;[B, T_txt, 4096]"]
+        TXT_FEAT --&gt; TXT_PROJ["text_embedding&lt;br/&gt;4096 → 5120"]
+    end
+
+    subgraph Fusion["特征融合 → DiT Cross-Attention"]
+        CLIP_PROJ --&gt; CAT["拼接为条件序列&lt;br/&gt;[B, ·, 5120]"]
+        TXT_PROJ --&gt; CAT
+        CAT --&gt; DIT_IN["输入 Causal WAN DiT&lt;br/&gt;(作为 K/V 供 cross-attn)"]
+    end
+
+    style ImagePath fill:#e3f2fd,stroke:#2196F3
+    style TextPath fill:#fff3e0,stroke:#FF9800
+    style Fusion fill:#e8f5e9,stroke:#4CAF50
+</div>1</p>
+<p><strong>Q 不能共享，K/V 可以共享（MQA）：</strong></p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th></th>
+<th>多K多V</th>
+<th>单K单V</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>多Q（问题不同）</strong></td>
+<td>标准多头 MHA</td>
+<td>MQA（现代大模型常用）</td>
+</tr>
+<tr>
+<td><strong>单Q（问题相同）</strong></td>
+<td>无意义（退化）</td>
+<td>普通单头</td>
+</tr>
+</tbody>
+</table></div>
+<p>MQA（Multi-Query Attention）中所有 Q 头共享同一组 K/V，节省 KV Cache 显存，但不影响 Q 的多样性——40 个人用不同问题检索同一个书架，仍然能找出不同的重点。</p>
+<hr />
+<h3 id="75-w_qw_kw_v-各自如何被训练">7.5 W_q、W_k、W_v 各自如何被训练<a class="headerlink" href="13.DreamZero_Architecture.html#75-w_qw_kw_v-各自如何被训练" title="Permanent link">#</a></h3>
+<p>三个矩阵的梯度路径不同，学到的东西也不同。</p>
+<p><div class="mermaid">
+graph LR
+    subgraph ImagePath["图像编码路径"]
+        VF["视频帧&lt;br/&gt;[B, T_img, C, H, W]"] --&gt; CLIP_ENC["CLIP ViT-H/14 编码&lt;br/&gt;wan_video_image_encoder.py"]
+        CLIP_ENC --&gt; CLIP_FEAT["图像特征&lt;br/&gt;[B, 257, 1280]"]
+        CLIP_FEAT --&gt; CLIP_PROJ["MLPProj&lt;br/&gt;1280 → 5120"]
+    end
+
+    subgraph TextPath["文本编码路径"]
+        PROMPT["语言提示&lt;br/&gt;(string)"] --&gt; T5_TOK["T5 分词器"]
+        T5_TOK --&gt; T5_ENC["umt5-xxl 编码&lt;br/&gt;wan_video_text_encoder.py"]
+        T5_ENC --&gt; TXT_FEAT["文本特征&lt;br/&gt;[B, T_txt, 4096]"]
+        TXT_FEAT --&gt; TXT_PROJ["text_embedding&lt;br/&gt;4096 → 5120"]
+    end
+
+    subgraph Fusion["特征融合 → DiT Cross-Attention"]
+        CLIP_PROJ --&gt; CAT["拼接为条件序列&lt;br/&gt;[B, ·, 5120]"]
+        TXT_PROJ --&gt; CAT
+        CAT --&gt; DIT_IN["输入 Causal WAN DiT&lt;br/&gt;(作为 K/V 供 cross-attn)"]
+    end
+
+    style ImagePath fill:#e3f2fd,stroke:#2196F3
+    style TextPath fill:#fff3e0,stroke:#FF9800
+    style Fusion fill:#e8f5e9,stroke:#4CAF50
+</div>2</p>
+<p>W_q 和 W_k 通过同一条路径（点积）互相塑造，W_v 的梯度路径完全独立，只由输出质量驱动。</p>
+<hr />
+<h3 id="76-qk-norm为什么归一化能稳定训练">7.6 QK Norm：为什么归一化能稳定训练<a class="headerlink" href="13.DreamZero_Architecture.html#76-qk-norm为什么归一化能稳定训练" title="Permanent link">#</a></h3>
+<p>原始点积：</p>
+<div class="highlight"><pre><span></span><code>q · k = |q| × |k| × cos(θ)
+</code></pre></div>
+
+<p>模长和方向混在一起，W_q 和 W_k 需要同时控制两件事，容易震荡。</p>
+<p>QK Norm 之后：</p>
+<div class="highlight"><pre><span></span><code>q_norm = q / |q|,  k_norm = k / |k|
+q_norm · k_norm = cos(θ)     # 值域固定在 [-1, 1]
+</code></pre></div>
+
+<p>点积退化为纯余弦相似度，<strong>只剩方向这一个自由度</strong>，模长的干扰被彻底消除。W_q 和 W_k 只需要各自学"朝哪个方向"，优化目标从三个因素（|q|、|k|、θ）变成一个（θ），训练更稳定。</p>
+<p>DreamZero 代码中对应实现（<code>wan2_1_submodule.py</code>）：</p>
+<div class="highlight"><pre><span></span><code><span class="n">q</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">norm_q</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">q</span><span class="p">(</span><span class="n">x</span><span class="p">))</span>        <span class="c1"># QK Norm</span>
+<span class="n">k</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">norm_k</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">k</span><span class="p">(</span><span class="n">context</span><span class="p">))</span>  <span class="c1"># QK Norm</span>
+</code></pre></div>
+      </div>
+    </main>
+        <aside class="toc">
+            <div class="toc-title">本页目录</div>
+            <ul>
+                <li><a href="13.DreamZero_Architecture.html#1-整体架构概览" class="toc-h2">1. 整体架构概览</a></li>
+                <li><a href="13.DreamZero_Architecture.html#2-核心组件详解" class="toc-h2">2. 核心组件详解</a></li>
+                <li><a href="13.DreamZero_Architecture.html#21-感知编码器" class="toc-h3">2.1 感知编码器</a></li>
+                <li><a href="13.DreamZero_Architecture.html#22-视频-vae" class="toc-h3">2.2 视频 VAE</a></li>
+                <li><a href="13.DreamZero_Architecture.html#23-causal-wan-dit核心扩散模型" class="toc-h3">2.3 Causal WAN DiT（核心扩散模型）</a></li>
+                <li><a href="13.DreamZero_Architecture.html#24-本体适配机制embodiment-interface" class="toc-h3">2.4 本体适配机制（Embodiment Interface）</a></li>
+                <li><a href="13.DreamZero_Architecture.html#3-训练流水线" class="toc-h2">3. 训练流水线</a></li>
+                <li><a href="13.DreamZero_Architecture.html#4-推理流水线" class="toc-h2">4. 推理流水线</a></li>
+                <li><a href="13.DreamZero_Architecture.html#分布式推理服务" class="toc-h3">分布式推理服务</a></li>
+                <li><a href="13.DreamZero_Architecture.html#5-关键超参数表" class="toc-h2">5. 关键超参数表</a></li>
+                <li><a href="13.DreamZero_Architecture.html#51-架构常量由预训练权重固定不可改" class="toc-h3">5.1 架构常量（由预训练权重固定，不可改）</a></li>
+                <li><a href="13.DreamZero_Architecture.html#52-配置项随脚本数据集变化" class="toc-h3">5.2 配置项（随脚本/数据集变化）</a></li>
+                <li><a href="13.DreamZero_Architecture.html#53-训练配置" class="toc-h3">5.3 训练配置</a></li>
+                <li><a href="13.DreamZero_Architecture.html#6-关键源文件表" class="toc-h2">6. 关键源文件表</a></li>
+                <li><a href="13.DreamZero_Architecture.html#7-attention-机制深入解析" class="toc-h2">7. Attention 机制深入解析</a></li>
+                <li><a href="13.DreamZero_Architecture.html#71-q-k-v-的本质分工" class="toc-h3">7.1 Q / K / V 的本质分工</a></li>
+                <li><a href="13.DreamZero_Architecture.html#72-self-attention-vs-cross-attention" class="toc-h3">7.2 Self-Attention vs Cross-Attention</a></li>
+                <li><a href="13.DreamZero_Architecture.html#73-为什么-k-不能等于-q" class="toc-h3">7.3 为什么 K 不能等于 Q</a></li>
+                <li><a href="13.DreamZero_Architecture.html#74-多头注意力multi-head-attention" class="toc-h3">7.4 多头注意力（Multi-Head Attention）</a></li>
+                <li><a href="13.DreamZero_Architecture.html#75-w_qw_kw_v-各自如何被训练" class="toc-h3">7.5 W_q、W_k、W_v 各自如何被训练</a></li>
+                <li><a href="13.DreamZero_Architecture.html#76-qk-norm为什么归一化能稳定训练" class="toc-h3">7.6 QK Norm：为什么归一化能稳定训练</a></li>
+            </ul>
+        </aside>
+
+    <button class="back-to-top" onclick="window.scrollTo({top:0,behavior:'smooth'})">&#8593;</button>
+
+    <script src="assets/vendor/mermaid/mermaid.min.js"></script>
+    <script defer src="assets/vendor/katex/katex.min.js"></script>
+    <script defer src="assets/vendor/katex/auto-render.min.js"
+            onload="renderMathInElement(document.querySelector('.content-inner'), {
+                delimiters: [
+                    { left: '$$', right: '$$', display: true },
+                    { left: '$', right: '$', display: false }
+                ],
+                ignoredTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code', 'option'],
+                ignoredClasses: ['mermaid', 'diagram'],
+                throwOnError: false
+            });"></script>
+    <script>
+        // Mermaid destroys the source text when it renders, so keep a copy in
+        // order to re-render on theme change.
+        document.querySelectorAll('.mermaid').forEach(el => {
+            el.dataset.src = el.textContent;
+        });
+
+        const prefersDark = window.matchMedia('(prefers-color-scheme: dark)');
+        function currentTheme() {
+            const forced = document.documentElement.getAttribute('data-theme');
+            if (forced) return forced;
+            return prefersDark.matches ? 'dark' : 'light';
+        }
+
+        function initMermaid() {
+            mermaid.initialize({
+                startOnLoad: false,
+                theme: currentTheme() === 'dark' ? 'dark' : 'default',
+                flowchart: { useMaxWidth: true, htmlLabels: true },
+                securityLevel: 'loose'
+            });
+        }
+
+        function renderMermaid() {
+            const nodes = document.querySelectorAll('.mermaid');
+            nodes.forEach(el => {
+                el.removeAttribute('data-processed');
+                el.textContent = el.dataset.src;
+            });
+            // mermaid.run rejects on its internal font probe in some browsers;
+            // the diagrams still render, so swallow it rather than surfacing an
+            // unhandled rejection.
+            if (!nodes.length) return;
+            Promise.resolve(mermaid.run({ nodes: nodes }))
+                .catch(() => {})
+                .then(() => nodes.forEach(applyZoom));
+        }
+
+        /* ---------- Diagram zoom ----------
+           Scale is tracked as a factor of the diagram's NATURAL size (its
+           viewBox), so 100% means 1:1 and one font size looks identical in
+           every diagram on the site. Left to itself mermaid's useMaxWidth
+           stretches each svg to the container, which blows a 3-node diagram
+           up to 3.4x and shrinks a wide one to 0.34x — a 10x spread in
+           apparent font size. FIT_MAX caps the auto-fit at 1:1 (never
+           upscale) and FIT_MIN stops wide diagrams from shrinking to
+           unreadable; anything past that overflows and scrolls/pans. */
+        const MIN_Z = 0.3, MAX_Z = 6, STEP = 1.25;
+        const FIT_MIN = 0.55, FIT_MAX = 1;
+        const PAD = 40;               // .mermaid horizontal padding (20px each side)
+        const zoom = new WeakMap();   // .mermaid -> explicit scale; absent = auto-fit
+
+        function naturalSize(svg) {
+            const vb = svg.viewBox && svg.viewBox.baseVal;
+            if (vb && vb.width) return { w: vb.width, h: vb.height };
+            const r = svg.getBoundingClientRect();
+            return { w: r.width, h: r.height };
+        }
+
+        function fitScale(el, nat) {
+            const avail = el.clientWidth - PAD;
+            if (!nat.w || avail <= 0) return 1;
+            return Math.min(FIT_MAX, Math.max(FIT_MIN, avail / nat.w));
+        }
+
+        function scaleOf(el, nat) {
+            const k = zoom.get(el);
+            return k === undefined ? fitScale(el, nat) : k;
+        }
+
+        function applyZoom(el) {
+            const svg = el.querySelector('svg');
+            if (!svg) return;
+            const nat = naturalSize(svg);
+            if (!nat.w) return;
+            const k = scaleOf(el, nat);
+
+            const label = el.closest('.diagram')?.querySelector('.diagram-zoom');
+            if (label) label.textContent = Math.round(k * 100) + '%';
+
+            // Size the svg explicitly instead of leaving it to useMaxWidth,
+            // so the container gets real scrollbars when the diagram overflows.
+            svg.style.maxWidth = 'none';
+            svg.style.width = (nat.w * k) + 'px';
+            svg.style.height = (nat.h * k) + 'px';
+
+            const overflows = nat.w * k > el.clientWidth - PAD + 1;
+            el.classList.toggle('is-zoomed', overflows);
+            if (!overflows) el.scrollLeft = el.scrollTop = 0;
+        }
+
+        function setZoom(el, k, anchor) {
+            const svg = el.querySelector('svg');
+            if (!svg) return;
+            const nat = naturalSize(svg);
+            const prev = scaleOf(el, nat);
+            if (k !== null) k = Math.min(MAX_Z, Math.max(MIN_Z, k));
+            const next = k === null ? fitScale(el, nat) : k;
+            if (next === prev) return;
+            // Keep the point under the cursor (or the viewport centre) put.
+            const ax = anchor ? anchor.x : el.clientWidth / 2;
+            const ay = anchor ? anchor.y : el.clientHeight / 2;
+            const rx = (el.scrollLeft + ax) / prev;
+            const ry = (el.scrollTop + ay) / prev;
+            if (k === null) zoom.delete(el); else zoom.set(el, k);
+            applyZoom(el);
+            el.scrollLeft = rx * next - ax;
+            el.scrollTop = ry * next - ay;
+        }
+
+        function currentScale(el) {
+            const svg = el.querySelector('svg');
+            return svg ? scaleOf(el, naturalSize(svg)) : 1;
+        }
+
+        function setupDiagrams() {
+            document.querySelectorAll('.mermaid').forEach(el => {
+                const wrap = document.createElement('div');
+                wrap.className = 'diagram';
+                el.parentNode.insertBefore(wrap, el);
+                wrap.appendChild(el);
+
+                const tools = document.createElement('div');
+                tools.className = 'diagram-tools';
+                tools.innerHTML =
+                    '<button type="button" data-act="out" title="缩小">&minus;</button>' +
+                    '<span class="diagram-zoom">100%</span>' +
+                    '<button type="button" data-act="in" title="放大">+</button>' +
+                    '<button type="button" data-act="reset" title="适应宽度">&#9633;</button>' +
+                    '<button type="button" data-act="full" title="全屏">&#10530;</button>';
+                wrap.appendChild(tools);
+
+                tools.addEventListener('click', e => {
+                    const act = e.target.closest('button')?.dataset.act;
+                    if (!act) return;
+                    const k = currentScale(el);
+                    if (act === 'in') setZoom(el, k * STEP);
+                    else if (act === 'out') setZoom(el, k / STEP);
+                    else if (act === 'reset') setZoom(el, null);
+                    else if (act === 'full') {
+                        if (document.fullscreenElement === wrap) document.exitFullscreen();
+                        else wrap.requestFullscreen?.();
+                    }
+                });
+
+                // Ctrl/⌘ + wheel zooms; a plain wheel keeps scrolling the page.
+                el.addEventListener('wheel', e => {
+                    if (!e.ctrlKey && !e.metaKey) return;
+                    e.preventDefault();
+                    const r = el.getBoundingClientRect();
+                    setZoom(el, currentScale(el) * (e.deltaY < 0 ? STEP : 1 / STEP),
+                            { x: e.clientX - r.left, y: e.clientY - r.top });
+                }, { passive: false });
+
+                // Drag to pan once zoomed in.
+                let drag = null;
+                el.addEventListener('pointerdown', e => {
+                    // Pan only matters once the diagram actually overflows.
+                    if (e.button !== 0 || !el.classList.contains('is-zoomed')) return;
+                    drag = { x: e.clientX, y: e.clientY, l: el.scrollLeft, t: el.scrollTop };
+                    el.setPointerCapture(e.pointerId);
+                    el.classList.add('is-panning');
+                });
+                el.addEventListener('pointermove', e => {
+                    if (!drag) return;
+                    el.scrollLeft = drag.l - (e.clientX - drag.x);
+                    el.scrollTop = drag.t - (e.clientY - drag.y);
+                });
+                const endDrag = () => { drag = null; el.classList.remove('is-panning'); };
+                el.addEventListener('pointerup', endDrag);
+                el.addEventListener('pointercancel', endDrag);
+
+                // Double click toggles between auto-fit and true 1:1.
+                el.addEventListener('dblclick', () => setZoom(el, zoom.has(el) ? null : 1));
+            });
+        }
+
+        setupDiagrams();
+        initMermaid();
+        renderMermaid();
+
+        const remeasure = () => document.querySelectorAll('.mermaid').forEach(applyZoom);
+        document.addEventListener('fullscreenchange', remeasure);
+        window.addEventListener('resize', remeasure);
+
+        // Theme toggle
+        const toggle = document.getElementById('theme-toggle');
+        toggle.addEventListener('click', () => {
+            const next = currentTheme() === 'dark' ? 'light' : 'dark';
+            document.documentElement.setAttribute('data-theme', next);
+            try { localStorage.setItem('theme', next); } catch (e) {}
+            initMermaid();
+            renderMermaid();
+        });
+
+        // Follow the OS while the user hasn't made an explicit choice
+        prefersDark.addEventListener('change', () => {
+            if (!document.documentElement.getAttribute('data-theme')) {
+                initMermaid();
+                renderMermaid();
+            }
+        });
+
+        // Back to top button
+        const btn = document.querySelector('.back-to-top');
+        window.addEventListener('scroll', () => {
+            btn.classList.toggle('visible', window.scrollY > 300);
+        });
+
+        // Close sidebar on mobile when clicking a link
+        document.querySelectorAll('.sidebar nav a').forEach(a => {
+            a.addEventListener('click', () => {
+                document.querySelector('.sidebar').classList.remove('open');
+            });
+        });
+
+        // Highlight the TOC entry for the heading currently in view
+        const tocLinks = Array.from(document.querySelectorAll('.toc a'));
+        if (tocLinks.length) {
+            const targets = tocLinks
+                .map(a => document.getElementById(decodeURIComponent(a.hash.slice(1))))
+                .filter(Boolean);
+            const setActive = () => {
+                let current = targets[0];
+                for (const t of targets) {
+                    if (t.getBoundingClientRect().top <= 120) current = t;
+                    else break;
+                }
+                tocLinks.forEach(a => a.classList.toggle(
+                    'active',
+                    current && decodeURIComponent(a.hash.slice(1)) === current.id
+                ));
+            };
+            setActive();
+            let queued = false;
+            window.addEventListener('scroll', () => {
+                if (queued) return;
+                queued = true;
+                requestAnimationFrame(() => { setActive(); queued = false; });
+            });
+        }
+    </script>
+</body>
+</html>

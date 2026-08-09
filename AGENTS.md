@@ -76,9 +76,10 @@ Before ANY project-related output, pass this checklist. If any item fails → st
 | `script.js` | Main page JS (theme toggle, nav highlight, i18n for index.html) |
 | `private-kb/` | Authorized local full-text Robotics Knowledge Base mirror; deployable static site under `private-kb/public/` |
 | `personnel page technical content KB.md` | Curated KB synthesis and auto-generated local reference catalog |
-| `PROJECT.md` | PLAN-B Speech-to-Grasp mining record, evidence table, diagram audit, and resume bullets |
+| `PROJECT.md` | RAM + PLAN-B mining record, evidence tables, diagram audits, and resume bullets |
 | `chenyy_cv.md` | PLAN-B resume bullets, grammar extraction, and risk notes |
 | `planb.html` + `planb.js` | PLAN-B Speech-to-Grasp detail page (DreamZero-style, corrected model/runtime SVGs, bilingual i18n keys) |
+| `ram.html` + `ram.js` | RAM retrieval-augmented manipulation detail page (DreamZero-style, code-backed metrics, bilingual i18n keys) |
 | `pi05.html` + `pi05.js` | pi0.5/LIBERO fine-tuning project page |
 | `aloha_lekiwi.html` + `aloha_lekiwi.js` | ALOHA/LeKiwi DreamZero reproduction page |
 | `coin_stand.html` | Embodied Coin Standing and Placement project page |
@@ -89,6 +90,7 @@ Before ANY project-related output, pass this checklist. If any item fails → st
 
 | Project | Page | Key Technical Depth | Source Docs |
 |---------|------|-------------------|-------------|
+| RAM | ram.html | GroundingDINO + SAM2 object discovery, VGGT-1B depth reconstruction, frozen DINOv2-B/14 RAMNet, 128-view templates, 100^3 voxel planning, 14-task / 31-object public evaluation framing | `/home/CNS2026391745/Documents/YUEYICHEN/Retrieval-augmented-Manipulation/` — `README.md`, `config/config.yaml`, `visions/ram/lib/network.py`, `tools/ram_training/train_bop.py` |
 | PLAN-B | planb.html | Streaming ALSA audio → cloud_qwen3 ASR → qwen3.5-flash JSON NLU → VLM bbox/SAM3 box-text grounding → TTS echo guard → 3D grasp_check server (no z_fallback) + optional pipeline `vlm_or_tactile` → 13-mixin FSM, latency budget, failure diagnosis | `/home/CNS2026391745/Documents/PLAN-B-CYY/planb-robot/` — `project.md` (988 lines), `docs/cyy/算法答辩云文档_new.md` (917 lines) |
 | pi0.5/LIBERO | pi05.html | VLA fine-tuning, freeze-filter matrix, action normalization fix, 2000-episode eval | `Pic/pi05/pi05_libero_finetune_report.pdf` |
 | ALOHA/LeKiwi | aloha_lekiwi.html | LeRobot schema conversion, embodiment registration, WebSocket inference | — |
@@ -103,6 +105,7 @@ Before ANY project-related output, pass this checklist. If any item fails → st
 - **ALOHA/LeKiwi**: Don't say "teleoperation". Describe LeRobot schema conversion, embodiment registration, camera order, timestamp alignment, WebSocket inference.
 - **PLAN-A Retargeting**: Don't say "motion mapping". Describe VDMocap 23-node struct parsing, T-pose offset calibration, quaternion/position runtime routes, 10D Dynamixel encoder contract, `[0,4095]` clamps, 60D-to-10D Teleop Transformer regression, and the 47-sample final-frame MAE caveat.
 - **PLAN-A**: Don't say "diffusion policy". Describe CVAE vs diffusion routes, retargeting calibration, latent dimension choices, scheduler steps.
+- **RAM**: Don't say "spatial reasoning". Describe GroundingDINO + SAM2 object discovery, VGGT-1B depth reconstruction, frozen DINOv2-B/14 RAMNet, 128-view templates, 100^3 voxel planning, and the 14-task / 31-object public evaluation framing.
 
 ---
 
@@ -151,6 +154,7 @@ Free-choice pool of visual style references. No file is locked to a specific pro
 | Project | Location |
 |---------|----------|
 | PLAN-B | `Pic/planb/` — 14 PNGs + 2 SVGs (`planb-model_architechture.svg`, `planb-runtime_visualization.svg`) (system_overview, dataflow_panorama, vad_funnel, engine_quadrant, sam3_improvement, letterbox_comparison, fsm_closed_loop, tracking_bargein, p0_causal_chain, p0_fix_timeline, metrics_comparison, latency_waterfall, gpu_gantt, radar_heatmap) |
+| RAM | `Pic/ram/` — `ram-model_architechture.svg`, `ram-runtime_visualization.svg` |
 | PLAN-A | `Pic/plan_a_system.png`; `Pic/plana/` (plana-model_architechture.svg, plana-runtime_visualization.svg) |
 | PLAN-A Retargeting | `Pic/plana_retargeting/plana_retargeting_arch.svg` |
 | pi0.5 | `Pic/pi05/` (includes `pi05_libero_finetune_report.pdf`) |

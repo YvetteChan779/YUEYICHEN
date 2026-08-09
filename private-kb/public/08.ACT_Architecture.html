@@ -1,0 +1,945 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ACT - Robotics Knowledge Base</title>
+    <link rel="icon" href="favicon.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="assets/vendor/katex/katex.min.css">
+    <script>
+        // Applied before first paint so the saved theme doesn't flash.
+        (function () {
+            try {
+                var t = localStorage.getItem('theme');
+                if (t === 'dark' || t === 'light') {
+                    document.documentElement.setAttribute('data-theme', t);
+                }
+            } catch (e) {}
+        })();
+    </script>
+</head>
+<body>
+    <button class="menu-toggle" onclick="document.querySelector('.sidebar').classList.toggle('open')">&#9776;</button>
+    <button class="theme-toggle" id="theme-toggle" title="切换日夜模式" aria-label="切换日夜模式">
+        <span class="icon-light">&#9790;</span><span class="icon-dark">&#9728;</span>
+    </button>
+
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <h2>Robotics Knowledge Base</h2>
+            <p>机器人模型架构知识库</p>
+        </div>
+        <nav>
+            <a href="index.html">Overview</a>
+            <div class="nav-group">VLA 模型</div>
+            <a href="01.Pi0_Architecture.html">Pi0</a>
+            <a href="02.Pi0.5_Architecture.html">Pi0.5</a>
+            <a href="03.Pi0-FAST_Architecture.html">Pi0-FAST</a>
+            <a href="04.Pi-Star-0.6_Architecture.html">π*₀.₆ (Pi-Star-0.6)</a>
+            <a href="05.Pi0.7_Architecture.html">π₀.₇ (Pi-0.7)</a>
+            <a href="06.Isaac-GR00T-N1.6_Architecture.html">Isaac-GR00T N1.6</a>
+            <a href="07.Isaac-GR00T-N1.5_Architecture.html">Isaac-GR00T N1.5</a>
+            <a href="08.ACT_Architecture.html" class="active">ACT</a>
+            <a href="09.SmolVLA_Architecture.html">SmolVLA</a>
+            <a href="10.WALL-OSS_Architecture.html">WALL-OSS / WALL-X</a>
+            <a href="11.X-VLA_Architecture.html">X-VLA</a>
+            <a href="12.Psi0_Architecture.html">Psi0 (ψ₀)</a>
+            <a href="13.DreamZero_Architecture.html">DreamZero</a>
+            <a href="14.FastWAM_Architecture.html">Fast-WAM</a>
+            <div class="nav-group">全身控制 (WBC)</div>
+            <a href="15.GR00T-WBC_Overview.html">GR00T-WBC 总览</a>
+            <a href="16.Decoupled-WBC_Architecture.html" class="nav-child">Decoupled WBC</a>
+            <a href="17.GEAR-SONIC_Architecture.html" class="nav-child">GEAR-SONIC</a>
+            <a href="18.MotionBricks_Architecture.html" class="nav-child">MotionBricks</a>
+            <div class="nav-group">3D 视觉与 VLM</div>
+            <a href="19.VLM3_Architecture.html">VLM³</a>
+        </nav>
+    </aside>
+
+    <main class="content">
+      <div class="content-inner">
+        <h1 id="act-action-chunking-transformer-模型架构">ACT (Action Chunking Transformer) 模型架构<a class="headerlink" href="08.ACT_Architecture.html#act-action-chunking-transformer-模型架构" title="Permanent link">#</a></h1>
+<h2 id="1-整体架构概览">1. 整体架构概览<a class="headerlink" href="08.ACT_Architecture.html#1-整体架构概览" title="Permanent link">#</a></h2>
+<p>ACT (Action Chunking Transformer) 是一种基于 Transformer 编码器-解码器结构的机器人操作策略模型，出自论文 <em>Learning Fine-Grained Bimanual Manipulation with Low-Cost Hardware</em> (Zhao et al., 2023)。其核心思想是 <strong>动作分块 (Action Chunking)</strong>：模型一次性预测未来 <code>chunk_size</code> 步的动作序列，而非逐步预测，从而有效缓解复合误差问题。ACT 使用 ResNet18 作为视觉编码器提取图像特征，可选的 VAE 编码器学习动作分布的隐变量，以及 Transformer 编码器-解码器生成最终的动作序列。推理时仅需单次前向传播，无需迭代去噪。</p>
+<div class="mermaid">
+graph TB
+    subgraph Input["输入"]
+        IMG["相机图像&lt;br/&gt;(多视角)&lt;br/&gt;[B, C, H, W]"]
+        STATE["机器人状态&lt;br/&gt;(关节角度)&lt;br/&gt;[B, state_dim]"]
+        ENV["环境状态 (可选)&lt;br/&gt;[B, env_dim]"]
+        ACT_IN["动作序列 (仅训练)&lt;br/&gt;[B, chunk_size, action_dim]"]
+    end
+
+    subgraph VisionBackbone["ResNet18 视觉编码器"]
+        RES["ResNet18&lt;br/&gt;(预训练 ImageNet 权重)&lt;br/&gt;FrozenBatchNorm2d"]
+        PROJ_IMG["1x1 卷积投影&lt;br/&gt;512 → 512"]
+        POS2D["2D 正弦位置编码"]
+    end
+
+    subgraph VAE["VAE 编码器 (可选, 仅训练)"]
+        CLS["[CLS] Token"]
+        VAE_ENC["VAE Transformer 编码器&lt;br/&gt;(4层)"]
+        LATENT["隐变量采样&lt;br/&gt;z ~ N(mu, sigma)"]
+    end
+
+    subgraph TransformerCore["Transformer 编码器-解码器"]
+        ENC["Transformer 编码器&lt;br/&gt;(4层, 8头, dim=512)"]
+        DEC["Transformer 解码器&lt;br/&gt;(1层, 交叉注意力)"]
+    end
+
+    subgraph Output["输出"]
+        HEAD["动作回归头&lt;br/&gt;(Linear: 512 → action_dim)"]
+        ACT_OUT["预测动作序列&lt;br/&gt;[B, chunk_size, action_dim]"]
+    end
+
+    IMG --&gt; RES --&gt; PROJ_IMG
+    PROJ_IMG --&gt;|"图像特征 + 2D 位置编码"| ENC
+    POS2D --&gt; ENC
+
+    STATE --&gt;|"状态嵌入"| ENC
+    ENV --&gt;|"环境嵌入 (可选)"| ENC
+
+    ACT_IN --&gt; VAE_ENC
+    STATE --&gt; VAE_ENC
+    CLS --&gt; VAE_ENC
+    VAE_ENC --&gt; LATENT --&gt;|"隐变量 z&lt;br/&gt;[B, latent_dim]"| ENC
+
+    ENC --&gt;|"编码器输出&lt;br/&gt;[S, B, 512]"| DEC
+    DEC --&gt; HEAD --&gt; ACT_OUT
+
+    style Input fill:#e8f4fd,stroke:#2196F3
+    style VisionBackbone fill:#fff3e0,stroke:#FF9800
+    style VAE fill:#f3e5f5,stroke:#9C27B0
+    style TransformerCore fill:#e8f5e9,stroke:#4CAF50
+    style Output fill:#fce4ec,stroke:#E91E63
+</div>
+<hr />
+<h2 id="2-核心组件详解">2. 核心组件详解<a class="headerlink" href="08.ACT_Architecture.html#2-核心组件详解" title="Permanent link">#</a></h2>
+<h3 id="21-resnet18-视觉编码器">2.1 ResNet18 视觉编码器<a class="headerlink" href="08.ACT_Architecture.html#21-resnet18-视觉编码器" title="Permanent link">#</a></h3>
+<p>ACT 使用 torchvision 提供的 ResNet18 作为图像特征提取器，默认加载 ImageNet 预训练权重。特征图取自 <code>layer4</code> 的输出，经过 1x1 卷积投影到 Transformer 的隐藏维度 (512)，并附加 2D 正弦位置编码。</p>
+<div class="mermaid">
+graph LR
+    subgraph Backbone["ResNet18 视觉编码器"]
+        IMG["输入图像&lt;br/&gt;[B, 3, H, W]"] --&gt; CONV1["conv1 + bn1 + relu&lt;br/&gt;+ maxpool"]
+        CONV1 --&gt; L1["layer1&lt;br/&gt;(2 BasicBlock)"]
+        L1 --&gt; L2["layer2&lt;br/&gt;(2 BasicBlock)"]
+        L2 --&gt; L3["layer3&lt;br/&gt;(2 BasicBlock)"]
+        L3 --&gt; L4["layer4&lt;br/&gt;(2 BasicBlock)&lt;br/&gt;可选: 膨胀卷积替代步幅"]
+    end
+
+    subgraph Projection["特征投影"]
+        L4 --&gt;|"feature_map&lt;br/&gt;[B, 512, h, w]"| CONV1x1["Conv2d 1x1&lt;br/&gt;512 → 512"]
+        CONV1x1 --&gt;|"[B, 512, h, w]"| RESHAPE["展平为序列&lt;br/&gt;[h*w, B, 512]"]
+    end
+
+    subgraph PosEmbed["2D 正弦位置编码"]
+        RESHAPE --&gt; ADD["+ pos_embed"]
+        PE["ACTSinusoidalPosition&lt;br/&gt;Embedding2d&lt;br/&gt;(dim=256)"] --&gt;|"[1, 512, h, w]&lt;br/&gt;→ [h*w, 1, 512]"| ADD
+    end
+
+    ADD --&gt; OUT["送入 Transformer 编码器"]
+
+    style Backbone fill:#fff3e0,stroke:#FF9800
+    style Projection fill:#e3f2fd,stroke:#2196F3
+    style PosEmbed fill:#e8f5e9,stroke:#4CAF50
+</div>
+<p><strong>关键设计细节:</strong></p>
+<ul>
+<li>使用 <code>IntermediateLayerGetter</code> 提取 <code>layer4</code> 的特征图，而非 ResNet 的最终分类输出</li>
+<li>Batch Normalization 使用 <code>FrozenBatchNorm2d</code>，训练时不更新统计量</li>
+<li><code>replace_final_stride_with_dilation</code> 选项可将 <code>layer4</code> 的 2x2 步幅替换为膨胀卷积，保留更高分辨率的特征图</li>
+<li>多相机视角的图像逐一通过同一个 backbone，特征拼接到编码器的序列维度上</li>
+</ul>
+<h3 id="22-vae-编码器-可选">2.2 VAE 编码器 (可选)<a class="headerlink" href="08.ACT_Architecture.html#22-vae-编码器-可选" title="Permanent link">#</a></h3>
+<p>VAE 编码器是 ACT 的核心创新之一。训练时，它将真实动作序列编码为隐变量 z，捕获动作分布中的多模态性；推理时跳过 VAE 编码器，直接使用零向量作为隐变量。</p>
+<div class="mermaid">
+graph TB
+    subgraph VAEInput["VAE 编码器输入"]
+        CLS["[CLS] 嵌入&lt;br/&gt;(可学习, nn.Embedding)&lt;br/&gt;[B, 1, 512]"]
+        RS["机器人状态嵌入&lt;br/&gt;(Linear: state_dim → 512)&lt;br/&gt;[B, 1, 512]"]
+        ACT_SEQ["动作序列嵌入&lt;br/&gt;(Linear: action_dim → 512)&lt;br/&gt;[B, chunk_size, 512]"]
+    end
+
+    subgraph VAEEncoder["VAE Transformer 编码器 (4层)"]
+        CONCAT["拼接: [CLS, state, actions]&lt;br/&gt;[B, chunk_size+2, 512]"]
+        SINPE["固定正弦位置编码"]
+        PAD_MASK["填充掩码&lt;br/&gt;(action_is_pad)"]
+        TENC["ACTEncoder&lt;br/&gt;(4层 ACTEncoderLayer)&lt;br/&gt;+ LayerNorm"]
+    end
+
+    subgraph LatentSample["隐变量采样"]
+        CLS_OUT["[CLS] Token 输出&lt;br/&gt;[B, 512]"]
+        LINEAR_P["线性投影&lt;br/&gt;512 → 64&lt;br/&gt;(latent_dim * 2)"]
+        MU["mu&lt;br/&gt;[B, 32]"]
+        LOG_S["log(sigma^2)&lt;br/&gt;[B, 32]"]
+        REPARAM["重参数化技巧&lt;br/&gt;z = mu + sigma * eps&lt;br/&gt;eps ~ N(0, 1)"]
+        Z["隐变量 z&lt;br/&gt;[B, 32]"]
+    end
+
+    CLS --&gt; CONCAT
+    RS --&gt; CONCAT
+    ACT_SEQ --&gt; CONCAT
+    SINPE --&gt; TENC
+    PAD_MASK --&gt; TENC
+    CONCAT --&gt; TENC
+
+    TENC --&gt;|"取第0个token"| CLS_OUT
+    CLS_OUT --&gt; LINEAR_P
+    LINEAR_P --&gt; MU
+    LINEAR_P --&gt; LOG_S
+    MU --&gt; REPARAM
+    LOG_S --&gt; REPARAM
+    REPARAM --&gt; Z
+
+    style VAEInput fill:#f3e5f5,stroke:#9C27B0
+    style VAEEncoder fill:#ede7f6,stroke:#673AB7
+    style LatentSample fill:#fce4ec,stroke:#E91E63
+</div>
+<p><strong>VAE 的设计意图:</strong></p>
+<ul>
+<li>人类演示数据中，同一状态可能对应多种合理的动作 (多模态性)。VAE 通过隐变量 z 对这种不确定性进行建模</li>
+<li>训练时，VAE 编码器从真实动作序列中提取隐变量；推理时使用零向量 (先验均值)，对应最可能的动作模式</li>
+<li>KL 散度损失约束隐变量分布接近标准正态分布 N(0, I)，确保推理时零向量采样合理</li>
+</ul>
+<h3 id="23-transformer-编码器-解码器">2.3 Transformer 编码器-解码器<a class="headerlink" href="08.ACT_Architecture.html#23-transformer-编码器-解码器" title="Permanent link">#</a></h3>
+<p>这是 ACT 的核心推理模块。Transformer 编码器融合隐变量、状态嵌入和图像特征；Transformer 解码器通过交叉注意力从编码器输出中生成动作序列。</p>
+<div class="mermaid">
+graph TB
+    subgraph EncoderInput["编码器输入 Token 序列"]
+        direction LR
+        T_Z["隐变量 Token&lt;br/&gt;(Linear: 32 → 512)&lt;br/&gt;[1, B, 512]"]
+        T_S["机器人状态 Token&lt;br/&gt;(Linear: state_dim → 512)&lt;br/&gt;[1, B, 512]"]
+        T_E["环境状态 Token (可选)&lt;br/&gt;(Linear: env_dim → 512)&lt;br/&gt;[1, B, 512]"]
+        T_IMG["图像特征 Token&lt;br/&gt;(每相机 h*w 个)&lt;br/&gt;[h*w*N_cam, B, 512]"]
+    end
+
+    subgraph Encoder["ACTEncoder (4层)"]
+        ENC_PE["位置编码&lt;br/&gt;1D token: 可学习 Embedding&lt;br/&gt;图像 token: 2D 正弦编码"]
+        ENC_LAYERS["ACTEncoderLayer x 4&lt;br/&gt;自注意力 + FFN&lt;br/&gt;(Post-Norm)"]
+        ENC_NORM["LayerNorm (若 Pre-Norm)"]
+    end
+
+    subgraph Decoder["ACTDecoder (1层)"]
+        DEC_QUERY["解码器查询&lt;br/&gt;全零初始化&lt;br/&gt;[chunk_size, B, 512]"]
+        DEC_PE["可学习位置嵌入&lt;br/&gt;(nn.Embedding)&lt;br/&gt;[chunk_size, 1, 512]"]
+        DEC_LAYER["ACTDecoderLayer x 1&lt;br/&gt;自注意力 → 交叉注意力 → FFN"]
+        DEC_NORM["LayerNorm"]
+    end
+
+    T_Z --&gt; ENC_LAYERS
+    T_S --&gt; ENC_LAYERS
+    T_E --&gt; ENC_LAYERS
+    T_IMG --&gt; ENC_LAYERS
+    ENC_PE --&gt; ENC_LAYERS
+    ENC_LAYERS --&gt; ENC_NORM
+
+    ENC_NORM --&gt;|"编码器输出&lt;br/&gt;[S, B, 512]"| DEC_LAYER
+    DEC_QUERY --&gt; DEC_LAYER
+    DEC_PE --&gt; DEC_LAYER
+    DEC_LAYER --&gt; DEC_NORM
+
+    DEC_NORM --&gt;|"解码器输出&lt;br/&gt;[chunk_size, B, 512]"| OUT["→ 动作头"]
+
+    style EncoderInput fill:#e8f4fd,stroke:#2196F3
+    style Encoder fill:#e8f5e9,stroke:#4CAF50
+    style Decoder fill:#fff3e0,stroke:#FF9800
+</div>
+<h4 id="actencoderlayer-内部结构">ACTEncoderLayer 内部结构<a class="headerlink" href="08.ACT_Architecture.html#actencoderlayer-内部结构" title="Permanent link">#</a></h4>
+<div class="mermaid">
+graph TB
+    IN["输入 x&lt;br/&gt;[S, B, 512]"] --&gt; NORM1{"Pre-Norm?"}
+
+    NORM1 --&gt;|"是"| LN1_PRE["LayerNorm"]
+    NORM1 --&gt;|"否"| SA_POST["直接进入"]
+
+    LN1_PRE --&gt; SA["多头自注意力&lt;br/&gt;(8头, dim=512)&lt;br/&gt;Q = K = x + pos_embed&lt;br/&gt;V = x"]
+    SA_POST --&gt; SA
+
+    SA --&gt; DROP1["Dropout"] --&gt; ADD1["+ 残差连接"]
+
+    ADD1 --&gt; NORM2{"Pre-Norm?"}
+    NORM2 --&gt;|"是"| LN2_PRE["LayerNorm"]
+    NORM2 --&gt;|"否"| LN1_POST["LayerNorm → 残差"]
+
+    LN2_PRE --&gt; FFN["前馈网络&lt;br/&gt;Linear(512→3200) → ReLU → Dropout&lt;br/&gt;→ Linear(3200→512)"]
+    LN1_POST --&gt; FFN
+
+    FFN --&gt; DROP2["Dropout"] --&gt; ADD2["+ 残差连接"]
+    ADD2 --&gt; OUT["输出&lt;br/&gt;[S, B, 512]"]
+
+    style IN fill:#e3f2fd,stroke:#2196F3
+    style OUT fill:#e8f5e9,stroke:#4CAF50
+</div>
+<h4 id="actdecoderlayer-内部结构">ACTDecoderLayer 内部结构<a class="headerlink" href="08.ACT_Architecture.html#actdecoderlayer-内部结构" title="Permanent link">#</a></h4>
+<div class="mermaid">
+graph TB
+    IN["输入 x&lt;br/&gt;[chunk_size, B, 512]"] --&gt; SA["多头自注意力&lt;br/&gt;Q = K = x + decoder_pos_embed&lt;br/&gt;V = x"]
+    SA --&gt; DROP1["Dropout + 残差"]
+
+    DROP1 --&gt; CA["多头交叉注意力&lt;br/&gt;Q = x + decoder_pos_embed&lt;br/&gt;K = encoder_out + encoder_pos_embed&lt;br/&gt;V = encoder_out"]
+    CA --&gt; DROP2["Dropout + 残差"]
+
+    DROP2 --&gt; FFN["前馈网络&lt;br/&gt;Linear(512→3200) → ReLU → Dropout&lt;br/&gt;→ Linear(3200→512)"]
+    FFN --&gt; DROP3["Dropout + 残差"]
+    DROP3 --&gt; OUT["输出&lt;br/&gt;[chunk_size, B, 512]"]
+
+    ENCODER["编码器输出&lt;br/&gt;[S, B, 512]"] --&gt;|"Key, Value"| CA
+
+    style IN fill:#e3f2fd,stroke:#2196F3
+    style OUT fill:#e8f5e9,stroke:#4CAF50
+    style ENCODER fill:#fff3e0,stroke:#FF9800
+</div>
+<blockquote>
+<p><strong>注意:</strong> 原始 ACT 代码中 <code>n_decoder_layers</code> 设为 7，但由于 <a href="https://github.com/tonyzhaozh/act/issues/25">代码 bug</a>，实际只有第一层被使用。LeRobot 实现中默认设为 1 以匹配原始行为。</p>
+</blockquote>
+<h3 id="24-动作头">2.4 动作头<a class="headerlink" href="08.ACT_Architecture.html#24-动作头" title="Permanent link">#</a></h3>
+<p>动作头是一个简单的线性层，将 Transformer 解码器的输出映射到动作空间。</p>
+<div class="mermaid">
+graph LR
+    subgraph ActionHead["动作回归头"]
+        DEC_OUT["解码器输出&lt;br/&gt;[B, chunk_size, 512]"] --&gt; LINEAR["nn.Linear&lt;br/&gt;512 → action_dim"]
+        LINEAR --&gt; ACTIONS["预测动作&lt;br/&gt;[B, chunk_size, action_dim]"]
+    end
+
+    style ActionHead fill:#fce4ec,stroke:#E91E63
+</div>
+<ul>
+<li>没有额外的非线性激活或归一化层，直接线性投影</li>
+<li>输出维度等于动作空间维度 (如双臂 ALOHA 为 14)</li>
+<li>一次性输出 <code>chunk_size</code> 步动作 (默认 100 步)</li>
+</ul>
+<hr />
+<h2 id="3-训练流水线">3. 训练流水线<a class="headerlink" href="08.ACT_Architecture.html#3-训练流水线" title="Permanent link">#</a></h2>
+<p>训练时存在两条路径：<strong>使用 VAE</strong> 和 <strong>不使用 VAE</strong>。核心区别在于隐变量 z 的来源。</p>
+<div class="mermaid">
+graph TB
+    subgraph DataInput["训练数据"]
+        IMG["相机图像&lt;br/&gt;[B, N_cam, C, H, W]"]
+        STATE["机器人状态&lt;br/&gt;[B, state_dim]"]
+        ENV["环境状态 (可选)&lt;br/&gt;[B, env_dim]"]
+        GT_ACT["真实动作序列&lt;br/&gt;[B, chunk_size, action_dim]"]
+    end
+
+    subgraph VisionEnc["视觉特征提取"]
+        IMG --&gt;|"逐相机处理"| RESNET["ResNet18&lt;br/&gt;→ layer4 特征图"]
+        RESNET --&gt; CONV["1x1 Conv 投影"]
+        CONV --&gt; FLAT["展平 + 2D 位置编码&lt;br/&gt;[h*w*N_cam, B, 512]"]
+    end
+
+    subgraph VAEPath["VAE 路径 (use_vae=True)"]
+        STATE --&gt;|"状态嵌入"| VAE_IN["VAE 编码器输入&lt;br/&gt;[CLS, state, actions]"]
+        GT_ACT --&gt;|"动作嵌入"| VAE_IN
+        VAE_IN --&gt; VAE_ENC["VAE Transformer&lt;br/&gt;编码器 (4层)"]
+        VAE_ENC --&gt;|"[CLS] → Linear"| PARAMS["mu, log(sigma^2)"]
+        PARAMS --&gt; SAMPLE["重参数化采样&lt;br/&gt;z ~ N(mu, sigma)"]
+    end
+
+    subgraph NoVAEPath["非 VAE 路径 (use_vae=False)"]
+        ZERO["z = 零向量&lt;br/&gt;[B, 32]"]
+    end
+
+    subgraph MainTransformer["主 Transformer"]
+        Z_PROJ["隐变量投影&lt;br/&gt;Linear: 32 → 512"]
+        STATE2["状态投影&lt;br/&gt;Linear: state_dim → 512"]
+        ENV2["环境投影 (可选)&lt;br/&gt;Linear: env_dim → 512"]
+
+        ENC["Transformer 编码器 (4层)&lt;br/&gt;输入: [z, state, (env), img_features]"]
+        DEC["Transformer 解码器 (1层)&lt;br/&gt;查询: 全零 + 可学习位置嵌入"]
+        HEAD["动作头&lt;br/&gt;Linear: 512 → action_dim"]
+    end
+
+    subgraph LossCalc["损失计算"]
+        L1["L1 损失&lt;br/&gt;|actions_pred - actions_gt|&lt;br/&gt;(带 action_is_pad 掩码)"]
+        KL["KL 散度损失 (仅 VAE)&lt;br/&gt;-0.5 * sum(1 + log(sigma^2) - mu^2 - sigma^2)"]
+        TOTAL["总损失&lt;br/&gt;L1 + kl_weight * KL&lt;br/&gt;(kl_weight 默认 = 10.0)"]
+    end
+
+    SAMPLE --&gt;|"z"| Z_PROJ
+    ZERO --&gt;|"z"| Z_PROJ
+    STATE --&gt; STATE2
+    ENV --&gt; ENV2
+
+    Z_PROJ --&gt; ENC
+    STATE2 --&gt; ENC
+    ENV2 --&gt; ENC
+    FLAT --&gt; ENC
+
+    ENC --&gt; DEC --&gt; HEAD
+
+    HEAD --&gt;|"预测动作"| L1
+    GT_ACT --&gt;|"真实动作"| L1
+    PARAMS --&gt;|"mu, log_sigma_x2"| KL
+    L1 --&gt; TOTAL
+    KL --&gt; TOTAL
+
+    style DataInput fill:#e8f4fd,stroke:#2196F3
+    style VisionEnc fill:#fff3e0,stroke:#FF9800
+    style VAEPath fill:#f3e5f5,stroke:#9C27B0
+    style NoVAEPath fill:#e0f2f1,stroke:#009688
+    style MainTransformer fill:#e8f5e9,stroke:#4CAF50
+    style LossCalc fill:#ffebee,stroke:#f44336
+</div>
+<p><strong>损失函数细节:</strong></p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>损失项</th>
+<th>公式</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>L1 重建损失</td>
+<td><code>mean(\|actions_pred - actions_gt\| * ~action_is_pad)</code></td>
+<td>主损失，填充位置被掩码排除</td>
+</tr>
+<tr>
+<td>KL 散度 (仅 VAE)</td>
+<td><code>-0.5 * mean(sum(1 + log(sigma^2) - mu^2 - sigma^2))</code></td>
+<td>约束隐变量接近 N(0, I)</td>
+</tr>
+<tr>
+<td>总损失</td>
+<td><code>L1 + kl_weight * KL</code></td>
+<td><code>kl_weight</code> 默认为 10.0</td>
+</tr>
+</tbody>
+</table></div>
+<hr />
+<h2 id="4-推理流水线">4. 推理流水线<a class="headerlink" href="08.ACT_Architecture.html#4-推理流水线" title="Permanent link">#</a></h2>
+<p>推理时 <strong>不使用 VAE 编码器</strong>，隐变量 z 设为零向量。模型通过单次前向传播输出整个动作块，无需迭代去噪。</p>
+<div class="mermaid">
+graph TB
+    subgraph InferInput["推理输入"]
+        IMG["相机图像&lt;br/&gt;[B, N_cam, C, H, W]"]
+        STATE["机器人状态&lt;br/&gt;[B, state_dim]"]
+        ENV["环境状态 (可选)"]
+    end
+
+    subgraph SinglePass["单次前向传播"]
+        RESNET["ResNet18 特征提取&lt;br/&gt;+ 1x1 Conv 投影"]
+        ZERO_Z["零向量隐变量&lt;br/&gt;z = 0, [B, 32]"]
+
+        ENC["Transformer 编码器&lt;br/&gt;[z, state, (env), img] → 编码输出"]
+        DEC["Transformer 解码器&lt;br/&gt;全零查询 + 位置嵌入 → 交叉注意力"]
+        HEAD["动作头 → [B, chunk_size, action_dim]"]
+    end
+
+    subgraph ActionSelect["动作选择策略"]
+        CHUNK["完整动作块&lt;br/&gt;[B, chunk_size, action_dim]"]
+        OPTION_A["策略 A: 动作队列&lt;br/&gt;取前 n_action_steps 步&lt;br/&gt;逐步弹出执行"]
+        OPTION_B["策略 B: 时间集成&lt;br/&gt;exponential weighting&lt;br/&gt;多次预测加权平均"]
+    end
+
+    subgraph Output["输出"]
+        SINGLE_ACT["单步动作&lt;br/&gt;[B, action_dim]"]
+    end
+
+    IMG --&gt; RESNET --&gt; ENC
+    STATE --&gt; ENC
+    ENV --&gt; ENC
+    ZERO_Z --&gt; ENC
+    ENC --&gt; DEC --&gt; HEAD --&gt; CHUNK
+
+    CHUNK --&gt; OPTION_A --&gt; SINGLE_ACT
+    CHUNK --&gt; OPTION_B --&gt; SINGLE_ACT
+
+    style InferInput fill:#e8f4fd,stroke:#2196F3
+    style SinglePass fill:#e8f5e9,stroke:#4CAF50
+    style ActionSelect fill:#fff3e0,stroke:#FF9800
+    style Output fill:#fce4ec,stroke:#E91E63
+</div>
+<h3 id="动作选择策略对比">动作选择策略对比<a class="headerlink" href="08.ACT_Architecture.html#动作选择策略对比" title="Permanent link">#</a></h3>
+<div class="mermaid">
+graph LR
+    subgraph QueueMode["动作队列模式 (默认)"]
+        direction TB
+        P1["模型预测 chunk_size=100 步"]
+        P2["截取前 n_action_steps 步"]
+        P3["放入队列, 逐步弹出执行"]
+        P4["队列空后重新预测"]
+        P1 --&gt; P2 --&gt; P3 --&gt; P4
+    end
+
+    subgraph EnsembleMode["时间集成模式 (temporal_ensemble)"]
+        direction TB
+        E1["每步都调用模型"]
+        E2["多次预测的重叠部分"]
+        E3["指数加权平均&lt;br/&gt;w_i = exp(-coeff * i)"]
+        E4["输出加权后的动作"]
+        E1 --&gt; E2 --&gt; E3 --&gt; E4
+    end
+
+    style QueueMode fill:#e3f2fd,stroke:#2196F3
+    style EnsembleMode fill:#fff9c4,stroke:#FFC107
+</div>
+<hr />
+<h2 id="5-关键超参数表">5. 关键超参数表<a class="headerlink" href="08.ACT_Architecture.html#5-关键超参数表" title="Permanent link">#</a></h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>参数</th>
+<th>默认值</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>chunk_size</code></td>
+<td>100</td>
+<td>动作分块大小，一次预测的动作步数</td>
+</tr>
+<tr>
+<td><code>n_action_steps</code></td>
+<td>100</td>
+<td>每次推理实际执行的动作步数 (&lt;=chunk_size)</td>
+</tr>
+<tr>
+<td><code>n_obs_steps</code></td>
+<td>1</td>
+<td>观测帧数 (当前仅支持 1)</td>
+</tr>
+<tr>
+<td><code>dim_model</code></td>
+<td>512</td>
+<td>Transformer 隐藏维度</td>
+</tr>
+<tr>
+<td><code>n_heads</code></td>
+<td>8</td>
+<td>多头注意力头数</td>
+</tr>
+<tr>
+<td><code>dim_feedforward</code></td>
+<td>3200</td>
+<td>FFN 中间层维度</td>
+</tr>
+<tr>
+<td><code>feedforward_activation</code></td>
+<td><code>relu</code></td>
+<td>FFN 激活函数</td>
+</tr>
+<tr>
+<td><code>n_encoder_layers</code></td>
+<td>4</td>
+<td>Transformer 编码器层数</td>
+</tr>
+<tr>
+<td><code>n_decoder_layers</code></td>
+<td>1</td>
+<td>Transformer 解码器层数 (原代码 bug 导致实际为 1)</td>
+</tr>
+<tr>
+<td><code>use_vae</code></td>
+<td>True</td>
+<td>是否启用 VAE 路径</td>
+</tr>
+<tr>
+<td><code>latent_dim</code></td>
+<td>32</td>
+<td>VAE 隐变量维度</td>
+</tr>
+<tr>
+<td><code>n_vae_encoder_layers</code></td>
+<td>4</td>
+<td>VAE 编码器 Transformer 层数</td>
+</tr>
+<tr>
+<td><code>kl_weight</code></td>
+<td>10.0</td>
+<td>KL 散度损失权重</td>
+</tr>
+<tr>
+<td><code>dropout</code></td>
+<td>0.1</td>
+<td>Transformer 各层 Dropout 率</td>
+</tr>
+<tr>
+<td><code>vision_backbone</code></td>
+<td><code>resnet18</code></td>
+<td>视觉编码器骨干网络</td>
+</tr>
+<tr>
+<td><code>pretrained_backbone_weights</code></td>
+<td><code>ResNet18_Weights.IMAGENET1K_V1</code></td>
+<td>预训练权重</td>
+</tr>
+<tr>
+<td><code>replace_final_stride_with_dilation</code></td>
+<td>False</td>
+<td>是否用膨胀卷积替代 layer4 步幅</td>
+</tr>
+<tr>
+<td><code>pre_norm</code></td>
+<td>False</td>
+<td>是否使用 Pre-Norm (默认 Post-Norm)</td>
+</tr>
+<tr>
+<td><code>temporal_ensemble_coeff</code></td>
+<td>None</td>
+<td>时间集成系数 (None 表示不启用)</td>
+</tr>
+<tr>
+<td><code>optimizer_lr</code></td>
+<td>1e-5</td>
+<td>学习率</td>
+</tr>
+<tr>
+<td><code>optimizer_lr_backbone</code></td>
+<td>1e-5</td>
+<td>视觉骨干网络学习率</td>
+</tr>
+<tr>
+<td><code>optimizer_weight_decay</code></td>
+<td>1e-4</td>
+<td>权重衰减</td>
+</tr>
+<tr>
+<td><code>optimizer_grad_clip_norm</code></td>
+<td>1.0</td>
+<td>梯度裁剪范数</td>
+</tr>
+</tbody>
+</table></div>
+<hr />
+<h2 id="6-关键源文件表">6. 关键源文件表<a class="headerlink" href="08.ACT_Architecture.html#6-关键源文件表" title="Permanent link">#</a></h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>组件</th>
+<th>类名</th>
+<th>文件</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>策略封装</td>
+<td><code>ACTPolicy</code></td>
+<td><code>lerobot/policies/act/modeling_act.py:41</code></td>
+</tr>
+<tr>
+<td>核心模型</td>
+<td><code>ACT</code></td>
+<td><code>lerobot/policies/act/modeling_act.py:252</code></td>
+</tr>
+<tr>
+<td>Transformer 编码器</td>
+<td><code>ACTEncoder</code></td>
+<td><code>lerobot/policies/act/modeling_act.py:509</code></td>
+</tr>
+<tr>
+<td>编码器层</td>
+<td><code>ACTEncoderLayer</code></td>
+<td><code>lerobot/policies/act/modeling_act.py:528</code></td>
+</tr>
+<tr>
+<td>Transformer 解码器</td>
+<td><code>ACTDecoder</code></td>
+<td><code>lerobot/policies/act/modeling_act.py:567</code></td>
+</tr>
+<tr>
+<td>解码器层</td>
+<td><code>ACTDecoderLayer</code></td>
+<td><code>lerobot/policies/act/modeling_act.py:590</code></td>
+</tr>
+<tr>
+<td>时间集成</td>
+<td><code>ACTTemporalEnsembler</code></td>
+<td><code>lerobot/policies/act/modeling_act.py:161</code></td>
+</tr>
+<tr>
+<td>2D 位置编码</td>
+<td><code>ACTSinusoidalPositionEmbedding2d</code></td>
+<td><code>lerobot/policies/act/modeling_act.py:680</code></td>
+</tr>
+<tr>
+<td>1D 位置编码</td>
+<td><code>create_sinusoidal_pos_embedding</code></td>
+<td><code>lerobot/policies/act/modeling_act.py:662</code></td>
+</tr>
+<tr>
+<td>配置</td>
+<td><code>ACTConfig</code></td>
+<td><code>lerobot/policies/act/configuration_act.py:25</code></td>
+</tr>
+</tbody>
+</table></div>
+      </div>
+    </main>
+        <aside class="toc">
+            <div class="toc-title">本页目录</div>
+            <ul>
+                <li><a href="08.ACT_Architecture.html#1-整体架构概览" class="toc-h2">1. 整体架构概览</a></li>
+                <li><a href="08.ACT_Architecture.html#2-核心组件详解" class="toc-h2">2. 核心组件详解</a></li>
+                <li><a href="08.ACT_Architecture.html#21-resnet18-视觉编码器" class="toc-h3">2.1 ResNet18 视觉编码器</a></li>
+                <li><a href="08.ACT_Architecture.html#22-vae-编码器-可选" class="toc-h3">2.2 VAE 编码器 (可选)</a></li>
+                <li><a href="08.ACT_Architecture.html#23-transformer-编码器-解码器" class="toc-h3">2.3 Transformer 编码器-解码器</a></li>
+                <li><a href="08.ACT_Architecture.html#24-动作头" class="toc-h3">2.4 动作头</a></li>
+                <li><a href="08.ACT_Architecture.html#3-训练流水线" class="toc-h2">3. 训练流水线</a></li>
+                <li><a href="08.ACT_Architecture.html#4-推理流水线" class="toc-h2">4. 推理流水线</a></li>
+                <li><a href="08.ACT_Architecture.html#动作选择策略对比" class="toc-h3">动作选择策略对比</a></li>
+                <li><a href="08.ACT_Architecture.html#5-关键超参数表" class="toc-h2">5. 关键超参数表</a></li>
+                <li><a href="08.ACT_Architecture.html#6-关键源文件表" class="toc-h2">6. 关键源文件表</a></li>
+            </ul>
+        </aside>
+
+    <button class="back-to-top" onclick="window.scrollTo({top:0,behavior:'smooth'})">&#8593;</button>
+
+    <script src="assets/vendor/mermaid/mermaid.min.js"></script>
+    <script defer src="assets/vendor/katex/katex.min.js"></script>
+    <script defer src="assets/vendor/katex/auto-render.min.js"
+            onload="renderMathInElement(document.querySelector('.content-inner'), {
+                delimiters: [
+                    { left: '$$', right: '$$', display: true },
+                    { left: '$', right: '$', display: false }
+                ],
+                ignoredTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code', 'option'],
+                ignoredClasses: ['mermaid', 'diagram'],
+                throwOnError: false
+            });"></script>
+    <script>
+        // Mermaid destroys the source text when it renders, so keep a copy in
+        // order to re-render on theme change.
+        document.querySelectorAll('.mermaid').forEach(el => {
+            el.dataset.src = el.textContent;
+        });
+
+        const prefersDark = window.matchMedia('(prefers-color-scheme: dark)');
+        function currentTheme() {
+            const forced = document.documentElement.getAttribute('data-theme');
+            if (forced) return forced;
+            return prefersDark.matches ? 'dark' : 'light';
+        }
+
+        function initMermaid() {
+            mermaid.initialize({
+                startOnLoad: false,
+                theme: currentTheme() === 'dark' ? 'dark' : 'default',
+                flowchart: { useMaxWidth: true, htmlLabels: true },
+                securityLevel: 'loose'
+            });
+        }
+
+        function renderMermaid() {
+            const nodes = document.querySelectorAll('.mermaid');
+            nodes.forEach(el => {
+                el.removeAttribute('data-processed');
+                el.textContent = el.dataset.src;
+            });
+            // mermaid.run rejects on its internal font probe in some browsers;
+            // the diagrams still render, so swallow it rather than surfacing an
+            // unhandled rejection.
+            if (!nodes.length) return;
+            Promise.resolve(mermaid.run({ nodes: nodes }))
+                .catch(() => {})
+                .then(() => nodes.forEach(applyZoom));
+        }
+
+        /* ---------- Diagram zoom ----------
+           Scale is tracked as a factor of the diagram's NATURAL size (its
+           viewBox), so 100% means 1:1 and one font size looks identical in
+           every diagram on the site. Left to itself mermaid's useMaxWidth
+           stretches each svg to the container, which blows a 3-node diagram
+           up to 3.4x and shrinks a wide one to 0.34x — a 10x spread in
+           apparent font size. FIT_MAX caps the auto-fit at 1:1 (never
+           upscale) and FIT_MIN stops wide diagrams from shrinking to
+           unreadable; anything past that overflows and scrolls/pans. */
+        const MIN_Z = 0.3, MAX_Z = 6, STEP = 1.25;
+        const FIT_MIN = 0.55, FIT_MAX = 1;
+        const PAD = 40;               // .mermaid horizontal padding (20px each side)
+        const zoom = new WeakMap();   // .mermaid -> explicit scale; absent = auto-fit
+
+        function naturalSize(svg) {
+            const vb = svg.viewBox && svg.viewBox.baseVal;
+            if (vb && vb.width) return { w: vb.width, h: vb.height };
+            const r = svg.getBoundingClientRect();
+            return { w: r.width, h: r.height };
+        }
+
+        function fitScale(el, nat) {
+            const avail = el.clientWidth - PAD;
+            if (!nat.w || avail <= 0) return 1;
+            return Math.min(FIT_MAX, Math.max(FIT_MIN, avail / nat.w));
+        }
+
+        function scaleOf(el, nat) {
+            const k = zoom.get(el);
+            return k === undefined ? fitScale(el, nat) : k;
+        }
+
+        function applyZoom(el) {
+            const svg = el.querySelector('svg');
+            if (!svg) return;
+            const nat = naturalSize(svg);
+            if (!nat.w) return;
+            const k = scaleOf(el, nat);
+
+            const label = el.closest('.diagram')?.querySelector('.diagram-zoom');
+            if (label) label.textContent = Math.round(k * 100) + '%';
+
+            // Size the svg explicitly instead of leaving it to useMaxWidth,
+            // so the container gets real scrollbars when the diagram overflows.
+            svg.style.maxWidth = 'none';
+            svg.style.width = (nat.w * k) + 'px';
+            svg.style.height = (nat.h * k) + 'px';
+
+            const overflows = nat.w * k > el.clientWidth - PAD + 1;
+            el.classList.toggle('is-zoomed', overflows);
+            if (!overflows) el.scrollLeft = el.scrollTop = 0;
+        }
+
+        function setZoom(el, k, anchor) {
+            const svg = el.querySelector('svg');
+            if (!svg) return;
+            const nat = naturalSize(svg);
+            const prev = scaleOf(el, nat);
+            if (k !== null) k = Math.min(MAX_Z, Math.max(MIN_Z, k));
+            const next = k === null ? fitScale(el, nat) : k;
+            if (next === prev) return;
+            // Keep the point under the cursor (or the viewport centre) put.
+            const ax = anchor ? anchor.x : el.clientWidth / 2;
+            const ay = anchor ? anchor.y : el.clientHeight / 2;
+            const rx = (el.scrollLeft + ax) / prev;
+            const ry = (el.scrollTop + ay) / prev;
+            if (k === null) zoom.delete(el); else zoom.set(el, k);
+            applyZoom(el);
+            el.scrollLeft = rx * next - ax;
+            el.scrollTop = ry * next - ay;
+        }
+
+        function currentScale(el) {
+            const svg = el.querySelector('svg');
+            return svg ? scaleOf(el, naturalSize(svg)) : 1;
+        }
+
+        function setupDiagrams() {
+            document.querySelectorAll('.mermaid').forEach(el => {
+                const wrap = document.createElement('div');
+                wrap.className = 'diagram';
+                el.parentNode.insertBefore(wrap, el);
+                wrap.appendChild(el);
+
+                const tools = document.createElement('div');
+                tools.className = 'diagram-tools';
+                tools.innerHTML =
+                    '<button type="button" data-act="out" title="缩小">&minus;</button>' +
+                    '<span class="diagram-zoom">100%</span>' +
+                    '<button type="button" data-act="in" title="放大">+</button>' +
+                    '<button type="button" data-act="reset" title="适应宽度">&#9633;</button>' +
+                    '<button type="button" data-act="full" title="全屏">&#10530;</button>';
+                wrap.appendChild(tools);
+
+                tools.addEventListener('click', e => {
+                    const act = e.target.closest('button')?.dataset.act;
+                    if (!act) return;
+                    const k = currentScale(el);
+                    if (act === 'in') setZoom(el, k * STEP);
+                    else if (act === 'out') setZoom(el, k / STEP);
+                    else if (act === 'reset') setZoom(el, null);
+                    else if (act === 'full') {
+                        if (document.fullscreenElement === wrap) document.exitFullscreen();
+                        else wrap.requestFullscreen?.();
+                    }
+                });
+
+                // Ctrl/⌘ + wheel zooms; a plain wheel keeps scrolling the page.
+                el.addEventListener('wheel', e => {
+                    if (!e.ctrlKey && !e.metaKey) return;
+                    e.preventDefault();
+                    const r = el.getBoundingClientRect();
+                    setZoom(el, currentScale(el) * (e.deltaY < 0 ? STEP : 1 / STEP),
+                            { x: e.clientX - r.left, y: e.clientY - r.top });
+                }, { passive: false });
+
+                // Drag to pan once zoomed in.
+                let drag = null;
+                el.addEventListener('pointerdown', e => {
+                    // Pan only matters once the diagram actually overflows.
+                    if (e.button !== 0 || !el.classList.contains('is-zoomed')) return;
+                    drag = { x: e.clientX, y: e.clientY, l: el.scrollLeft, t: el.scrollTop };
+                    el.setPointerCapture(e.pointerId);
+                    el.classList.add('is-panning');
+                });
+                el.addEventListener('pointermove', e => {
+                    if (!drag) return;
+                    el.scrollLeft = drag.l - (e.clientX - drag.x);
+                    el.scrollTop = drag.t - (e.clientY - drag.y);
+                });
+                const endDrag = () => { drag = null; el.classList.remove('is-panning'); };
+                el.addEventListener('pointerup', endDrag);
+                el.addEventListener('pointercancel', endDrag);
+
+                // Double click toggles between auto-fit and true 1:1.
+                el.addEventListener('dblclick', () => setZoom(el, zoom.has(el) ? null : 1));
+            });
+        }
+
+        setupDiagrams();
+        initMermaid();
+        renderMermaid();
+
+        const remeasure = () => document.querySelectorAll('.mermaid').forEach(applyZoom);
+        document.addEventListener('fullscreenchange', remeasure);
+        window.addEventListener('resize', remeasure);
+
+        // Theme toggle
+        const toggle = document.getElementById('theme-toggle');
+        toggle.addEventListener('click', () => {
+            const next = currentTheme() === 'dark' ? 'light' : 'dark';
+            document.documentElement.setAttribute('data-theme', next);
+            try { localStorage.setItem('theme', next); } catch (e) {}
+            initMermaid();
+            renderMermaid();
+        });
+
+        // Follow the OS while the user hasn't made an explicit choice
+        prefersDark.addEventListener('change', () => {
+            if (!document.documentElement.getAttribute('data-theme')) {
+                initMermaid();
+                renderMermaid();
+            }
+        });
+
+        // Back to top button
+        const btn = document.querySelector('.back-to-top');
+        window.addEventListener('scroll', () => {
+            btn.classList.toggle('visible', window.scrollY > 300);
+        });
+
+        // Close sidebar on mobile when clicking a link
+        document.querySelectorAll('.sidebar nav a').forEach(a => {
+            a.addEventListener('click', () => {
+                document.querySelector('.sidebar').classList.remove('open');
+            });
+        });
+
+        // Highlight the TOC entry for the heading currently in view
+        const tocLinks = Array.from(document.querySelectorAll('.toc a'));
+        if (tocLinks.length) {
+            const targets = tocLinks
+                .map(a => document.getElementById(decodeURIComponent(a.hash.slice(1))))
+                .filter(Boolean);
+            const setActive = () => {
+                let current = targets[0];
+                for (const t of targets) {
+                    if (t.getBoundingClientRect().top <= 120) current = t;
+                    else break;
+                }
+                tocLinks.forEach(a => a.classList.toggle(
+                    'active',
+                    current && decodeURIComponent(a.hash.slice(1)) === current.id
+                ));
+            };
+            setActive();
+            let queued = false;
+            window.addEventListener('scroll', () => {
+                if (queued) return;
+                queued = true;
+                requestAnimationFrame(() => { setActive(); queued = false; });
+            });
+        }
+    </script>
+</body>
+</html>

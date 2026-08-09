@@ -269,6 +269,23 @@
 
                         <div class="pub-entry">
                             <div class="pub-thumbnail">
+                                <img src="Pic/ram/ram-model_architechture.svg" alt="Retrieval-Augmented Manipulation architecture" class="pub-thumbnail-contain" />
+                            </div>
+                            <div class="pub-info">
+                                <h3 class="pub-title" data-i18n="proj.ram.title">Retrieval-Augmented Manipulation</h3>
+                                <p class="pub-authors"><strong>Yueyi Chen</strong></p>
+                                <p class="pub-venue" data-i18n-html="proj.ram.venue"><em>Science Robotics / CUHK Paper Reproduction</em>, 2026</p>
+                                <p class="pub-desc" data-i18n-html="proj.ram.desc">Reproduced a retrieval-augmented manipulation stack that chains GroundingDINO + SAM2 object discovery, VGGT-1B depth reconstruction, and a frozen DINOv2-B/14 RAMNet with 1-layer view adaptation, 4-layer shape encoding, 4-layer map adaptation, and a 3-layer deformation decoder. The public code path is split into <code>step1_grounding.py</code> through <code>step4_conducting.py</code>, with <code>ram_k=5</code>, <code>img_size=224</code>, <code>n_pts=1024</code>, and <code>map_size=100</code> fixing the retrieval and planning contracts. I rebuilt the training side around BOP-style BlenderProc data, 128-view templates, and <code>PoseNCE</code> / <code>NOCSLoss</code> / <code>MatchLoss</code> on a frozen DINO backbone. The paper frames the system for zero-shot real-world manipulation and CO3D generalization, but the repo itself does not ship benchmark logs.</p>
+                                <div class="pub-links">
+                                    <a href="ram.html" class="pub-link" data-i18n="proj.ram.link.details">Details</a>
+                                    <a href="https://github.com/RetrievalManip/Retrieval-augmented-Manipulation" target="_blank" rel="noopener" class="pub-link" data-i18n="proj.ram.link.code">Code</a>
+                                    <a href="https://doi.org/10.1126/scirobotics.aea2092" target="_blank" rel="noopener" class="pub-link" data-i18n="proj.ram.link.paper">Paper</a>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="pub-entry">
+                            <div class="pub-thumbnail">
                                 <img src="Pic/planb/planb-model_architechture.svg" alt="PLAN-B model architecture" class="pub-thumbnail-contain" />
                             </div>
                             <div class="pub-info">

@@ -1,0 +1,1102 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SmolVLA - Robotics Knowledge Base</title>
+    <link rel="icon" href="favicon.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="assets/vendor/katex/katex.min.css">
+    <script>
+        // Applied before first paint so the saved theme doesn't flash.
+        (function () {
+            try {
+                var t = localStorage.getItem('theme');
+                if (t === 'dark' || t === 'light') {
+                    document.documentElement.setAttribute('data-theme', t);
+                }
+            } catch (e) {}
+        })();
+    </script>
+</head>
+<body>
+    <button class="menu-toggle" onclick="document.querySelector('.sidebar').classList.toggle('open')">&#9776;</button>
+    <button class="theme-toggle" id="theme-toggle" title="切换日夜模式" aria-label="切换日夜模式">
+        <span class="icon-light">&#9790;</span><span class="icon-dark">&#9728;</span>
+    </button>
+
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <h2>Robotics Knowledge Base</h2>
+            <p>机器人模型架构知识库</p>
+        </div>
+        <nav>
+            <a href="index.html">Overview</a>
+            <div class="nav-group">VLA 模型</div>
+            <a href="01.Pi0_Architecture.html">Pi0</a>
+            <a href="02.Pi0.5_Architecture.html">Pi0.5</a>
+            <a href="03.Pi0-FAST_Architecture.html">Pi0-FAST</a>
+            <a href="04.Pi-Star-0.6_Architecture.html">π*₀.₆ (Pi-Star-0.6)</a>
+            <a href="05.Pi0.7_Architecture.html">π₀.₇ (Pi-0.7)</a>
+            <a href="06.Isaac-GR00T-N1.6_Architecture.html">Isaac-GR00T N1.6</a>
+            <a href="07.Isaac-GR00T-N1.5_Architecture.html">Isaac-GR00T N1.5</a>
+            <a href="08.ACT_Architecture.html">ACT</a>
+            <a href="09.SmolVLA_Architecture.html" class="active">SmolVLA</a>
+            <a href="10.WALL-OSS_Architecture.html">WALL-OSS / WALL-X</a>
+            <a href="11.X-VLA_Architecture.html">X-VLA</a>
+            <a href="12.Psi0_Architecture.html">Psi0 (ψ₀)</a>
+            <a href="13.DreamZero_Architecture.html">DreamZero</a>
+            <a href="14.FastWAM_Architecture.html">Fast-WAM</a>
+            <div class="nav-group">全身控制 (WBC)</div>
+            <a href="15.GR00T-WBC_Overview.html">GR00T-WBC 总览</a>
+            <a href="16.Decoupled-WBC_Architecture.html" class="nav-child">Decoupled WBC</a>
+            <a href="17.GEAR-SONIC_Architecture.html" class="nav-child">GEAR-SONIC</a>
+            <a href="18.MotionBricks_Architecture.html" class="nav-child">MotionBricks</a>
+            <div class="nav-group">3D 视觉与 VLM</div>
+            <a href="19.VLM3_Architecture.html">VLM³</a>
+        </nav>
+    </aside>
+
+    <main class="content">
+      <div class="content-inner">
+        <h1 id="smolvla-模型架构">SmolVLA 模型架构<a class="headerlink" href="09.SmolVLA_Architecture.html#smolvla-模型架构" title="Permanent link">#</a></h1>
+<h2 id="1-整体架构概览">1. 整体架构概览<a class="headerlink" href="09.SmolVLA_Architecture.html#1-整体架构概览" title="Permanent link">#</a></h2>
+<p>SmolVLA (Small Vision-Language-Action) 是由 Hugging Face 设计的轻量级视觉-语言-动作 (VLA) 模型，采用 <strong>SmolVLM2-500M-Video-Instruct</strong> 作为视觉语言主干网络，并引入独立的 <strong>Action Expert</strong> 网络通过交叉注意力机制从 VLM 中提取特征来生成机器人动作。SmolVLA 使用 <strong>Flow Matching</strong>（与 Pi0 相同的范式）进行动作生成，通过迭代去噪将高斯噪声转化为动作轨迹。其核心设计理念是：VLM 处理前缀序列（图像 + 语言 + 状态），Action Expert 处理后缀序列（含噪动作 + 时间步），两者通过交叉注意力层交互，最终输出预测动作。</p>
+<div class="mermaid">
+graph TB
+    subgraph Input["输入"]
+        IMG["相机图像&lt;br/&gt;(1~N 个视角)"]
+        TXT["语言指令&lt;br/&gt;(token 化)"]
+        STATE["机器人状态&lt;br/&gt;[B, max_state_dim]"]
+    end
+
+    subgraph VLMBackbone["SmolVLM2-500M 主干网络 (可冻结)"]
+        VE["SigLIP 视觉编码器"]
+        CONN["Connector 投影层"]
+        LLM["SmolVLM2 语言模型&lt;br/&gt;(前 16 层)"]
+    end
+
+    subgraph Projection["投影层"]
+        SP["state_proj&lt;br/&gt;Linear: state_dim -&gt; hidden_size"]
+    end
+
+    subgraph ActionExpert["Action Expert 网络"]
+        AIP["action_in_proj&lt;br/&gt;Linear: action_dim -&gt; expert_hidden"]
+        TML["action_time_mlp&lt;br/&gt;时间步融合 MLP"]
+        EXP["lm_expert&lt;br/&gt;(交叉注意力 + 自注意力&lt;br/&gt;交替的 Transformer 层)"]
+        AOP["action_out_proj&lt;br/&gt;Linear: expert_hidden -&gt; action_dim"]
+    end
+
+    subgraph FlowMatch["Flow Matching"]
+        FM["高斯噪声采样&lt;br/&gt;+ Beta(1.5, 1.0) 时间步"]
+    end
+
+    subgraph Output["输出"]
+        ACT["预测动作轨迹&lt;br/&gt;[B, chunk_size, action_dim]"]
+    end
+
+    IMG --&gt; VE --&gt; CONN --&gt; LLM
+    TXT --&gt; LLM
+    STATE --&gt; SP
+    SP --&gt;|"状态嵌入"| LLM
+
+    LLM --&gt;|"KV Cache&lt;br/&gt;前缀特征"| EXP
+
+    FM --&gt;|"含噪动作 x_t"| AIP
+    AIP --&gt; TML
+    TML --&gt;|"动作+时间步嵌入"| EXP
+    EXP --&gt; AOP --&gt; ACT
+
+    style Input fill:#e8f4fd,stroke:#2196F3
+    style VLMBackbone fill:#fff3e0,stroke:#FF9800
+    style Projection fill:#f3e5f5,stroke:#9C27B0
+    style ActionExpert fill:#e8f5e9,stroke:#4CAF50
+    style FlowMatch fill:#e0f7fa,stroke:#00BCD4
+    style Output fill:#fce4ec,stroke:#E91E63
+</div>
+<p><strong>SmolVLA 的核心设计特点：</strong></p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>特性</th>
+<th>SmolVLA</th>
+<th>GR00T N1.5 (对比)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>VLM 主干</td>
+<td>SmolVLM2-500M (SigLIP + SmolLM2)</td>
+<td>Eagle (SigLIP2 + Qwen3-1.7B)</td>
+</tr>
+<tr>
+<td>动作生成</td>
+<td>Action Expert (交叉注意力)</td>
+<td>DiT (交替注意力)</td>
+</tr>
+<tr>
+<td>动作范式</td>
+<td>Flow Matching (连续)</td>
+<td>Flow Matching (连续)</td>
+</tr>
+<tr>
+<td>注意力模式</td>
+<td>前缀双向 + 后缀交叉注意力</td>
+<td>交替交叉/自注意力</td>
+</tr>
+<tr>
+<td>模型规模</td>
+<td>~500M 参数</td>
+<td>~2B+ 参数</td>
+</tr>
+<tr>
+<td>推理步数</td>
+<td>10 步</td>
+<td>4 步</td>
+</tr>
+</tbody>
+</table></div>
+<hr />
+<h2 id="2-核心组件详解">2. 核心组件详解<a class="headerlink" href="09.SmolVLA_Architecture.html#2-核心组件详解" title="Permanent link">#</a></h2>
+<h3 id="21-smolvlm2-500m-视觉语言模型">2.1 SmolVLM2-500M 视觉语言模型<a class="headerlink" href="09.SmolVLA_Architecture.html#21-smolvlm2-500m-视觉语言模型" title="Permanent link">#</a></h3>
+<p>SmolVLA 使用 <code>HuggingFaceTB/SmolVLM2-500M-Video-Instruct</code> 作为 VLM 主干，内部包含 SigLIP 视觉编码器、Connector 投影层和 SmolLM2 语言模型。VLM 的作用是处理前缀序列（图像 + 语言 + 状态），生成供 Action Expert 使用的 KV Cache。</p>
+<div class="mermaid">
+graph LR
+    subgraph VisionEncoder["SigLIP 视觉编码器 (vision_model)"]
+        PIX["pixel_values&lt;br/&gt;[B, 3, 512, 512]&lt;br/&gt;像素范围 [-1, 1]"] --&gt; SIG["SigLIP&lt;br/&gt;视觉编码器"]
+        SIG --&gt; FEAT["图像特征&lt;br/&gt;[B, N_patches, vis_dim]"]
+    end
+
+    subgraph Connector["Connector 投影层"]
+        FEAT --&gt; CPROJ["Connector&lt;br/&gt;(Modality Projection&lt;br/&gt;+ Resampling)"]
+        CPROJ --&gt; VFEAT["投影后特征&lt;br/&gt;[B, N_tokens, hidden_size]"]
+    end
+
+    subgraph TextModel["SmolLM2 语言模型 (text_model)"]
+        LANG["语言 token&lt;br/&gt;[B, seq_len]"] --&gt; LEMB["词元嵌入层"]
+        LEMB --&gt; NORM["嵌入 * sqrt(dim)&lt;br/&gt;归一化"]
+        VFEAT --&gt;|"图像特殊 token&lt;br/&gt;包裹后拼接"| MERGE["融合至序列"]
+        NORM --&gt; MERGE
+        MERGE --&gt; LAYERS["SmolLM2 Transformer&lt;br/&gt;前 num_vlm_layers 层&lt;br/&gt;(默认 16 层)"]
+    end
+
+    LAYERS --&gt;|"VLM 隐藏状态&lt;br/&gt;[B, prefix_len, hidden_size]"| OUT["前缀特征"]
+
+    style VisionEncoder fill:#e3f2fd,stroke:#2196F3
+    style Connector fill:#f3e5f5,stroke:#9C27B0
+    style TextModel fill:#e8f5e9,stroke:#4CAF50
+</div>
+<p><strong>图像预处理流程：</strong></p>
+<ol>
+<li>图像缩放至 <code>512x512</code>，保持宽高比并用 0 填充（<code>resize_with_pad</code>）</li>
+<li>像素值从 <code>[0, 1]</code> 映射至 <code>[-1, 1]</code>（SigLIP 要求）</li>
+<li>SigLIP 编码后经过 Connector 投影至语言模型维度</li>
+<li>图像嵌入乘以 <code>sqrt(dim)</code> 进行归一化</li>
+<li>可选：添加特殊图像 token（<code>fake_image_token</code> + <code>global_image_token</code>）包裹</li>
+</ol>
+<p><strong>前缀序列拼接顺序：</strong></p>
+<div class="highlight"><pre><span></span><code>[图像1特殊token] [图像1 patch嵌入] [图像1结束token] ... [语言嵌入] [状态嵌入]
+</code></pre></div>
+
+<p><strong>VLM 层截断：</strong> 与 GR00T 类似，SmolVLA 通过 <code>num_vlm_layers</code> 参数（默认 16）截断 VLM 的 Transformer 层数，仅使用前 16 层。</p>
+<p><strong>冻结策略：</strong>
+- <code>freeze_vision_encoder=True</code>（默认）：SigLIP 视觉编码器完全冻结
+- <code>train_expert_only=True</code>（默认）：整个 VLM 冻结，仅训练 Action Expert</p>
+<hr />
+<h3 id="22-action-expert-网络交叉注意力">2.2 Action Expert 网络（交叉注意力）<a class="headerlink" href="09.SmolVLA_Architecture.html#22-action-expert-网络交叉注意力" title="Permanent link">#</a></h3>
+<p>Action Expert 是 SmolVLA 的核心创新：一个独立的、更小的 Transformer 网络，通过交叉注意力从 VLM 的 KV Cache 中读取信息。其宽度通过 <code>expert_width_multiplier</code>（默认 0.75）控制，隐藏维度为 VLM 隐藏维度的 75%。</p>
+<div class="mermaid">
+graph TB
+    subgraph ExpertConfig["Action Expert 配置"]
+        direction LR
+        C1["hidden_size = int(vlm_hidden * 0.75)"]
+        C2["intermediate_size = get_intermediate_size(hidden_size)"]
+        C3["num_layers = num_vlm_layers (默认 16)"]
+        C4["每 2 层交替一次自注意力"]
+    end
+
+    subgraph ExpertArch["Action Expert Transformer 层结构"]
+        direction TB
+        subgraph Layer0["Layer 0 — 自注意力层 (layer_idx % 2 == 0)"]
+            IN0["后缀嵌入"] --&gt; LN0["RMSNorm"]
+            LN0 --&gt; SA0["自注意力&lt;br/&gt;Q, K, V 均来自后缀"]
+            SA0 --&gt; RES0["+ 残差"]
+            RES0 --&gt; PLN0["Post-Attention RMSNorm"]
+            PLN0 --&gt; MLP0["前馈 MLP"]
+            MLP0 --&gt; PRES0["+ 残差"]
+        end
+
+        subgraph Layer1["Layer 1 — 交叉注意力层 (layer_idx % 2 != 0)"]
+            IN1["后缀嵌入"] --&gt; LN1["RMSNorm"]
+            LN1 --&gt; CA1["交叉注意力&lt;br/&gt;Q 来自后缀&lt;br/&gt;K, V 来自 VLM KV Cache"]
+            CA1 --&gt; RES1["+ 残差"]
+            RES1 --&gt; PLN1["Post-Attention RMSNorm"]
+            PLN1 --&gt; MLP1["前馈 MLP"]
+            MLP1 --&gt; PRES1["+ 残差"]
+        end
+
+        PRES0 --&gt; IN1
+        subgraph Layer2["Layer 2 — 自注意力层"]
+            SA2["自注意力..."]
+        end
+        PRES1 --&gt; SA2
+        SA2 --&gt; DOTS["... 交替至第 N 层"]
+    end
+
+    subgraph KVSource["KV 来源"]
+        VLM_KV["VLM KV Cache&lt;br/&gt;(前缀特征的 K, V)"]
+    end
+
+    VLM_KV --&gt;|"K, V 投影&lt;br/&gt;(k_proj, v_proj 重新定义&lt;br/&gt;输入维度 = vlm_kv_dim)"| CA1
+
+    style ExpertConfig fill:#fff8e1,stroke:#FFC107
+    style ExpertArch fill:#e8f5e9,stroke:#4CAF50
+    style Layer0 fill:#e3f2fd,stroke:#2196F3
+    style Layer1 fill:#fce4ec,stroke:#E91E63
+    style Layer2 fill:#e3f2fd,stroke:#2196F3
+    style KVSource fill:#fff3e0,stroke:#FF9800
+</div>
+<p><strong>交叉注意力层的 K, V 投影重塑：</strong></p>
+<p>在交叉注意力层中，K 和 V 来自 VLM 的 KV Cache，其维度为 <code>num_kv_heads * head_dim</code>。由于 Expert 的隐藏维度不同于 VLM，SmolVLA 在初始化时重新创建了这些层的 <code>k_proj</code> 和 <code>v_proj</code>：</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># 交叉注意力层的 K, V 投影</span>
+<span class="n">k_proj</span> <span class="o">=</span> <span class="n">Linear</span><span class="p">(</span><span class="n">vlm_kv_heads</span> <span class="o">*</span> <span class="n">vlm_head_dim</span><span class="p">,</span> <span class="n">expert_kv_heads</span> <span class="o">*</span> <span class="n">expert_head_dim</span><span class="p">)</span>
+<span class="n">v_proj</span> <span class="o">=</span> <span class="n">Linear</span><span class="p">(</span><span class="n">vlm_kv_heads</span> <span class="o">*</span> <span class="n">vlm_head_dim</span><span class="p">,</span> <span class="n">expert_kv_heads</span> <span class="o">*</span> <span class="n">expert_head_dim</span><span class="p">)</span>
+</code></pre></div>
+
+<p><strong>层对应关系：</strong> 当 <code>num_expert_layers &lt; num_vlm_layers</code> 时，Expert 层与 VLM 层按比例对应。例如 VLM 有 16 层、Expert 有 8 层时，每隔一层 VLM 层对应一个 Expert 层。未对应的层跳过 Expert 处理。</p>
+<hr />
+<h3 id="23-flow-matching-扩散机制">2.3 Flow Matching 扩散机制<a class="headerlink" href="09.SmolVLA_Architecture.html#23-flow-matching-扩散机制" title="Permanent link">#</a></h3>
+<p>SmolVLA 使用 <strong>Flow Matching</strong>（条件流匹配）范式生成动作，与 Pi0 相同。核心思想是学习从噪声分布到动作分布的"速度场"，训练时通过线性插值构造含噪样本，推理时通过欧拉积分迭代去噪。</p>
+<div class="mermaid">
+graph TB
+    subgraph Training["训练时: 构造含噪样本"]
+        direction TB
+        A_GT["真实动作 a&lt;br/&gt;[B, 50, action_dim]"]
+        NOISE["高斯噪声 epsilon&lt;br/&gt;~ N(0, 1)"]
+        BETA["时间步 t&lt;br/&gt;~ Beta(1.5, 1.0) * 0.999 + 0.001"]
+
+        A_GT --&gt; INTERP["线性插值&lt;br/&gt;x_t = t * epsilon + (1 - t) * a"]
+        NOISE --&gt; INTERP
+        BETA --&gt; INTERP
+
+        A_GT --&gt; TARGET["速度目标&lt;br/&gt;u_t = epsilon - a"]
+        NOISE --&gt; TARGET
+
+        INTERP --&gt; XT["含噪动作 x_t"]
+        TARGET --&gt; UT["目标速度 u_t"]
+    end
+
+    subgraph Model["模型预测"]
+        XT --&gt; VLA["SmolVLA&lt;br/&gt;(VLM + Expert)"]
+        BETA --&gt;|"时间步条件"| VLA
+        VLA --&gt; VT["预测速度 v_t"]
+    end
+
+    subgraph Loss["损失"]
+        UT --&gt; MSE["MSE Loss&lt;br/&gt;||u_t - v_t||^2"]
+        VT --&gt; MSE
+    end
+
+    style Training fill:#e0f7fa,stroke:#00BCD4
+    style Model fill:#e8f5e9,stroke:#4CAF50
+    style Loss fill:#fce4ec,stroke:#E91E63
+</div>
+<p><strong>Flow Matching 关键公式：</strong></p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>公式</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>t ~ Beta(1.5, 1.0) * 0.999 + 0.001</code></td>
+<td>时间步采样，偏向 t 接近 1（更接近噪声）</td>
+</tr>
+<tr>
+<td><code>x_t = t * noise + (1 - t) * action</code></td>
+<td>线性插值构造含噪样本（t=0 为干净动作，t=1 为纯噪声）</td>
+</tr>
+<tr>
+<td><code>u_t = noise - action</code></td>
+<td>速度目标（从动作到噪声的方向）</td>
+</tr>
+<tr>
+<td><code>loss = MSE(u_t, v_t)</code></td>
+<td>训练损失</td>
+</tr>
+<tr>
+<td><code>x_{t+dt} = x_t + dt * v_t</code></td>
+<td>推理时欧拉积分（dt = -1/num_steps）</td>
+</tr>
+</tbody>
+</table></div>
+<blockquote>
+<p><strong>注意：</strong> SmolVLA 的插值方向与某些文献相反：<code>t=0</code> 对应干净动作，<code>t=1</code> 对应纯噪声。推理时从 <code>t=1</code> 开始，逐步向 <code>t=0</code> 去噪。</p>
+</blockquote>
+<hr />
+<h3 id="24-状态投影与动作投影">2.4 状态投影与动作投影<a class="headerlink" href="09.SmolVLA_Architecture.html#24-状态投影与动作投影" title="Permanent link">#</a></h3>
+<p>SmolVLA 通过一系列线性投影层实现不同维度空间之间的映射。</p>
+<div class="mermaid">
+graph LR
+    subgraph StateProj["状态投影 (state_proj)"]
+        S_IN["机器人状态&lt;br/&gt;[B, max_state_dim=32]"]
+        S_IN --&gt; SP["Linear&lt;br/&gt;(32 -&gt; vlm_hidden_size)"]
+        SP --&gt; S_OUT["状态嵌入&lt;br/&gt;[B, 1, vlm_hidden_size]"]
+    end
+
+    subgraph ActionInProj["动作输入投影 (action_in_proj)"]
+        A_IN["含噪动作 x_t&lt;br/&gt;[B, 50, max_action_dim=32]"]
+        A_IN --&gt; AIP["Linear&lt;br/&gt;(32 -&gt; expert_hidden_size)"]
+        AIP --&gt; A_EMB["动作嵌入&lt;br/&gt;[B, 50, expert_hidden]"]
+    end
+
+    subgraph TimeEmb["时间步嵌入"]
+        T_IN["时间步 t&lt;br/&gt;[B]"]
+        T_IN --&gt; SIN["正弦余弦位置编码&lt;br/&gt;dim=expert_hidden_size&lt;br/&gt;period: [4e-3, 4.0]"]
+        SIN --&gt; T_EMB["时间嵌入&lt;br/&gt;[B, 1, expert_hidden]"]
+        T_EMB --&gt; EXPAND["广播至动作长度&lt;br/&gt;[B, 50, expert_hidden]"]
+    end
+
+    subgraph TimeFusion["时间步融合 MLP (action_time_mlp)"]
+        A_EMB --&gt; CAT["Concat&lt;br/&gt;[B, 50, expert_hidden*2]"]
+        EXPAND --&gt; CAT
+        CAT --&gt; MLP_IN["Linear&lt;br/&gt;(expert_hidden*2 -&gt; expert_hidden)"]
+        MLP_IN --&gt; SILU["SiLU 激活函数"]
+        SILU --&gt; MLP_OUT["Linear&lt;br/&gt;(expert_hidden -&gt; expert_hidden)"]
+        MLP_OUT --&gt; FUSED["融合后的动作+时间嵌入&lt;br/&gt;[B, 50, expert_hidden]"]
+    end
+
+    subgraph ActionOutProj["动作输出投影 (action_out_proj)"]
+        EXP_OUT["Expert 输出&lt;br/&gt;[B, 50, expert_hidden]"]
+        EXP_OUT --&gt; CAST["上转型至 float32"]
+        CAST --&gt; AOP["Linear&lt;br/&gt;(expert_hidden -&gt; 32)"]
+        AOP --&gt; V_OUT["预测速度 v_t&lt;br/&gt;[B, 50, max_action_dim=32]"]
+    end
+
+    style StateProj fill:#e3f2fd,stroke:#2196F3
+    style ActionInProj fill:#f3e5f5,stroke:#9C27B0
+    style TimeEmb fill:#fff8e1,stroke:#FFC107
+    style TimeFusion fill:#e0f7fa,stroke:#00BCD4
+    style ActionOutProj fill:#fce4ec,stroke:#E91E63
+</div>
+<p><strong>维度填充机制：</strong> SmolVLA 将所有状态和动作向量填充至固定维度（<code>max_state_dim=32</code>，<code>max_action_dim=32</code>），不足部分补零。推理后再截断回原始维度。这使得模型能够兼容不同自由度的机器人。</p>
+<hr />
+<h2 id="3-训练流水线">3. 训练流水线<a class="headerlink" href="09.SmolVLA_Architecture.html#3-训练流水线" title="Permanent link">#</a></h2>
+<p>训练时，模型接收完整的前缀和后缀序列，一次前向传播同时处理 VLM 和 Expert。注意力掩码确保前缀序列（图像、语言）采用双向注意力，而后缀序列（含噪动作）只能通过交叉注意力关注前缀。</p>
+<div class="mermaid">
+graph TB
+    subgraph DataPrep["数据准备"]
+        direction LR
+        IMG_RAW["原始图像"] --&gt; RESIZE["resize_with_pad&lt;br/&gt;-&gt; [512, 512]&lt;br/&gt;-&gt; [-1, 1]"]
+        STATE_RAW["原始状态"] --&gt; PAD_S["pad_vector&lt;br/&gt;-&gt; [max_state_dim=32]"]
+        ACT_RAW["原始动作"] --&gt; PAD_A["pad_vector&lt;br/&gt;-&gt; [B, 50, 32]"]
+        LANG_RAW["语言指令"] --&gt; TOKENIZE["分词器&lt;br/&gt;max_length=48"]
+    end
+
+    subgraph NoiseSample["噪声采样"]
+        direction LR
+        EPSILON["epsilon ~ N(0, 1)&lt;br/&gt;[B, 50, 32]"]
+        T_SAMPLE["t ~ Beta(1.5, 1.0)&lt;br/&gt;* 0.999 + 0.001"]
+        T_SAMPLE --&gt; INTERP
+        EPSILON --&gt; INTERP["x_t = t*epsilon + (1-t)*action"]
+        PAD_A --&gt; INTERP
+        EPSILON --&gt; VEL_TARGET["u_t = epsilon - action"]
+        PAD_A --&gt; VEL_TARGET
+    end
+
+    subgraph PrefixEmbed["前缀嵌入 (embed_prefix)"]
+        RESIZE --&gt; VE["SigLIP 编码"]
+        VE --&gt; IMG_EMB["图像嵌入 * sqrt(dim)"]
+        TOKENIZE --&gt; LANG_EMB["语言嵌入 * sqrt(dim)"]
+        PAD_S --&gt; STATE_EMB["state_proj"]
+        IMG_EMB --&gt; PREFIX_CAT["拼接: [img | lang | state]"]
+        LANG_EMB --&gt; PREFIX_CAT
+        STATE_EMB --&gt; PREFIX_CAT
+        PREFIX_CAT --&gt; PREFIX["prefix_embs&lt;br/&gt;[B, prefix_len, vlm_hidden]"]
+    end
+
+    subgraph SuffixEmbed["后缀嵌入 (embed_suffix)"]
+        INTERP --&gt; AIN["action_in_proj"]
+        T_SAMPLE --&gt; TIME_EMB["正弦余弦编码"]
+        AIN --&gt; FUSE["concat + action_time_mlp&lt;br/&gt;+ SiLU"]
+        TIME_EMB --&gt; FUSE
+        FUSE --&gt; SUFFIX["suffix_embs&lt;br/&gt;[B, 50, expert_hidden]"]
+    end
+
+    subgraph AttMask["注意力掩码构造"]
+        direction LR
+        AM1["前缀 att_mask: 0&lt;br/&gt;(双向注意力)"]
+        AM2["状态 att_mask: 1&lt;br/&gt;(因果边界)"]
+        AM3["后缀 att_mask: 1&lt;br/&gt;(因果边界)"]
+        AM1 --&gt; MASK_2D["make_att_2d_masks&lt;br/&gt;构造 2D 注意力掩码"]
+        AM2 --&gt; MASK_2D
+        AM3 --&gt; MASK_2D
+    end
+
+    subgraph Forward["联合前向传播"]
+        PREFIX --&gt; VLM_EXP["VLM + Expert&lt;br/&gt;逐层交替处理"]
+        SUFFIX --&gt; VLM_EXP
+        MASK_2D --&gt; VLM_EXP
+        VLM_EXP --&gt; EXPERT_OUT["Expert 输出&lt;br/&gt;取最后 50 个 token"]
+        EXPERT_OUT --&gt; AOUT["action_out_proj&lt;br/&gt;(float32)"]
+        AOUT --&gt; V_PRED["预测速度 v_t"]
+    end
+
+    subgraph LossCalc["损失计算"]
+        V_PRED --&gt; MSE["MSE Loss&lt;br/&gt;||u_t - v_t||^2"]
+        VEL_TARGET --&gt; MSE
+        MSE --&gt; MASK_LOSS["应用 in_episode_bound 掩码&lt;br/&gt;+ 截断至原始 action_dim"]
+        MASK_LOSS --&gt; FINAL_LOSS["最终损失"]
+    end
+
+    style DataPrep fill:#fff3e0,stroke:#FF9800
+    style NoiseSample fill:#e0f7fa,stroke:#00BCD4
+    style PrefixEmbed fill:#e3f2fd,stroke:#2196F3
+    style SuffixEmbed fill:#f3e5f5,stroke:#9C27B0
+    style AttMask fill:#fff8e1,stroke:#FFC107
+    style Forward fill:#e8f5e9,stroke:#4CAF50
+    style LossCalc fill:#fce4ec,stroke:#E91E63
+</div>
+<p><strong>训练时注意力掩码详解：</strong></p>
+<div class="highlight"><pre><span></span><code>前缀 (图像+语言):  att_mask = [0, 0, 0, ..., 0]  -&gt; 双向注意力（互相可见）
+前缀 (状态):       att_mask = [1]                   -&gt; 因果边界（图像/语言不关注状态）
+后缀 (动作+时间):  att_mask = [1, 1, ..., 1]        -&gt; 因果边界（前缀不关注后缀）
+</code></pre></div>
+
+<p>通过 <code>make_att_2d_masks</code> 函数，基于 <code>att_mask</code> 的累积和构造完整的 2D 注意力掩码矩阵。结果是：
+- 图像和语言 token 之间<strong>双向可见</strong>
+- 状态和动作 token 可以看到前面的所有 token
+- 图像和语言 token <strong>无法看到</strong>状态和动作 token</p>
+<hr />
+<h2 id="4-推理流水线">4. 推理流水线<a class="headerlink" href="09.SmolVLA_Architecture.html#4-推理流水线" title="Permanent link">#</a></h2>
+<p>推理时采用两阶段：先计算前缀的 KV Cache（一次），然后通过 10 步欧拉积分迭代去噪后缀。KV Cache 使得前缀只需计算一次，大幅节省推理时间。</p>
+<div class="mermaid">
+graph TB
+    subgraph Phase1["阶段 1: 前缀编码 (一次性)"]
+        IMG_IN["图像"] --&gt; EMB_P["embed_prefix&lt;br/&gt;SigLIP + 语言嵌入 + 状态投影"]
+        LANG_IN["语言指令"] --&gt; EMB_P
+        STATE_IN["机器人状态"] --&gt; EMB_P
+        EMB_P --&gt; VLM_FWD["VLM 前向&lt;br/&gt;fill_kv_cache=True"]
+        VLM_FWD --&gt; KV["KV Cache&lt;br/&gt;(每层的 key_states, value_states)"]
+    end
+
+    subgraph Phase2["阶段 2: 迭代去噪 (10 步欧拉积分)"]
+        INIT["初始化&lt;br/&gt;x_1 ~ N(0, 1)&lt;br/&gt;[B, 50, 32]"]
+        INIT --&gt; STEP1
+
+        subgraph STEP1["Step 1: t=1.0"]
+            E1["embed_suffix(x_t, t)"] --&gt; D1["denoise_step&lt;br/&gt;Expert 前向 + KV Cache"]
+            D1 --&gt; V1["v_1"]
+            V1 --&gt; U1["x_t += dt * v_1&lt;br/&gt;dt = -0.1"]
+        end
+
+        subgraph STEP2["Step 2: t=0.9"]
+            E2["embed_suffix(x_t, t)"] --&gt; D2["denoise_step"]
+            D2 --&gt; V2["v_2"]
+            V2 --&gt; U2["x_t += dt * v_2"]
+        end
+
+        subgraph STEP3["Step 3~9: t=0.8 ... 0.2"]
+            DOTS2["...重复去噪..."]
+        end
+
+        subgraph STEP10["Step 10: t=0.1"]
+            E10["embed_suffix(x_t, t)"] --&gt; D10["denoise_step"]
+            D10 --&gt; V10["v_10"]
+            V10 --&gt; U10["x_t += dt * v_10"]
+        end
+
+        U1 --&gt; STEP2
+        U2 --&gt; STEP3
+        STEP3 --&gt; STEP10
+    end
+
+    KV --&gt;|"传入每步"| D1
+    KV --&gt;|"传入每步"| D2
+    KV --&gt;|"传入每步"| D10
+
+    subgraph Output["输出"]
+        U10 --&gt; UNPAD["截断至原始 action_dim"]
+        UNPAD --&gt; ACTIONS["最终动作轨迹&lt;br/&gt;[B, 50, action_dim]"]
+    end
+
+    style Phase1 fill:#e3f2fd,stroke:#2196F3
+    style Phase2 fill:#e8f5e9,stroke:#4CAF50
+    style STEP1 fill:#f1f8e9,stroke:#8BC34A
+    style STEP2 fill:#f1f8e9,stroke:#8BC34A
+    style STEP3 fill:#f1f8e9,stroke:#8BC34A
+    style STEP10 fill:#f1f8e9,stroke:#8BC34A
+    style Output fill:#fce4ec,stroke:#E91E63
+</div>
+<h3 id="单步去噪详解-denoise_step">单步去噪详解 (denoise_step)<a class="headerlink" href="09.SmolVLA_Architecture.html#单步去噪详解-denoise_step" title="Permanent link">#</a></h3>
+<div class="mermaid">
+graph LR
+    XT["x_t&lt;br/&gt;[B, 50, 32]"] --&gt; AIP["action_in_proj"]
+    TS["timestep t"] --&gt; SIN_COS["正弦余弦编码&lt;br/&gt;[B, expert_hidden]"]
+    AIP --&gt; ACT_EMB["动作嵌入&lt;br/&gt;[B, 50, expert_hidden]"]
+    SIN_COS --&gt; EXPAND["广播&lt;br/&gt;[B, 50, expert_hidden]"]
+    ACT_EMB --&gt; CAT["Concat&lt;br/&gt;[B, 50, expert_hidden*2]"]
+    EXPAND --&gt; CAT
+    CAT --&gt; TML_IN["action_time_mlp_in"]
+    TML_IN --&gt; SILU["SiLU"]
+    SILU --&gt; TML_OUT["action_time_mlp_out"]
+    TML_OUT --&gt; SUFFIX["suffix_embs"]
+
+    SUFFIX --&gt; ATTN["构造注意力掩码&lt;br/&gt;(prefix KV + suffix 2D mask)"]
+    KV["KV Cache"] --&gt; ATTN
+    ATTN --&gt; EXPERT["Expert 前向&lt;br/&gt;(交叉注意力读取 KV Cache)"]
+    EXPERT --&gt; LAST50["取最后 50 token"]
+    LAST50 --&gt; FP32["转为 float32"]
+    FP32 --&gt; AOP["action_out_proj"]
+    AOP --&gt; VT["预测速度 v_t&lt;br/&gt;[B, 50, 32]"]
+
+    style XT fill:#e0f7fa,stroke:#00BCD4
+    style EXPERT fill:#e8f5e9,stroke:#4CAF50
+    style VT fill:#fce4ec,stroke:#E91E63
+</div>
+<p><strong>推理时的注意力掩码：</strong> 后缀的每个 token 可以通过交叉注意力看到前缀 KV Cache 中的所有有效 token（基于 <code>prefix_pad_masks</code>），同时后缀 token 之间通过 <code>suffix_att_masks</code> 控制可见性。</p>
+<hr />
+<h2 id="5-关键超参数表">5. 关键超参数表<a class="headerlink" href="09.SmolVLA_Architecture.html#5-关键超参数表" title="Permanent link">#</a></h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>参数</th>
+<th>默认值</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>模型结构</strong></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>vlm_model_name</code></td>
+<td><code>HuggingFaceTB/SmolVLM2-500M-Video-Instruct</code></td>
+<td>VLM 主干模型</td>
+</tr>
+<tr>
+<td><code>num_vlm_layers</code></td>
+<td>16</td>
+<td>VLM 使用的 Transformer 层数</td>
+</tr>
+<tr>
+<td><code>num_expert_layers</code></td>
+<td>-1 (与 VLM 相同)</td>
+<td>Action Expert 层数</td>
+</tr>
+<tr>
+<td><code>expert_width_multiplier</code></td>
+<td>0.75</td>
+<td>Expert 隐藏维度 = VLM 隐藏维度 * 0.75</td>
+</tr>
+<tr>
+<td><code>self_attn_every_n_layers</code></td>
+<td>2</td>
+<td>每 2 层插入一个自注意力层</td>
+</tr>
+<tr>
+<td><code>attention_mode</code></td>
+<td><code>cross_attn</code></td>
+<td>交叉注意力模式</td>
+</tr>
+<tr>
+<td><strong>输入/输出</strong></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>chunk_size</code></td>
+<td>50</td>
+<td>动作块大小（预测未来 50 步）</td>
+</tr>
+<tr>
+<td><code>n_action_steps</code></td>
+<td>50</td>
+<td>每次执行的动作步数</td>
+</tr>
+<tr>
+<td><code>n_obs_steps</code></td>
+<td>1</td>
+<td>观测步数</td>
+</tr>
+<tr>
+<td><code>max_state_dim</code></td>
+<td>32</td>
+<td>状态向量最大维度（不足补零）</td>
+</tr>
+<tr>
+<td><code>max_action_dim</code></td>
+<td>32</td>
+<td>动作向量最大维度（不足补零）</td>
+</tr>
+<tr>
+<td><strong>图像处理</strong></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>resize_imgs_with_padding</code></td>
+<td>(512, 512)</td>
+<td>图像缩放至 512x512</td>
+</tr>
+<tr>
+<td><code>empty_cameras</code></td>
+<td>0</td>
+<td>空相机数量（用零填充）</td>
+</tr>
+<tr>
+<td><code>add_image_special_tokens</code></td>
+<td>False</td>
+<td>是否添加图像特殊 token</td>
+</tr>
+<tr>
+<td><strong>Flow Matching</strong></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>num_steps</code></td>
+<td>10</td>
+<td>推理去噪步数</td>
+</tr>
+<tr>
+<td>噪声分布</td>
+<td>N(0, 1)</td>
+<td>高斯噪声</td>
+</tr>
+<tr>
+<td>时间步分布</td>
+<td>Beta(1.5, 1.0) * 0.999 + 0.001</td>
+<td>偏向 t 接近 1</td>
+</tr>
+<tr>
+<td><code>min_period</code></td>
+<td>4e-3</td>
+<td>时间步正弦编码最小周期</td>
+</tr>
+<tr>
+<td><code>max_period</code></td>
+<td>4.0</td>
+<td>时间步正弦编码最大周期</td>
+</tr>
+<tr>
+<td><strong>训练设置</strong></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>freeze_vision_encoder</code></td>
+<td>True</td>
+<td>冻结 SigLIP 视觉编码器</td>
+</tr>
+<tr>
+<td><code>train_expert_only</code></td>
+<td>True</td>
+<td>仅训练 Action Expert</td>
+</tr>
+<tr>
+<td><code>train_state_proj</code></td>
+<td>True</td>
+<td>训练状态投影层</td>
+</tr>
+<tr>
+<td><code>optimizer_lr</code></td>
+<td>1e-4</td>
+<td>学习率</td>
+</tr>
+<tr>
+<td><code>optimizer_betas</code></td>
+<td>(0.9, 0.95)</td>
+<td>Adam beta 参数</td>
+</tr>
+<tr>
+<td><code>optimizer_weight_decay</code></td>
+<td>1e-10</td>
+<td>权重衰减</td>
+</tr>
+<tr>
+<td><code>optimizer_grad_clip_norm</code></td>
+<td>10</td>
+<td>梯度裁剪</td>
+</tr>
+<tr>
+<td><code>scheduler_warmup_steps</code></td>
+<td>1,000</td>
+<td>学习率预热步数</td>
+</tr>
+<tr>
+<td><code>scheduler_decay_steps</code></td>
+<td>30,000</td>
+<td>余弦衰减步数</td>
+</tr>
+<tr>
+<td><code>scheduler_decay_lr</code></td>
+<td>2.5e-6</td>
+<td>衰减后最低学习率</td>
+</tr>
+<tr>
+<td><strong>推理优化</strong></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td><code>use_cache</code></td>
+<td>True</td>
+<td>使用 KV Cache 加速推理</td>
+</tr>
+<tr>
+<td><code>tokenizer_max_length</code></td>
+<td>48</td>
+<td>分词器最大长度</td>
+</tr>
+<tr>
+<td><code>prefix_length</code></td>
+<td>-1 (不填充)</td>
+<td>前缀固定长度（-1 表示不填充）</td>
+</tr>
+</tbody>
+</table></div>
+<hr />
+<h2 id="6-关键源文件表">6. 关键源文件表<a class="headerlink" href="09.SmolVLA_Architecture.html#6-关键源文件表" title="Permanent link">#</a></h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>组件</th>
+<th>类名</th>
+<th>文件路径</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>策略封装</td>
+<td><code>SmolVLAPolicy</code></td>
+<td><code>lerobot/policies/smolvla/modeling_smolvla.py:225</code></td>
+</tr>
+<tr>
+<td>核心模型</td>
+<td><code>VLAFlowMatching</code></td>
+<td><code>lerobot/policies/smolvla/modeling_smolvla.py:530</code></td>
+</tr>
+<tr>
+<td>VLM + Expert 封装</td>
+<td><code>SmolVLMWithExpertModel</code></td>
+<td><code>lerobot/policies/smolvla/smolvlm_with_expert.py:61</code></td>
+</tr>
+<tr>
+<td>模型配置</td>
+<td><code>SmolVLAConfig</code></td>
+<td><code>lerobot/policies/smolvla/configuration_smolvla.py:29</code></td>
+</tr>
+<tr>
+<td>注意力掩码工具</td>
+<td><code>make_att_2d_masks</code></td>
+<td><code>lerobot/policies/smolvla/modeling_smolvla.py:102</code></td>
+</tr>
+<tr>
+<td>正弦位置编码</td>
+<td><code>create_sinusoidal_pos_embedding</code></td>
+<td><code>lerobot/policies/smolvla/modeling_smolvla.py:81</code></td>
+</tr>
+<tr>
+<td>RoPE 实现</td>
+<td><code>apply_rope</code></td>
+<td><code>lerobot/policies/smolvla/smolvlm_with_expert.py:28</code></td>
+</tr>
+<tr>
+<td>图像缩放</td>
+<td><code>resize_with_pad</code></td>
+<td><code>lerobot/policies/smolvla/modeling_smolvla.py:135</code></td>
+</tr>
+<tr>
+<td>向量填充</td>
+<td><code>pad_vector</code></td>
+<td><code>lerobot/policies/smolvla/modeling_smolvla.py:157</code></td>
+</tr>
+<tr>
+<td>RTC 处理器</td>
+<td><code>RTCProcessor</code></td>
+<td><code>lerobot/policies/rtc/modeling_rtc.py</code></td>
+</tr>
+</tbody>
+</table></div>
+      </div>
+    </main>
+        <aside class="toc">
+            <div class="toc-title">本页目录</div>
+            <ul>
+                <li><a href="09.SmolVLA_Architecture.html#1-整体架构概览" class="toc-h2">1. 整体架构概览</a></li>
+                <li><a href="09.SmolVLA_Architecture.html#2-核心组件详解" class="toc-h2">2. 核心组件详解</a></li>
+                <li><a href="09.SmolVLA_Architecture.html#21-smolvlm2-500m-视觉语言模型" class="toc-h3">2.1 SmolVLM2-500M 视觉语言模型</a></li>
+                <li><a href="09.SmolVLA_Architecture.html#22-action-expert-网络交叉注意力" class="toc-h3">2.2 Action Expert 网络（交叉注意力）</a></li>
+                <li><a href="09.SmolVLA_Architecture.html#23-flow-matching-扩散机制" class="toc-h3">2.3 Flow Matching 扩散机制</a></li>
+                <li><a href="09.SmolVLA_Architecture.html#24-状态投影与动作投影" class="toc-h3">2.4 状态投影与动作投影</a></li>
+                <li><a href="09.SmolVLA_Architecture.html#3-训练流水线" class="toc-h2">3. 训练流水线</a></li>
+                <li><a href="09.SmolVLA_Architecture.html#4-推理流水线" class="toc-h2">4. 推理流水线</a></li>
+                <li><a href="09.SmolVLA_Architecture.html#单步去噪详解-denoise_step" class="toc-h3">单步去噪详解 (denoise_step)</a></li>
+                <li><a href="09.SmolVLA_Architecture.html#5-关键超参数表" class="toc-h2">5. 关键超参数表</a></li>
+                <li><a href="09.SmolVLA_Architecture.html#6-关键源文件表" class="toc-h2">6. 关键源文件表</a></li>
+            </ul>
+        </aside>
+
+    <button class="back-to-top" onclick="window.scrollTo({top:0,behavior:'smooth'})">&#8593;</button>
+
+    <script src="assets/vendor/mermaid/mermaid.min.js"></script>
+    <script defer src="assets/vendor/katex/katex.min.js"></script>
+    <script defer src="assets/vendor/katex/auto-render.min.js"
+            onload="renderMathInElement(document.querySelector('.content-inner'), {
+                delimiters: [
+                    { left: '$$', right: '$$', display: true },
+                    { left: '$', right: '$', display: false }
+                ],
+                ignoredTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code', 'option'],
+                ignoredClasses: ['mermaid', 'diagram'],
+                throwOnError: false
+            });"></script>
+    <script>
+        // Mermaid destroys the source text when it renders, so keep a copy in
+        // order to re-render on theme change.
+        document.querySelectorAll('.mermaid').forEach(el => {
+            el.dataset.src = el.textContent;
+        });
+
+        const prefersDark = window.matchMedia('(prefers-color-scheme: dark)');
+        function currentTheme() {
+            const forced = document.documentElement.getAttribute('data-theme');
+            if (forced) return forced;
+            return prefersDark.matches ? 'dark' : 'light';
+        }
+
+        function initMermaid() {
+            mermaid.initialize({
+                startOnLoad: false,
+                theme: currentTheme() === 'dark' ? 'dark' : 'default',
+                flowchart: { useMaxWidth: true, htmlLabels: true },
+                securityLevel: 'loose'
+            });
+        }
+
+        function renderMermaid() {
+            const nodes = document.querySelectorAll('.mermaid');
+            nodes.forEach(el => {
+                el.removeAttribute('data-processed');
+                el.textContent = el.dataset.src;
+            });
+            // mermaid.run rejects on its internal font probe in some browsers;
+            // the diagrams still render, so swallow it rather than surfacing an
+            // unhandled rejection.
+            if (!nodes.length) return;
+            Promise.resolve(mermaid.run({ nodes: nodes }))
+                .catch(() => {})
+                .then(() => nodes.forEach(applyZoom));
+        }
+
+        /* ---------- Diagram zoom ----------
+           Scale is tracked as a factor of the diagram's NATURAL size (its
+           viewBox), so 100% means 1:1 and one font size looks identical in
+           every diagram on the site. Left to itself mermaid's useMaxWidth
+           stretches each svg to the container, which blows a 3-node diagram
+           up to 3.4x and shrinks a wide one to 0.34x — a 10x spread in
+           apparent font size. FIT_MAX caps the auto-fit at 1:1 (never
+           upscale) and FIT_MIN stops wide diagrams from shrinking to
+           unreadable; anything past that overflows and scrolls/pans. */
+        const MIN_Z = 0.3, MAX_Z = 6, STEP = 1.25;
+        const FIT_MIN = 0.55, FIT_MAX = 1;
+        const PAD = 40;               // .mermaid horizontal padding (20px each side)
+        const zoom = new WeakMap();   // .mermaid -> explicit scale; absent = auto-fit
+
+        function naturalSize(svg) {
+            const vb = svg.viewBox && svg.viewBox.baseVal;
+            if (vb && vb.width) return { w: vb.width, h: vb.height };
+            const r = svg.getBoundingClientRect();
+            return { w: r.width, h: r.height };
+        }
+
+        function fitScale(el, nat) {
+            const avail = el.clientWidth - PAD;
+            if (!nat.w || avail <= 0) return 1;
+            return Math.min(FIT_MAX, Math.max(FIT_MIN, avail / nat.w));
+        }
+
+        function scaleOf(el, nat) {
+            const k = zoom.get(el);
+            return k === undefined ? fitScale(el, nat) : k;
+        }
+
+        function applyZoom(el) {
+            const svg = el.querySelector('svg');
+            if (!svg) return;
+            const nat = naturalSize(svg);
+            if (!nat.w) return;
+            const k = scaleOf(el, nat);
+
+            const label = el.closest('.diagram')?.querySelector('.diagram-zoom');
+            if (label) label.textContent = Math.round(k * 100) + '%';
+
+            // Size the svg explicitly instead of leaving it to useMaxWidth,
+            // so the container gets real scrollbars when the diagram overflows.
+            svg.style.maxWidth = 'none';
+            svg.style.width = (nat.w * k) + 'px';
+            svg.style.height = (nat.h * k) + 'px';
+
+            const overflows = nat.w * k > el.clientWidth - PAD + 1;
+            el.classList.toggle('is-zoomed', overflows);
+            if (!overflows) el.scrollLeft = el.scrollTop = 0;
+        }
+
+        function setZoom(el, k, anchor) {
+            const svg = el.querySelector('svg');
+            if (!svg) return;
+            const nat = naturalSize(svg);
+            const prev = scaleOf(el, nat);
+            if (k !== null) k = Math.min(MAX_Z, Math.max(MIN_Z, k));
+            const next = k === null ? fitScale(el, nat) : k;
+            if (next === prev) return;
+            // Keep the point under the cursor (or the viewport centre) put.
+            const ax = anchor ? anchor.x : el.clientWidth / 2;
+            const ay = anchor ? anchor.y : el.clientHeight / 2;
+            const rx = (el.scrollLeft + ax) / prev;
+            const ry = (el.scrollTop + ay) / prev;
+            if (k === null) zoom.delete(el); else zoom.set(el, k);
+            applyZoom(el);
+            el.scrollLeft = rx * next - ax;
+            el.scrollTop = ry * next - ay;
+        }
+
+        function currentScale(el) {
+            const svg = el.querySelector('svg');
+            return svg ? scaleOf(el, naturalSize(svg)) : 1;
+        }
+
+        function setupDiagrams() {
+            document.querySelectorAll('.mermaid').forEach(el => {
+                const wrap = document.createElement('div');
+                wrap.className = 'diagram';
+                el.parentNode.insertBefore(wrap, el);
+                wrap.appendChild(el);
+
+                const tools = document.createElement('div');
+                tools.className = 'diagram-tools';
+                tools.innerHTML =
+                    '<button type="button" data-act="out" title="缩小">&minus;</button>' +
+                    '<span class="diagram-zoom">100%</span>' +
+                    '<button type="button" data-act="in" title="放大">+</button>' +
+                    '<button type="button" data-act="reset" title="适应宽度">&#9633;</button>' +
+                    '<button type="button" data-act="full" title="全屏">&#10530;</button>';
+                wrap.appendChild(tools);
+
+                tools.addEventListener('click', e => {
+                    const act = e.target.closest('button')?.dataset.act;
+                    if (!act) return;
+                    const k = currentScale(el);
+                    if (act === 'in') setZoom(el, k * STEP);
+                    else if (act === 'out') setZoom(el, k / STEP);
+                    else if (act === 'reset') setZoom(el, null);
+                    else if (act === 'full') {
+                        if (document.fullscreenElement === wrap) document.exitFullscreen();
+                        else wrap.requestFullscreen?.();
+                    }
+                });
+
+                // Ctrl/⌘ + wheel zooms; a plain wheel keeps scrolling the page.
+                el.addEventListener('wheel', e => {
+                    if (!e.ctrlKey && !e.metaKey) return;
+                    e.preventDefault();
+                    const r = el.getBoundingClientRect();
+                    setZoom(el, currentScale(el) * (e.deltaY < 0 ? STEP : 1 / STEP),
+                            { x: e.clientX - r.left, y: e.clientY - r.top });
+                }, { passive: false });
+
+                // Drag to pan once zoomed in.
+                let drag = null;
+                el.addEventListener('pointerdown', e => {
+                    // Pan only matters once the diagram actually overflows.
+                    if (e.button !== 0 || !el.classList.contains('is-zoomed')) return;
+                    drag = { x: e.clientX, y: e.clientY, l: el.scrollLeft, t: el.scrollTop };
+                    el.setPointerCapture(e.pointerId);
+                    el.classList.add('is-panning');
+                });
+                el.addEventListener('pointermove', e => {
+                    if (!drag) return;
+                    el.scrollLeft = drag.l - (e.clientX - drag.x);
+                    el.scrollTop = drag.t - (e.clientY - drag.y);
+                });
+                const endDrag = () => { drag = null; el.classList.remove('is-panning'); };
+                el.addEventListener('pointerup', endDrag);
+                el.addEventListener('pointercancel', endDrag);
+
+                // Double click toggles between auto-fit and true 1:1.
+                el.addEventListener('dblclick', () => setZoom(el, zoom.has(el) ? null : 1));
+            });
+        }
+
+        setupDiagrams();
+        initMermaid();
+        renderMermaid();
+
+        const remeasure = () => document.querySelectorAll('.mermaid').forEach(applyZoom);
+        document.addEventListener('fullscreenchange', remeasure);
+        window.addEventListener('resize', remeasure);
+
+        // Theme toggle
+        const toggle = document.getElementById('theme-toggle');
+        toggle.addEventListener('click', () => {
+            const next = currentTheme() === 'dark' ? 'light' : 'dark';
+            document.documentElement.setAttribute('data-theme', next);
+            try { localStorage.setItem('theme', next); } catch (e) {}
+            initMermaid();
+            renderMermaid();
+        });
+
+        // Follow the OS while the user hasn't made an explicit choice
+        prefersDark.addEventListener('change', () => {
+            if (!document.documentElement.getAttribute('data-theme')) {
+                initMermaid();
+                renderMermaid();
+            }
+        });
+
+        // Back to top button
+        const btn = document.querySelector('.back-to-top');
+        window.addEventListener('scroll', () => {
+            btn.classList.toggle('visible', window.scrollY > 300);
+        });
+
+        // Close sidebar on mobile when clicking a link
+        document.querySelectorAll('.sidebar nav a').forEach(a => {
+            a.addEventListener('click', () => {
+                document.querySelector('.sidebar').classList.remove('open');
+            });
+        });
+
+        // Highlight the TOC entry for the heading currently in view
+        const tocLinks = Array.from(document.querySelectorAll('.toc a'));
+        if (tocLinks.length) {
+            const targets = tocLinks
+                .map(a => document.getElementById(decodeURIComponent(a.hash.slice(1))))
+                .filter(Boolean);
+            const setActive = () => {
+                let current = targets[0];
+                for (const t of targets) {
+                    if (t.getBoundingClientRect().top <= 120) current = t;
+                    else break;
+                }
+                tocLinks.forEach(a => a.classList.toggle(
+                    'active',
+                    current && decodeURIComponent(a.hash.slice(1)) === current.id
+                ));
+            };
+            setActive();
+            let queued = false;
+            window.addEventListener('scroll', () => {
+                if (queued) return;
+                queued = true;
+                requestAnimationFrame(() => { setActive(); queued = false; });
+            });
+        }
+    </script>
+</body>
+</html>

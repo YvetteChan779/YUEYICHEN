@@ -1,0 +1,1118 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MotionBricks - Robotics Knowledge Base</title>
+    <link rel="icon" href="favicon.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="assets/vendor/katex/katex.min.css">
+    <script>
+        // Applied before first paint so the saved theme doesn't flash.
+        (function () {
+            try {
+                var t = localStorage.getItem('theme');
+                if (t === 'dark' || t === 'light') {
+                    document.documentElement.setAttribute('data-theme', t);
+                }
+            } catch (e) {}
+        })();
+    </script>
+</head>
+<body>
+    <button class="menu-toggle" onclick="document.querySelector('.sidebar').classList.toggle('open')">&#9776;</button>
+    <button class="theme-toggle" id="theme-toggle" title="切换日夜模式" aria-label="切换日夜模式">
+        <span class="icon-light">&#9790;</span><span class="icon-dark">&#9728;</span>
+    </button>
+
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <h2>Robotics Knowledge Base</h2>
+            <p>机器人模型架构知识库</p>
+        </div>
+        <nav>
+            <a href="index.html">Overview</a>
+            <div class="nav-group">VLA 模型</div>
+            <a href="01.Pi0_Architecture.html">Pi0</a>
+            <a href="02.Pi0.5_Architecture.html">Pi0.5</a>
+            <a href="03.Pi0-FAST_Architecture.html">Pi0-FAST</a>
+            <a href="04.Pi-Star-0.6_Architecture.html">π*₀.₆ (Pi-Star-0.6)</a>
+            <a href="05.Pi0.7_Architecture.html">π₀.₇ (Pi-0.7)</a>
+            <a href="06.Isaac-GR00T-N1.6_Architecture.html">Isaac-GR00T N1.6</a>
+            <a href="07.Isaac-GR00T-N1.5_Architecture.html">Isaac-GR00T N1.5</a>
+            <a href="08.ACT_Architecture.html">ACT</a>
+            <a href="09.SmolVLA_Architecture.html">SmolVLA</a>
+            <a href="10.WALL-OSS_Architecture.html">WALL-OSS / WALL-X</a>
+            <a href="11.X-VLA_Architecture.html">X-VLA</a>
+            <a href="12.Psi0_Architecture.html">Psi0 (ψ₀)</a>
+            <a href="13.DreamZero_Architecture.html">DreamZero</a>
+            <a href="14.FastWAM_Architecture.html">Fast-WAM</a>
+            <div class="nav-group">全身控制 (WBC)</div>
+            <a href="15.GR00T-WBC_Overview.html">GR00T-WBC 总览</a>
+            <a href="16.Decoupled-WBC_Architecture.html" class="nav-child">Decoupled WBC</a>
+            <a href="17.GEAR-SONIC_Architecture.html" class="nav-child">GEAR-SONIC</a>
+            <a href="18.MotionBricks_Architecture.html" class="nav-child active">MotionBricks</a>
+            <div class="nav-group">3D 视觉与 VLM</div>
+            <a href="19.VLM3_Architecture.html">VLM³</a>
+        </nav>
+    </aside>
+
+    <main class="content">
+      <div class="content-inner">
+        <h1 id="motionbricks-架构">MotionBricks 架构<a class="headerlink" href="18.MotionBricks_Architecture.html#motionbricks-架构" title="Permanent link">#</a></h1>
+<h2 id="1-整体架构概览">1. 整体架构概览<a class="headerlink" href="18.MotionBricks_Architecture.html#1-整体架构概览" title="Permanent link">#</a></h2>
+<p>MotionBricks(arXiv:2604.24833,Tingwu Wang 等,2026)是 GR00T-WholeBodyControl 里的<strong>运动生成</strong>层 —— 它不控制机器人,它<strong>生产机器人要跟踪的运动</strong>。给定几帧上下文和一个方向/风格指令,它在毫秒级内合成一段物理合理的 G1 全身运动,吞吐达到 <strong>15,000 FPS</strong> 的零样本合成速度。</p>
+<p>架构上是<strong>三个模型串成一条链</strong>:</p>
+<ol>
+<li><strong>VQVAE</strong> —— 运动分词器。把一段运动压成若干离散 token,再解回来。先单独训练,之后冻结。</li>
+<li><strong>Root 模型</strong> —— 先决定"走到哪、朝哪、用几个 token",输出全局根轨迹。<strong>不依赖 VQVAE</strong>。</li>
+<li><strong>Pose 模型</strong> —— 以 root 轨迹为条件,用掩码 token 生成的方式补出姿态 token 序列,再送进 VQVAE 解码器还原成运动。</li>
+</ol>
+<div class="mermaid">
+graph TB
+    subgraph Input["输入 (8 帧约束)"]
+        GR["global_root_values&lt;br/&gt;[B, 8, 5]"]
+        LR["local_root_values&lt;br/&gt;[B, 8, 4]"]
+        LP["local_poses&lt;br/&gt;[B, 8, 413]"]
+        MASK["has_* 掩码&lt;br/&gt;(哪些帧是硬约束)"]
+        NT["num_tokens"]
+        TXT["text_embeddings (可选)"]
+    end
+
+    subgraph Chain["三模型链"]
+        ROOT["Root 模型&lt;br/&gt;n_embd 512, 16 head&lt;br/&gt;3 层共享 + 3 层 root-token&lt;br/&gt;预测 num_tokens + 根轨迹"]
+        POSE["Pose 模型&lt;br/&gt;n_embd 1024, 16 head, 16 层&lt;br/&gt;掩码 token 生成&lt;br/&gt;masked_token_ratio 0.8"]
+        VQD["VQVAE 解码器&lt;br/&gt;z, c → 运动&lt;br/&gt;c = 边界值 + root 外部条件"]
+    end
+
+    subgraph Output["输出"]
+        FEAT["motion features&lt;br/&gt;[T, 418]"]
+        QPOS["mujoco_qpos_converter&lt;br/&gt;→ [T, 36]"]
+    end
+
+    ENV["MuJoCo 可视化 / SONIC 跟踪"]
+
+    GR --&gt; ROOT
+    LR --&gt; ROOT
+    LP --&gt; ROOT
+    MASK --&gt; ROOT
+    NT --&gt; ROOT
+    TXT --&gt; POSE
+    ROOT --&gt;|root 轨迹 + token 数| POSE
+    POSE --&gt;|pose tokens| VQD
+    ROOT --&gt;|root 作为外部条件| VQD
+    VQD --&gt; FEAT --&gt; QPOS --&gt; ENV
+
+    style ROOT fill:#e1f5ff
+    style POSE fill:#fff4e1
+    style VQD fill:#e8f5e9
+</div>
+<p>"先根后姿"的分解是整个设计的核心:根轨迹是<strong>低维、强物理约束、可被用户直接指定</strong>的(走到哪儿是用户说了算),姿态是<strong>高维、多解、需要生成模型</strong>的。把它们拆开之后,交互式控制只需要改 root 的输入,pose 模型自动适配。</p>
+<hr />
+<h2 id="2-运动表征">2. 运动表征<a class="headerlink" href="18.MotionBricks_Architecture.html#2-运动表征" title="Permanent link">#</a></h2>
+<h3 id="21-dualrootglobaljoints-on-g1skeleton34">2.1 <code>DualRootGlobalJoints</code> on <code>G1Skeleton34</code><a class="headerlink" href="18.MotionBricks_Architecture.html#21-dualrootglobaljoints-on-g1skeleton34" title="Permanent link">#</a></h3>
+<p>骨架 <code>G1Skeleton34</code> = Unitree G1 的 32 个关节 + 2 个虚拟脚趾关节(仅用于足部接触检测,真机不驱动)。</p>
+<p>每帧特征 <strong>418 维</strong>,由三块组成:</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>块</th>
+<th>维度</th>
+<th>内容</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Body</strong></td>
+<td><strong>409</strong></td>
+<td>见下表,全局/局部两种表示共享</td>
+</tr>
+<tr>
+<td>Global root</td>
+<td>5</td>
+<td><code>global_root_pos</code>(3)+ <code>global_root_heading</code> cos/sin(2)</td>
+</tr>
+<tr>
+<td>Local root</td>
+<td>4</td>
+<td><code>local_root_rot_vel</code>(1)+ <code>local_root_vel</code> XZ(2)+ <code>global_root_y</code> 高度(1)</td>
+</tr>
+</tbody>
+</table></div>
+<p>Body 409 的细分:</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>特征</th>
+<th>维度</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>ric_data</code></td>
+<td>99</td>
+<td>33 个非根关节的全局位置,<strong>逐帧减去根的 XZ 投影</strong></td>
+</tr>
+<tr>
+<td><code>global_rot_data</code></td>
+<td>204</td>
+<td>34 个关节的<strong>世界系</strong> 6D 连续旋转(34 × 6)</td>
+</tr>
+<tr>
+<td><code>local_vel</code></td>
+<td>102</td>
+<td>34 关节的世界系速度(位置有限差分)。名字里的 <code>local_</code> 是历史遗留 —— <code>removing_heading=False</code>,<strong>没有</strong>做朝向旋转</td>
+</tr>
+<tr>
+<td><code>foot_contacts</code></td>
+<td>4</td>
+<td>左踝、左趾、右踝、右趾的二值接触</td>
+</tr>
+</tbody>
+</table></div>
+<p>三种组合:</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>表示</th>
+<th>公式</th>
+<th>总维</th>
+<th>使用者</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>GlobalRootGlobalJoints</code></td>
+<td>5 + 409</td>
+<td><strong>414</strong></td>
+<td><strong>Root 模型</strong>、数据加载器</td>
+</tr>
+<tr>
+<td><code>LocalRootGlobalJoints</code></td>
+<td>4 + 409</td>
+<td><strong>413</strong></td>
+<td><strong>Pose / 分词器模块</strong></td>
+</tr>
+<tr>
+<td><code>DualRootGlobalJoints</code></td>
+<td>5 + 4 + 409</td>
+<td><strong>418</strong></td>
+<td>完整表示</td>
+</tr>
+</tbody>
+</table></div>
+<p>两个子集通过 <code>dual_rep.global_to_local</code> / <code>local_to_global</code> <strong>无损互转</strong>。数据加载器返回的永远是 global(414),训练步里按需转成 local。</p>
+<p>为什么 root 模型用 global、pose 模型用 local?因为 root 模型的职责就是<strong>精确的全局位置控制</strong>(用户要机器人走到某个坐标),必须直接看世界系;pose 模型只关心"相对于当前根,身体怎么动",用局部速度表示对平移/旋转不变,泛化更好。</p>
+<h3 id="22-没有固定朝向规范化">2.2 没有固定朝向规范化<a class="headerlink" href="18.MotionBricks_Architecture.html#22-没有固定朝向规范化" title="Permanent link">#</a></h3>
+<p>这是 MotionBricks 与大多数运动生成工作的一个明显区别。它<strong>不</strong>把每段运动旋转到统一朝向,而是:</p>
+<div class="highlight"><pre><span></span><code>change_first_heading(..., first_heading_angle)
+  训练: first_heading_angle ~ Uniform(0, 2π)      → 随机朝向
+  推理: first_heading_angle = 0                    → 确定性
+</code></pre></div>
+
+<p>效果是把首帧根 XZ 放到原点(高度 Y 保留),并整体旋转到目标朝向。既然训练时模型见过所有朝向,预先规范化就没有额外收益,反而引入一次多余的坐标变换。</p>
+<h3 id="23-归一化与坐标系">2.3 归一化与坐标系<a class="headerlink" href="18.MotionBricks_Architecture.html#23-归一化与坐标系" title="Permanent link">#</a></h3>
+<p>z-score,<code>eps = 1e-5</code>:</p>
+<div class="highlight"><pre><span></span><code>normalized = (feature - mean) / sqrt(std² + eps)
+</code></pre></div>
+
+<p><code>mean.npy</code> / <code>std.npy</code> 存在每个 checkpoint 的 <code>stats/motion/</code> 目录下。</p>
+<p><strong>坐标系是最容易出错的地方</strong>:</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>空间</th>
+<th>Up</th>
+<th>Forward</th>
+<th>手性</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Motion(MotionBricks 内部)</td>
+<td><strong>Y</strong></td>
+<td><strong>Z</strong></td>
+<td>右手</td>
+</tr>
+<tr>
+<td>MuJoCo</td>
+<td><strong>Z</strong></td>
+<td><strong>X</strong></td>
+<td>右手</td>
+</tr>
+</tbody>
+</table></div>
+<p>转换关系:<code>Motion X = MuJoCo Y</code>,<code>Motion Y = MuJoCo Z</code>,<code>Motion Z = MuJoCo X</code>。</p>
+<p>输出的 MuJoCo <code>qpos</code> 是 <strong>36 维</strong>:</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>索引</th>
+<th>内容</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0–2</td>
+<td>根平移 (x, y, z)</td>
+</tr>
+<tr>
+<td>3–6</td>
+<td>根四元数 (w, x, y, z)</td>
+</tr>
+<tr>
+<td>7–35</td>
+<td>29 个铰链关节角</td>
+</tr>
+</tbody>
+</table></div>
+<p>34 关节的运动表示 ↔ 29 DoF 的 MuJoCo 模型由 <code>mujoco_qpos_converter</code> 负责映射(差的 5 个:2 个虚拟脚趾 + 3 个骨架里有但 MuJoCo 模型未建的自由度)。</p>
+<hr />
+<h2 id="3-三个模型详解">3. 三个模型详解<a class="headerlink" href="18.MotionBricks_Architecture.html#3-三个模型详解" title="Permanent link">#</a></h2>
+<h3 id="31-vqvae运动分词器">3.1 VQVAE:运动分词器<a class="headerlink" href="18.MotionBricks_Architecture.html#31-vqvae运动分词器" title="Permanent link">#</a></h3>
+<p><code>motionbricks/vqvae/neural_modules/vqvae.py</code> 的接口约定很直白:</p>
+<ul>
+<li><strong>编码器</strong>:无条件,<code>x → z</code>。</li>
+<li><strong>解码器</strong>:有条件,<code>(z, c) → x</code>,其中 <code>c</code> = <strong>目标条件</strong>(边界值,即片段首尾的锚点)+ <strong>外部条件</strong>(pose VQVAE 用的是 root 值)。</li>
+</ul>
+<p>配置(<code>out/motionbricks_vqvae/version_1/config.yaml</code>):</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>项</th>
+<th>值</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>encoder_state_dim</code></td>
+<td>241</td>
+</tr>
+<tr>
+<td><code>decoder_state_dim</code></td>
+<td>329</td>
+</tr>
+<tr>
+<td><code>decoder_target_cond_dim</code></td>
+<td>241</td>
+</tr>
+<tr>
+<td><code>decoder_external_cond_dim</code></td>
+<td>2</td>
+</tr>
+<tr>
+<td><code>quantizer_strategy</code></td>
+<td><code>multihead_ema_reset</code></td>
+</tr>
+<tr>
+<td><code>quantizer_mu</code></td>
+<td>0.99</td>
+</tr>
+<tr>
+<td><code>nb_code</code></td>
+<td><strong>100,000,000</strong></td>
+</tr>
+<tr>
+<td><code>code_dim</code></td>
+<td>256</td>
+</tr>
+<tr>
+<td><code>num_heads</code></td>
+<td>8</td>
+</tr>
+<tr>
+<td><code>down_t</code> / <code>stride_t</code></td>
+<td>2 / 2</td>
+</tr>
+<tr>
+<td><code>width</code> / <code>depth</code></td>
+<td>512 / 4</td>
+</tr>
+<tr>
+<td><code>min_tokens</code> / <code>max_tokens</code></td>
+<td>6 / 16</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>一亿码本是怎么来的?</strong> <code>quantize_cnn_multihead.py</code> 的 <code>QuantizeEMAResetMultiHead</code>:</p>
+<div class="highlight"><pre><span></span><code><span class="n">nb_code_per_head</span> <span class="o">=</span> <span class="nb">round</span><span class="p">(</span><span class="mi">2</span> <span class="o">**</span> <span class="p">(</span><span class="n">math</span><span class="o">.</span><span class="n">log2</span><span class="p">(</span><span class="n">nb_code</span><span class="p">)</span> <span class="o">/</span> <span class="n">num_heads</span><span class="p">))</span>
+<span class="k">assert</span> <span class="n">nb_code_per_head</span> <span class="o">**</span> <span class="n">num_heads</span> <span class="o">==</span> <span class="n">nb_code</span>
+<span class="n">codebook_dim</span> <span class="o">=</span> <span class="n">code_dim</span> <span class="o">//</span> <span class="n">num_heads</span>
+</code></pre></div>
+
+<p>代入:<code>log2(1e8) / 8 = 3.3219</code>,<code>2^3.3219 ≈ 10</code>,<code>10^8 = 100,000,000</code> ✓。也就是说<strong>每个头只有 10 个码字,码字维度 32</strong>,8 个头组合出 10⁸ 的有效词表。索引通过 <code>from_mh_indices_to_overall_indices</code> 做 10 进制打包。</p>
+<p>这是绕过码本坍塌的经典手法:真去维护一亿个 256 维码字既不可训练也不可存储,而 8 × 10 个 32 维码字总共只有 80 个向量,EMA 更新充分、每个码字都被高频访问。表达力则来自组合爆炸。</p>
+<p><code>ema_reset</code> 是配套的:长期未被使用的码字被重置到当前 batch 的某个编码上,<code>mu = 0.99</code> 是 EMA 动量。</p>
+<p><strong>损失项</strong>:</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>项</th>
+<th>系数</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>commit_loss_coeff</code></td>
+<td>0.02</td>
+</tr>
+<tr>
+<td><code>skate_contact_loss_coeff</code></td>
+<td>0.01</td>
+</tr>
+<tr>
+<td><code>joint_vel_loss_coeff</code></td>
+<td><strong>2.0</strong></td>
+</tr>
+</tbody>
+</table></div>
+<p><code>joint_vel_loss</code> 系数是重建之外最大的一项 —— 运动质量的主观感受高度依赖速度连续性,位置对了但速度抖动的运动看起来是"卡顿的"。<code>skate_contact_loss</code> 惩罚脚在接触状态下的水平滑移(滑步是运动生成的典型 artifact)。另有关键帧预热 200,000 步,以及 1.0 s 窗口内的 <code>min_joint_height_within_windows</code> 地板约束。</p>
+<p><strong>训练</strong>:<code>AdamAtan2</code>,lr 2e-4 + WarmupCosine(warmup 10,000,<code>max_steps</code> 2,000,001,final lr 4e-6),8 GPU × 4 节点 DDP,fp32,梯度裁剪 0.5,batch 128。数据 <code>motionbricks-G1</code> @30 fps,<code>MaxDurationRandomCrop max_seconds: 30</code>,<code>randomize_first_heading: true</code>。</p>
+<h3 id="32-root-模型先定轨迹">3.2 Root 模型:先定轨迹<a class="headerlink" href="18.MotionBricks_Architecture.html#32-root-模型先定轨迹" title="Permanent link">#</a></h3>
+<p><code>out/motionbricks_root/version_1/config.yaml</code>:</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>项</th>
+<th>值</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>n_embd</code></td>
+<td>512</td>
+</tr>
+<tr>
+<td><code>n_head</code></td>
+<td>16</td>
+</tr>
+<tr>
+<td><code>n_layers_shared</code></td>
+<td>3</td>
+</tr>
+<tr>
+<td><code>n_layers_root_token</code></td>
+<td>3</td>
+</tr>
+<tr>
+<td><code>pose_feat_dim</code></td>
+<td>256</td>
+</tr>
+<tr>
+<td><code>local_root_feat_dim</code> / <code>global_root_feat_dim</code></td>
+<td>64 / 64</td>
+</tr>
+<tr>
+<td><code>use_hard_num_token_emb_for_root_prediction</code></td>
+<td>true</td>
+</tr>
+<tr>
+<td><code>num_token_loss_coeff</code></td>
+<td>1.0</td>
+</tr>
+<tr>
+<td><code>global_root_loss_coeff</code></td>
+<td><strong>2.0</strong></td>
+</tr>
+<tr>
+<td><code>local_root_loss_coeff</code></td>
+<td>1.0</td>
+</tr>
+<tr>
+<td><code>prob_provide_text_emb</code></td>
+<td><strong>0.0</strong></td>
+</tr>
+<tr>
+<td>训练规模</td>
+<td>8 GPU × 2 节点</td>
+</tr>
+</tbody>
+</table></div>
+<p>三个输出头:</p>
+<ol>
+<li><strong><code>num_tokens</code></strong> —— 这段运动该用几个 token(范围 [6, 16])。等价于预测运动时长,因为 token 数 × 下采样率 = 帧数。</li>
+<li><strong>全局根轨迹</strong>(损失权重 2.0)—— 世界系位置 + 朝向。</li>
+<li><strong>局部根轨迹</strong>(损失权重 1.0)—— 速度形式。</li>
+</ol>
+<p><code>use_hard_num_token_emb_for_root_prediction: true</code>:预测出的 <code>num_tokens</code> 以<strong>硬 embedding</strong>(而非软权重)反馈进根轨迹预测。因为根轨迹的形状强依赖于时长 —— 同样的起点终点,给 6 个 token 和给 16 个 token 应当是完全不同的速度曲线。</p>
+<p><code>prob_provide_text_emb: 0.0</code> —— <strong>root 模型完全不看文本</strong>。风格/语义只影响姿态,不影响"走到哪儿"。这个分工很干净。</p>
+<p>推理时有一条断言:<strong>root 模型不是 tokenized 的</strong>(<code>motion_inference.py</code>),它直接回归连续值,不经过 VQVAE。</p>
+<h3 id="33-pose-模型掩码-token-生成">3.3 Pose 模型:掩码 token 生成<a class="headerlink" href="18.MotionBricks_Architecture.html#33-pose-模型掩码-token-生成" title="Permanent link">#</a></h3>
+<p><code>out/motionbricks_pose/version_1/config.yaml</code>:</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>项</th>
+<th>值</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>n_embd</code></td>
+<td>1024</td>
+</tr>
+<tr>
+<td><code>n_head</code></td>
+<td>16</td>
+</tr>
+<tr>
+<td><code>n_layers</code></td>
+<td>16</td>
+</tr>
+<tr>
+<td><code>root_feat_width</code></td>
+<td>256</td>
+</tr>
+<tr>
+<td><code>pose_feat_width</code></td>
+<td>640</td>
+</tr>
+<tr>
+<td><code>token_length_feat_width</code></td>
+<td>128</td>
+</tr>
+<tr>
+<td><code>text_emb_dim</code></td>
+<td><strong>4096</strong></td>
+</tr>
+<tr>
+<td><code>masked_token_ratio</code></td>
+<td><strong>0.8</strong></td>
+</tr>
+<tr>
+<td><code>max_num_start/end_keyframes</code></td>
+<td>4 / 4</td>
+</tr>
+<tr>
+<td><code>max_num_middle_keyframes</code></td>
+<td>8</td>
+</tr>
+<tr>
+<td><code>no_middle_keyframe_prob</code></td>
+<td>0.5</td>
+</tr>
+<tr>
+<td><code>prob_provide_text_emb</code></td>
+<td><strong>0.2</strong></td>
+</tr>
+<tr>
+<td>lr</td>
+<td>1e-4</td>
+</tr>
+</tbody>
+</table></div>
+<p>它加载冻结的 VQVAE:</p>
+<div class="highlight"><pre><span></span><code><span class="nt">vqvae_model_ckpt_path</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">out/motionbricks_vqvae/version_1/checkpoints/model-step=2000000.ckpt</span>
+</code></pre></div>
+
+<p><strong>掩码比例 0.8</strong> 意味着训练时平均 80% 的 token 被遮住 —— 这是 MaskGIT 风格的生成范式,推理时可以从全掩码开始迭代式地填充,也可以只掩住中间段做 in-betweening。</p>
+<p><strong>关键帧调度</strong>是这个模型的可控性来源:训练时随机采样起始关键帧(≤4)、结束关键帧(≤4)、中间关键帧(≤8),并且有 50% 概率完全没有中间关键帧。这让同一个模型同时支持:</p>
+<ul>
+<li>只给起点 → 自由续写</li>
+<li>给起点 + 终点 → in-betweening</li>
+<li>给起点 + 若干中间点 + 终点 → 精确路径跟随</li>
+</ul>
+<p><strong>文本条件只有 20% 概率提供</strong>(<code>prob_provide_text_emb: 0.2</code>),<code>text_emb_dim: 4096</code>。低概率是刻意的 —— 保证模型在无文本时仍能正常工作(交互式 demo 就不用文本),文本只是一个可选的风格调节器。</p>
+<hr />
+<h2 id="4-推理流水线">4. 推理流水线<a class="headerlink" href="18.MotionBricks_Architecture.html#4-推理流水线" title="Permanent link">#</a></h2>
+<p><code>motionbricks/motion_backbone/inference/motion_inference.py</code>。全局常量:</p>
+<div class="highlight"><pre><span></span><code><span class="n">BATCH_SIZE</span> <span class="o">=</span> <span class="mi">1</span>
+<span class="n">EXTERNAL_POSE_FEATURE_MODE</span> <span class="o">=</span> <span class="s2">&quot;joint_positions_and_rotations&quot;</span>
+<span class="n">INTERNAL_POSE_FEATURE_MODE</span> <span class="o">=</span> <span class="s2">&quot;joint_positions_and_rotations_and_hip_height&quot;</span>
+<span class="n">EPS</span> <span class="o">=</span> <span class="mf">1e-5</span>
+</code></pre></div>
+
+<p>外部/内部特征模式的差异只在 <code>hip_height</code> —— 对外暴露的接口不需要用户提供髋高,内部会补上。</p>
+<p><code>predict()</code> 五步:</p>
+<div class="mermaid">
+sequenceDiagram
+    participant U as 调用方
+    participant MI as MotionInference
+    participant R as Root 模型
+    participant P as Pose 模型
+    participant V as VQVAE 解码器
+
+    U-&gt;&gt;MI: global_root_values [B,8,5]&lt;br/&gt;local_root_values [B,8,4]&lt;br/&gt;local_poses [B,8,413]&lt;br/&gt;+ has_* 掩码, num_tokens, text_emb?
+    MI-&gt;&gt;MI: 1. 重定心全局根&lt;br/&gt;(记下原始根信息)
+    MI-&gt;&gt;R: 2. _predict_root_trajectories
+    R--&gt;&gt;MI: num_tokens + 根轨迹
+    MI-&gt;&gt;P: 3. _predict_pose_tokens&lt;br/&gt;(以根轨迹为条件)
+    P--&gt;&gt;MI: pose token 序列
+    MI-&gt;&gt;V: 4. _decode_motions_from_predicted_&lt;br/&gt;root_and_pose_tokens
+    V--&gt;&gt;MI: 运动特征 [T, 418]
+    MI-&gt;&gt;MI: 5. _reapply_initial_root_info&lt;br/&gt;(把第 1 步的偏移还原)
+    MI--&gt;&gt;U: 运动 → mujoco_qpos [T, 36]
+</div>
+<p>第 1 步和第 5 步是一对:先把上下文运动搬到原点、旋到标准朝向,生成完后再搬回去。这保证模型永远工作在它训练时见过的分布内,而调用方可以在任意世界坐标下使用它。</p>
+<p>上下文是固定的 <strong>8 帧</strong>约束窗口,配 <code>has_global_root</code> / <code>has_local_root</code> / <code>has_local_poses</code> 掩码 —— 哪几帧是硬约束由调用方决定,不需要 8 帧全给。<code>allowed_pred_num_tokens</code> 可以限制 root 模型只在指定的 token 数里选(比如强制生成固定时长)。</p>
+<h3 id="41-交互式导航-agent">4.1 交互式导航 agent<a class="headerlink" href="18.MotionBricks_Architecture.html#41-交互式导航-agent" title="Permanent link">#</a></h3>
+<p><code>motionbricks/motion_backbone/demo/full_agent.py</code>(596 行)把上面的一次性推理包装成<strong>流式</strong>的:</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>方法</th>
+<th>职责</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>generate_new_frames(input, controller_dt=0.25, force_generation)</code></td>
+<td>主入口,按需触发新一段生成</td>
+</tr>
+<tr>
+<td><code>_should_regenerate</code></td>
+<td>判断当前缓冲是否快用完 / 指令是否变了</td>
+</tr>
+<tr>
+<td><code>_generate_spring_model_position_and_heading</code></td>
+<td>临界阻尼弹簧模型平滑用户输入(<code>fast_neg_exp_func</code>)</td>
+</tr>
+<tr>
+<td><code>_generate_target_joint_transforms</code></td>
+<td>由目标根位姿推出目标关节变换</td>
+</tr>
+<tr>
+<td><code>_generate_inbetween_frames</code></td>
+<td>新旧片段之间的过渡帧</td>
+</tr>
+<tr>
+<td><code>get_next_frame</code></td>
+<td>每个渲染 tick 取一帧 qpos</td>
+</tr>
+<tr>
+<td><code>get_context_motion_features</code> / <code>get_context_mujoco_qpos</code></td>
+<td>取最近 8 帧上下文,喂回下一轮</td>
+</tr>
+<tr>
+<td><code>_canonicalize_mujoco_qpos</code> / <code>_uncanonicalize_mujoco_qpos</code></td>
+<td>世界系 ↔ 规范系</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>临界阻尼弹簧</strong>是让交互手感自然的关键:用户按下 W 时目标速度阶跃变化,直接喂给模型会产生突兀的加速;弹簧模型把阶跃滤成平滑的一阶响应,再交给 root 模型。这也是 <code>planner_onnx.md</code> 里那句"实际速度可能与目标速度有偏差 —— 因为临界阻尼弹簧模型"的来源。</p>
+<h3 id="42-demo">4.2 Demo<a class="headerlink" href="18.MotionBricks_Architecture.html#42-demo" title="Permanent link">#</a></h3>
+<div class="highlight"><pre><span></span><code><span class="nv">DISPLAY</span><span class="o">=</span>:1<span class="w"> </span>python<span class="w"> </span>scripts/interactive_demo_g1.py
+</code></pre></div>
+
+<p><code>mujoco.viewer.launch_passive</code> + X11 被动键抓取(<code>_disable_mujoco_keyboard_shortcuts</code>,<code>interactive_demo_g1.py:12</code>)—— MuJoCo viewer 自己占用了 WASD 等快捷键,所以在 Linux 上用 Xlib 的 <code>grab_key</code> 在 X server 层面把 <code>wasdrtfgeqzxcvb</code> 这 15 个键截下来。macOS/Windows 暂不支持,快捷键会冲突。</p>
+<p>主循环(<code>:71-103</code>):取下一帧 qpos → 取上下文 → 生成控制信号 → <code>generate_new_frames</code> → <code>mj_forward</code> → <code>viewer.sync()</code> → 按 <code>mj_model.opt.timestep</code> 睡眠。</p>
+<p><strong>按键</strong>:</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>键</th>
+<th>风格</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>W / A / S / D</td>
+<td>移动方向</td>
+</tr>
+<tr>
+<td>V</td>
+<td>慢走</td>
+</tr>
+<tr>
+<td>Z</td>
+<td>手爬</td>
+</tr>
+<tr>
+<td>X</td>
+<td>边走边出拳</td>
+</tr>
+<tr>
+<td>B</td>
+<td>肘爬</td>
+</tr>
+<tr>
+<td>R</td>
+<td>潜行</td>
+</tr>
+<tr>
+<td>T</td>
+<td>受伤</td>
+</tr>
+<tr>
+<td>C</td>
+<td>蹲伏潜行</td>
+</tr>
+<tr>
+<td>E</td>
+<td>开心跳舞</td>
+</tr>
+<tr>
+<td>F</td>
+<td>僵尸</td>
+</tr>
+<tr>
+<td>G</td>
+<td>持枪行走</td>
+</tr>
+<tr>
+<td>Q</td>
+<td>惊吓</td>
+</tr>
+</tbody>
+</table></div>
+<p>关键 CLI 参数:<code>--use_qpos 1</code>(用 qpos 而非 motion features 作上下文)、<code>--generate_dt 2.0</code>、<code>--controller wasd|random</code>、<code>--force_canonicalization 1</code>、<code>--source/target_root_realignment 1</code>。</p>
+<hr />
+<h2 id="5-模型与数据">5. 模型与数据<a class="headerlink" href="18.MotionBricks_Architecture.html#5-模型与数据" title="Permanent link">#</a></h2>
+<h3 id="51-checkpoint">5.1 Checkpoint<a class="headerlink" href="18.MotionBricks_Architecture.html#51-checkpoint" title="Permanent link">#</a></h3>
+<p>Git LFS,合计约 <strong>2.2 GB</strong>:</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>文件</th>
+<th>大小</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>out/G1-clip.ckpt</code></td>
+<td>~7.5 MB</td>
+</tr>
+<tr>
+<td>VQVAE</td>
+<td>~273 MB</td>
+</tr>
+<tr>
+<td>Pose 模型</td>
+<td>~1.6 GB</td>
+</tr>
+<tr>
+<td>Root 模型</td>
+<td>~391 MB</td>
+</tr>
+</tbody>
+</table></div>
+<p>Pose 模型占了大头(1024 × 16 层),Root 模型小得多(512 × 6 层),符合"根简单、姿态难"的设计判断。</p>
+<h3 id="52-相关项目">5.2 相关项目<a class="headerlink" href="18.MotionBricks_Architecture.html#52-相关项目" title="Permanent link">#</a></h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>项目</th>
+<th>关系</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>BONES-SEED</strong></td>
+<td>MotionBricks 的训练语料,也是 <a href="17.GEAR-SONIC_Architecture.html">GEAR-SONIC</a> 的数据底座。<code>motionbricks/README.md</code> 称 35 万条产品级真人动捕片段;仓库主 README 的开源公告写的是 14.2 万+ 条人体运动(约 288 小时)并附带 G1 MuJoCo 轨迹 —— 前者应指原始素材规模,后者指公开发布的子集</td>
+</tr>
+<tr>
+<td><strong>SOMA Retargeter</strong></td>
+<td>人体动捕 → G1 骨架的重定向工具</td>
+</tr>
+<tr>
+<td><strong>GEAR-SONIC</strong></td>
+<td>下游全身控制器,跟踪 MotionBricks 生成的运动</td>
+</tr>
+<tr>
+<td><strong>Kimodo</strong></td>
+<td>同系列运动模型</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="53-许可">5.3 许可<a class="headerlink" href="18.MotionBricks_Architecture.html#53-许可" title="Permanent link">#</a></h3>
+<p>代码 Apache 2.0,权重 NVIDIA Open Model License(双许可)。发布日期 2026-04-27。</p>
+<hr />
+<h2 id="6-关键源文件表">6. 关键源文件表<a class="headerlink" href="18.MotionBricks_Architecture.html#6-关键源文件表" title="Permanent link">#</a></h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>文件</th>
+<th>作用</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>motionbricks/motion_backbone/inference/motion_inference.py</code></td>
+<td><code>predict()</code> 五步流水线、输入契约、常量定义</td>
+</tr>
+<tr>
+<td><code>motionbricks/motion_backbone/demo/full_agent.py</code></td>
+<td>流式导航 agent、弹簧模型、过渡帧、上下文管理</td>
+</tr>
+<tr>
+<td><code>motionbricks/motion_backbone/demo/controllers.py</code></td>
+<td>WASD / 随机控制器,风格键映射</td>
+</tr>
+<tr>
+<td><code>motionbricks/motion_backbone/demo/utils.py</code></td>
+<td><code>navigation_demo</code> 装配入口</td>
+</tr>
+<tr>
+<td><code>motionbricks/vqvae/neural_modules/vqvae.py</code></td>
+<td>VQVAE 编解码器接口与条件约定</td>
+</tr>
+<tr>
+<td><code>motionbricks/vqvae/neural_modules/quantize_cnn_multihead.py</code></td>
+<td><code>QuantizeEMAResetMultiHead</code>、多头索引打包</td>
+</tr>
+<tr>
+<td><code>motionlib/core/motion_reps/tools/motion_features.py</code></td>
+<td><code>compute_motion_features</code> 特征计算管线</td>
+</tr>
+<tr>
+<td><code>out/motionbricks_vqvae/version_1/config.yaml</code></td>
+<td>分词器超参与损失系数</td>
+</tr>
+<tr>
+<td><code>out/motionbricks_root/version_1/config.yaml</code></td>
+<td>Root 模型结构与损失权重</td>
+</tr>
+<tr>
+<td><code>out/motionbricks_pose/version_1/config.yaml</code></td>
+<td>Pose 模型结构、掩码与关键帧调度</td>
+</tr>
+<tr>
+<td><code>scripts/interactive_demo_g1.py</code></td>
+<td>交互式 MuJoCo demo、X11 键抓取</td>
+</tr>
+<tr>
+<td><code>docs/motion_representation.md</code></td>
+<td>418 维表征、骨架、坐标系、归一化</td>
+</tr>
+<tr>
+<td><code>README.md</code></td>
+<td>论文信息、checkpoint、按键、许可</td>
+</tr>
+</tbody>
+</table></div>
+<hr />
+<h2 id="7-与-sonic-planner-的关系">7. 与 SONIC Planner 的关系<a class="headerlink" href="18.MotionBricks_Architecture.html#7-与-sonic-planner-的关系" title="Permanent link">#</a></h2>
+<p><code>gear_sonic</code> 里的运动学规划器(见 <a href="17.GEAR-SONIC_Architecture.html">GEAR-SONIC 架构 §4.4</a>)与 MotionBricks 在接口上高度同构:</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th></th>
+<th>MotionBricks</th>
+<th>SONIC Planner ONNX</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>上下文</td>
+<td>8 帧(motion features 或 qpos)</td>
+<td>4 帧 <code>context_mujoco_qpos [1,4,36]</code></td>
+</tr>
+<tr>
+<td>指令</td>
+<td>方向 + 风格键 + 可选文本</td>
+<td><code>movement_direction</code> / <code>facing_direction</code> / <code>mode</code> / <code>target_vel</code> / <code>height</code></td>
+</tr>
+<tr>
+<td>输出</td>
+<td>运动特征 → qpos</td>
+<td><code>mujoco_qpos [1,N,36]</code> + <code>num_pred_frames</code></td>
+</tr>
+<tr>
+<td>变长输出</td>
+<td><code>num_tokens ∈ [6,16]</code></td>
+<td><code>num_pred_frames</code>,其余 padding</td>
+</tr>
+<tr>
+<td>平滑机制</td>
+<td>临界阻尼弹簧</td>
+<td>同(文档明确提及)</td>
+</tr>
+<tr>
+<td>形态</td>
+<td>PyTorch,研究/离线</td>
+<td>ONNX,C++ 部署</td>
+</tr>
+<tr>
+<td>训练码</td>
+<td><strong>已开源</strong></td>
+<td>未发布</td>
+</tr>
+</tbody>
+</table></div>
+<p>可以理解为:MotionBricks 是这一类"运动学规划器"的开源研究版本,SONIC 部署栈里那个 ONNX 是它的工程化形态。二者的分工都是<strong>上层出运动、下层跟踪运动</strong> —— 生成的 qpos 序列交给 SONIC 的 token 编码器 → 策略,最终落到 50 Hz 的关节指令。</p>
+<p>整体链路与另一条 <a href="16.Decoupled-WBC_Architecture.html">Decoupled WBC</a> 路线的对比,见 <a href="15.GR00T-WBC_Overview.html">GR00T-WBC 总览</a>。</p>
+      </div>
+    </main>
+        <aside class="toc">
+            <div class="toc-title">本页目录</div>
+            <ul>
+                <li><a href="18.MotionBricks_Architecture.html#1-整体架构概览" class="toc-h2">1. 整体架构概览</a></li>
+                <li><a href="18.MotionBricks_Architecture.html#2-运动表征" class="toc-h2">2. 运动表征</a></li>
+                <li><a href="18.MotionBricks_Architecture.html#21-dualrootglobaljoints-on-g1skeleton34" class="toc-h3">2.1 DualRootGlobalJoints on G1Skeleton34</a></li>
+                <li><a href="18.MotionBricks_Architecture.html#22-没有固定朝向规范化" class="toc-h3">2.2 没有固定朝向规范化</a></li>
+                <li><a href="18.MotionBricks_Architecture.html#23-归一化与坐标系" class="toc-h3">2.3 归一化与坐标系</a></li>
+                <li><a href="18.MotionBricks_Architecture.html#3-三个模型详解" class="toc-h2">3. 三个模型详解</a></li>
+                <li><a href="18.MotionBricks_Architecture.html#31-vqvae运动分词器" class="toc-h3">3.1 VQVAE:运动分词器</a></li>
+                <li><a href="18.MotionBricks_Architecture.html#32-root-模型先定轨迹" class="toc-h3">3.2 Root 模型:先定轨迹</a></li>
+                <li><a href="18.MotionBricks_Architecture.html#33-pose-模型掩码-token-生成" class="toc-h3">3.3 Pose 模型:掩码 token 生成</a></li>
+                <li><a href="18.MotionBricks_Architecture.html#4-推理流水线" class="toc-h2">4. 推理流水线</a></li>
+                <li><a href="18.MotionBricks_Architecture.html#41-交互式导航-agent" class="toc-h3">4.1 交互式导航 agent</a></li>
+                <li><a href="18.MotionBricks_Architecture.html#42-demo" class="toc-h3">4.2 Demo</a></li>
+                <li><a href="18.MotionBricks_Architecture.html#5-模型与数据" class="toc-h2">5. 模型与数据</a></li>
+                <li><a href="18.MotionBricks_Architecture.html#51-checkpoint" class="toc-h3">5.1 Checkpoint</a></li>
+                <li><a href="18.MotionBricks_Architecture.html#52-相关项目" class="toc-h3">5.2 相关项目</a></li>
+                <li><a href="18.MotionBricks_Architecture.html#53-许可" class="toc-h3">5.3 许可</a></li>
+                <li><a href="18.MotionBricks_Architecture.html#6-关键源文件表" class="toc-h2">6. 关键源文件表</a></li>
+                <li><a href="18.MotionBricks_Architecture.html#7-与-sonic-planner-的关系" class="toc-h2">7. 与 SONIC Planner 的关系</a></li>
+            </ul>
+        </aside>
+
+    <button class="back-to-top" onclick="window.scrollTo({top:0,behavior:'smooth'})">&#8593;</button>
+
+    <script src="assets/vendor/mermaid/mermaid.min.js"></script>
+    <script defer src="assets/vendor/katex/katex.min.js"></script>
+    <script defer src="assets/vendor/katex/auto-render.min.js"
+            onload="renderMathInElement(document.querySelector('.content-inner'), {
+                delimiters: [
+                    { left: '$$', right: '$$', display: true },
+                    { left: '$', right: '$', display: false }
+                ],
+                ignoredTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code', 'option'],
+                ignoredClasses: ['mermaid', 'diagram'],
+                throwOnError: false
+            });"></script>
+    <script>
+        // Mermaid destroys the source text when it renders, so keep a copy in
+        // order to re-render on theme change.
+        document.querySelectorAll('.mermaid').forEach(el => {
+            el.dataset.src = el.textContent;
+        });
+
+        const prefersDark = window.matchMedia('(prefers-color-scheme: dark)');
+        function currentTheme() {
+            const forced = document.documentElement.getAttribute('data-theme');
+            if (forced) return forced;
+            return prefersDark.matches ? 'dark' : 'light';
+        }
+
+        function initMermaid() {
+            mermaid.initialize({
+                startOnLoad: false,
+                theme: currentTheme() === 'dark' ? 'dark' : 'default',
+                flowchart: { useMaxWidth: true, htmlLabels: true },
+                securityLevel: 'loose'
+            });
+        }
+
+        function renderMermaid() {
+            const nodes = document.querySelectorAll('.mermaid');
+            nodes.forEach(el => {
+                el.removeAttribute('data-processed');
+                el.textContent = el.dataset.src;
+            });
+            // mermaid.run rejects on its internal font probe in some browsers;
+            // the diagrams still render, so swallow it rather than surfacing an
+            // unhandled rejection.
+            if (!nodes.length) return;
+            Promise.resolve(mermaid.run({ nodes: nodes }))
+                .catch(() => {})
+                .then(() => nodes.forEach(applyZoom));
+        }
+
+        /* ---------- Diagram zoom ----------
+           Scale is tracked as a factor of the diagram's NATURAL size (its
+           viewBox), so 100% means 1:1 and one font size looks identical in
+           every diagram on the site. Left to itself mermaid's useMaxWidth
+           stretches each svg to the container, which blows a 3-node diagram
+           up to 3.4x and shrinks a wide one to 0.34x — a 10x spread in
+           apparent font size. FIT_MAX caps the auto-fit at 1:1 (never
+           upscale) and FIT_MIN stops wide diagrams from shrinking to
+           unreadable; anything past that overflows and scrolls/pans. */
+        const MIN_Z = 0.3, MAX_Z = 6, STEP = 1.25;
+        const FIT_MIN = 0.55, FIT_MAX = 1;
+        const PAD = 40;               // .mermaid horizontal padding (20px each side)
+        const zoom = new WeakMap();   // .mermaid -> explicit scale; absent = auto-fit
+
+        function naturalSize(svg) {
+            const vb = svg.viewBox && svg.viewBox.baseVal;
+            if (vb && vb.width) return { w: vb.width, h: vb.height };
+            const r = svg.getBoundingClientRect();
+            return { w: r.width, h: r.height };
+        }
+
+        function fitScale(el, nat) {
+            const avail = el.clientWidth - PAD;
+            if (!nat.w || avail <= 0) return 1;
+            return Math.min(FIT_MAX, Math.max(FIT_MIN, avail / nat.w));
+        }
+
+        function scaleOf(el, nat) {
+            const k = zoom.get(el);
+            return k === undefined ? fitScale(el, nat) : k;
+        }
+
+        function applyZoom(el) {
+            const svg = el.querySelector('svg');
+            if (!svg) return;
+            const nat = naturalSize(svg);
+            if (!nat.w) return;
+            const k = scaleOf(el, nat);
+
+            const label = el.closest('.diagram')?.querySelector('.diagram-zoom');
+            if (label) label.textContent = Math.round(k * 100) + '%';
+
+            // Size the svg explicitly instead of leaving it to useMaxWidth,
+            // so the container gets real scrollbars when the diagram overflows.
+            svg.style.maxWidth = 'none';
+            svg.style.width = (nat.w * k) + 'px';
+            svg.style.height = (nat.h * k) + 'px';
+
+            const overflows = nat.w * k > el.clientWidth - PAD + 1;
+            el.classList.toggle('is-zoomed', overflows);
+            if (!overflows) el.scrollLeft = el.scrollTop = 0;
+        }
+
+        function setZoom(el, k, anchor) {
+            const svg = el.querySelector('svg');
+            if (!svg) return;
+            const nat = naturalSize(svg);
+            const prev = scaleOf(el, nat);
+            if (k !== null) k = Math.min(MAX_Z, Math.max(MIN_Z, k));
+            const next = k === null ? fitScale(el, nat) : k;
+            if (next === prev) return;
+            // Keep the point under the cursor (or the viewport centre) put.
+            const ax = anchor ? anchor.x : el.clientWidth / 2;
+            const ay = anchor ? anchor.y : el.clientHeight / 2;
+            const rx = (el.scrollLeft + ax) / prev;
+            const ry = (el.scrollTop + ay) / prev;
+            if (k === null) zoom.delete(el); else zoom.set(el, k);
+            applyZoom(el);
+            el.scrollLeft = rx * next - ax;
+            el.scrollTop = ry * next - ay;
+        }
+
+        function currentScale(el) {
+            const svg = el.querySelector('svg');
+            return svg ? scaleOf(el, naturalSize(svg)) : 1;
+        }
+
+        function setupDiagrams() {
+            document.querySelectorAll('.mermaid').forEach(el => {
+                const wrap = document.createElement('div');
+                wrap.className = 'diagram';
+                el.parentNode.insertBefore(wrap, el);
+                wrap.appendChild(el);
+
+                const tools = document.createElement('div');
+                tools.className = 'diagram-tools';
+                tools.innerHTML =
+                    '<button type="button" data-act="out" title="缩小">&minus;</button>' +
+                    '<span class="diagram-zoom">100%</span>' +
+                    '<button type="button" data-act="in" title="放大">+</button>' +
+                    '<button type="button" data-act="reset" title="适应宽度">&#9633;</button>' +
+                    '<button type="button" data-act="full" title="全屏">&#10530;</button>';
+                wrap.appendChild(tools);
+
+                tools.addEventListener('click', e => {
+                    const act = e.target.closest('button')?.dataset.act;
+                    if (!act) return;
+                    const k = currentScale(el);
+                    if (act === 'in') setZoom(el, k * STEP);
+                    else if (act === 'out') setZoom(el, k / STEP);
+                    else if (act === 'reset') setZoom(el, null);
+                    else if (act === 'full') {
+                        if (document.fullscreenElement === wrap) document.exitFullscreen();
+                        else wrap.requestFullscreen?.();
+                    }
+                });
+
+                // Ctrl/⌘ + wheel zooms; a plain wheel keeps scrolling the page.
+                el.addEventListener('wheel', e => {
+                    if (!e.ctrlKey && !e.metaKey) return;
+                    e.preventDefault();
+                    const r = el.getBoundingClientRect();
+                    setZoom(el, currentScale(el) * (e.deltaY < 0 ? STEP : 1 / STEP),
+                            { x: e.clientX - r.left, y: e.clientY - r.top });
+                }, { passive: false });
+
+                // Drag to pan once zoomed in.
+                let drag = null;
+                el.addEventListener('pointerdown', e => {
+                    // Pan only matters once the diagram actually overflows.
+                    if (e.button !== 0 || !el.classList.contains('is-zoomed')) return;
+                    drag = { x: e.clientX, y: e.clientY, l: el.scrollLeft, t: el.scrollTop };
+                    el.setPointerCapture(e.pointerId);
+                    el.classList.add('is-panning');
+                });
+                el.addEventListener('pointermove', e => {
+                    if (!drag) return;
+                    el.scrollLeft = drag.l - (e.clientX - drag.x);
+                    el.scrollTop = drag.t - (e.clientY - drag.y);
+                });
+                const endDrag = () => { drag = null; el.classList.remove('is-panning'); };
+                el.addEventListener('pointerup', endDrag);
+                el.addEventListener('pointercancel', endDrag);
+
+                // Double click toggles between auto-fit and true 1:1.
+                el.addEventListener('dblclick', () => setZoom(el, zoom.has(el) ? null : 1));
+            });
+        }
+
+        setupDiagrams();
+        initMermaid();
+        renderMermaid();
+
+        const remeasure = () => document.querySelectorAll('.mermaid').forEach(applyZoom);
+        document.addEventListener('fullscreenchange', remeasure);
+        window.addEventListener('resize', remeasure);
+
+        // Theme toggle
+        const toggle = document.getElementById('theme-toggle');
+        toggle.addEventListener('click', () => {
+            const next = currentTheme() === 'dark' ? 'light' : 'dark';
+            document.documentElement.setAttribute('data-theme', next);
+            try { localStorage.setItem('theme', next); } catch (e) {}
+            initMermaid();
+            renderMermaid();
+        });
+
+        // Follow the OS while the user hasn't made an explicit choice
+        prefersDark.addEventListener('change', () => {
+            if (!document.documentElement.getAttribute('data-theme')) {
+                initMermaid();
+                renderMermaid();
+            }
+        });
+
+        // Back to top button
+        const btn = document.querySelector('.back-to-top');
+        window.addEventListener('scroll', () => {
+            btn.classList.toggle('visible', window.scrollY > 300);
+        });
+
+        // Close sidebar on mobile when clicking a link
+        document.querySelectorAll('.sidebar nav a').forEach(a => {
+            a.addEventListener('click', () => {
+                document.querySelector('.sidebar').classList.remove('open');
+            });
+        });
+
+        // Highlight the TOC entry for the heading currently in view
+        const tocLinks = Array.from(document.querySelectorAll('.toc a'));
+        if (tocLinks.length) {
+            const targets = tocLinks
+                .map(a => document.getElementById(decodeURIComponent(a.hash.slice(1))))
+                .filter(Boolean);
+            const setActive = () => {
+                let current = targets[0];
+                for (const t of targets) {
+                    if (t.getBoundingClientRect().top <= 120) current = t;
+                    else break;
+                }
+                tocLinks.forEach(a => a.classList.toggle(
+                    'active',
+                    current && decodeURIComponent(a.hash.slice(1)) === current.id
+                ));
+            };
+            setActive();
+            let queued = false;
+            window.addEventListener('scroll', () => {
+                if (queued) return;
+                queued = true;
+                requestAnimationFrame(() => { setActive(); queued = false; });
+            });
+        }
+    </script>
+</body>
+</html>

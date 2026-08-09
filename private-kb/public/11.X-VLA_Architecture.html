@@ -1,0 +1,1241 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>X-VLA - Robotics Knowledge Base</title>
+    <link rel="icon" href="favicon.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="assets/vendor/katex/katex.min.css">
+    <script>
+        // Applied before first paint so the saved theme doesn't flash.
+        (function () {
+            try {
+                var t = localStorage.getItem('theme');
+                if (t === 'dark' || t === 'light') {
+                    document.documentElement.setAttribute('data-theme', t);
+                }
+            } catch (e) {}
+        })();
+    </script>
+</head>
+<body>
+    <button class="menu-toggle" onclick="document.querySelector('.sidebar').classList.toggle('open')">&#9776;</button>
+    <button class="theme-toggle" id="theme-toggle" title="切换日夜模式" aria-label="切换日夜模式">
+        <span class="icon-light">&#9790;</span><span class="icon-dark">&#9728;</span>
+    </button>
+
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <h2>Robotics Knowledge Base</h2>
+            <p>机器人模型架构知识库</p>
+        </div>
+        <nav>
+            <a href="index.html">Overview</a>
+            <div class="nav-group">VLA 模型</div>
+            <a href="01.Pi0_Architecture.html">Pi0</a>
+            <a href="02.Pi0.5_Architecture.html">Pi0.5</a>
+            <a href="03.Pi0-FAST_Architecture.html">Pi0-FAST</a>
+            <a href="04.Pi-Star-0.6_Architecture.html">π*₀.₆ (Pi-Star-0.6)</a>
+            <a href="05.Pi0.7_Architecture.html">π₀.₇ (Pi-0.7)</a>
+            <a href="06.Isaac-GR00T-N1.6_Architecture.html">Isaac-GR00T N1.6</a>
+            <a href="07.Isaac-GR00T-N1.5_Architecture.html">Isaac-GR00T N1.5</a>
+            <a href="08.ACT_Architecture.html">ACT</a>
+            <a href="09.SmolVLA_Architecture.html">SmolVLA</a>
+            <a href="10.WALL-OSS_Architecture.html">WALL-OSS / WALL-X</a>
+            <a href="11.X-VLA_Architecture.html" class="active">X-VLA</a>
+            <a href="12.Psi0_Architecture.html">Psi0 (ψ₀)</a>
+            <a href="13.DreamZero_Architecture.html">DreamZero</a>
+            <a href="14.FastWAM_Architecture.html">Fast-WAM</a>
+            <div class="nav-group">全身控制 (WBC)</div>
+            <a href="15.GR00T-WBC_Overview.html">GR00T-WBC 总览</a>
+            <a href="16.Decoupled-WBC_Architecture.html" class="nav-child">Decoupled WBC</a>
+            <a href="17.GEAR-SONIC_Architecture.html" class="nav-child">GEAR-SONIC</a>
+            <a href="18.MotionBricks_Architecture.html" class="nav-child">MotionBricks</a>
+            <div class="nav-group">3D 视觉与 VLM</div>
+            <a href="19.VLM3_Architecture.html">VLM³</a>
+        </nav>
+    </aside>
+
+    <main class="content">
+      <div class="content-inner">
+        <h1 id="x-vla-模型架构">X-VLA 模型架构<a class="headerlink" href="11.X-VLA_Architecture.html#x-vla-模型架构" title="Permanent link">#</a></h1>
+<h2 id="1-整体架构概览">1. 整体架构概览<a class="headerlink" href="11.X-VLA_Architecture.html#1-整体架构概览" title="Permanent link">#</a></h2>
+<p>X-VLA (Extended Vision-Language-Action) 是一个基于扩散的跨具身视觉-语言-动作模型，将 Florence2 视觉语言模型作为感知主干网络，配合软提示 Transformer (SoftPromptedTransformer) 动作头进行机器人动作预测。其核心设计思路为：Florence2 的 Vision Tower 和 BART 编码器提取多模态特征（<strong>移除 BART 解码器以降低计算量</strong>），再通过域感知线性层 (DomainAwareLinear) 实现多机器人具身支持，最终以扩散去噪方式生成动作序列。模型支持多视角图像输入、多种动作空间（ee6d / joint / auto 等），并通过可学习的软提示 token 实现域特定的知识注入。</p>
+<div class="mermaid">
+graph TB
+    subgraph Input["输入"]
+        IMG["多视角相机图像&lt;br/&gt;(pixel_values)&lt;br/&gt;[B, num_views, C, H, W]"]
+        TXT["语言指令&lt;br/&gt;(input_ids)&lt;br/&gt;[B, seq_len]"]
+        STATE["本体感受状态&lt;br/&gt;(proprio)&lt;br/&gt;[B, state_dim]"]
+        DID["域 ID&lt;br/&gt;(domain_id)&lt;br/&gt;[B]"]
+    end
+
+    subgraph VLM["Florence2 视觉语言模型 (VLM)"]
+        VT["DaViT Vision Tower&lt;br/&gt;图像编码"]
+        PROJ["多模态投影层"]
+        BART_ENC["BART 编码器&lt;br/&gt;文本-图像融合"]
+        BART_DEC["BART 解码器&lt;br/&gt;❌ 已移除"]
+    end
+
+    subgraph ActionHead["SoftPromptedTransformer 动作头"]
+        TE["时间步编码器&lt;br/&gt;(正弦编码)"]
+        AE["DomainAwareLinear&lt;br/&gt;(动作编码器)"]
+        VLP["VLM 投影层"]
+        AUXP["辅助视觉投影层"]
+        SP["软提示 Hub&lt;br/&gt;(num_domains x 32 tokens)"]
+        BLOCKS["24层 TransformerBlock&lt;br/&gt;(Pre-LN, MHSA + MLP)"]
+        AD["DomainAwareLinear&lt;br/&gt;(动作解码器)"]
+    end
+
+    subgraph Output["输出"]
+        ACT["预测动作轨迹&lt;br/&gt;[B, chunk_size, action_dim]"]
+    end
+
+    IMG --&gt; VT
+    VT --&gt; PROJ --&gt; BART_ENC
+    TXT --&gt; BART_ENC
+    BART_ENC --&gt;|"vlm_features&lt;br/&gt;[B, T_vlm, D]"| VLP
+    BART_ENC --&gt;|"aux_visual_inputs&lt;br/&gt;[B, T_aux, D]"| AUXP
+
+    STATE --&gt; AE
+    DID --&gt; AE
+    DID --&gt; SP
+    DID --&gt; AD
+    TE --&gt; AE
+
+    VLP --&gt;|"投影特征"| BLOCKS
+    AUXP --&gt;|"辅助视觉特征"| BLOCKS
+    AE --&gt;|"动作 token"| BLOCKS
+    SP --&gt;|"32个软提示 token"| BLOCKS
+
+    BLOCKS --&gt; AD --&gt; ACT
+
+    style Input fill:#e8f4fd,stroke:#2196F3
+    style VLM fill:#fff3e0,stroke:#FF9800
+    style ActionHead fill:#e8f5e9,stroke:#4CAF50
+    style Output fill:#fce4ec,stroke:#E91E63
+</div>
+<hr />
+<h2 id="2-核心组件详解">2. 核心组件详解<a class="headerlink" href="11.X-VLA_Architecture.html#2-核心组件详解" title="Permanent link">#</a></h2>
+<h3 id="21-florence2-视觉语言模型-vision-tower-bart-编码器">2.1 Florence2 视觉语言模型 (Vision Tower + BART 编码器)<a class="headerlink" href="11.X-VLA_Architecture.html#21-florence2-视觉语言模型-vision-tower-bart-编码器" title="Permanent link">#</a></h3>
+<p>Florence2 作为 X-VLA 的感知主干网络，负责将多视角图像和语言指令编码为统一的多模态特征。X-VLA <strong>仅使用编码器部分</strong>，在初始化时显式移除了 BART 的解码器 (<code>lm.model.decoder</code>) 和语言模型头 (<code>lm.lm_head</code>)，以节省显存和计算量。</p>
+<p><strong>多视角处理流程：</strong> 第一个视角图像与文本 token 在 BART 编码器中融合，产生 <code>vlm_features</code>；其余视角图像作为辅助视觉输入 (<code>aux_visual_inputs</code>) 直接传递给 Transformer 动作头。</p>
+<div class="mermaid">
+graph LR
+    subgraph ImageEnc["DaViT Vision Tower"]
+        PIX["pixel_values&lt;br/&gt;[B, num_views, C, H, W]"]
+        FLAT["展平 &amp; 掩码过滤&lt;br/&gt;仅处理有效视角"]
+        DAVIT["DaViT 视觉编码器&lt;br/&gt;_encode_image()"]
+        RESHAPE["重塑为&lt;br/&gt;[B, num_views, tokens, D]"]
+        PIX --&gt; FLAT --&gt; DAVIT --&gt; RESHAPE
+    end
+
+    subgraph TextEnc["BART 文本-图像融合"]
+        IDS["input_ids&lt;br/&gt;[B, seq_len]"] --&gt; EMB["词元嵌入&lt;br/&gt;get_input_embeddings()"]
+        V0["第0视角特征&lt;br/&gt;[B, tokens, D]"]
+        EMB --&gt; MERGE["_merge_input_ids_with_image_features()&lt;br/&gt;图像 token 插入文本序列"]
+        V0 --&gt; MERGE
+        MERGE --&gt; ENC["BART 编码器&lt;br/&gt;language_model.model.encoder"]
+    end
+
+    subgraph Outputs["输出"]
+        ENC --&gt;|"vlm_features&lt;br/&gt;[B, T_vlm, D]"| OUT1["主视觉语言特征"]
+        AUX["辅助视角特征&lt;br/&gt;[B, (num_views-1)*tokens, D]"]
+        RESHAPE --&gt;|"image_features[:, 1:]"| AUX
+    end
+
+    RESHAPE --&gt;|"image_features[:, 0]"| V0
+
+    style ImageEnc fill:#e3f2fd,stroke:#2196F3
+    style TextEnc fill:#fff3e0,stroke:#FF9800
+    style Outputs fill:#e8f5e9,stroke:#4CAF50
+</div>
+<p><strong>关键设计：BART 解码器移除</strong></p>
+<div class="mermaid">
+graph LR
+    subgraph Full["Florence2 原始结构"]
+        FVT["Vision Tower ✅"]
+        FPROJ["投影层 ✅"]
+        FENC["BART 编码器 ✅"]
+        FDEC["BART 解码器 ❌ 已删除"]
+        FLM["LM Head ❌ 已删除"]
+        FVT --&gt; FPROJ --&gt; FENC --&gt; FDEC --&gt; FLM
+    end
+
+    subgraph Used["X-VLA 实际使用"]
+        UVT["Vision Tower&lt;br/&gt;DaViT"]
+        UPROJ["多模态投影层"]
+        UENC["BART 编码器&lt;br/&gt;输出多模态特征"]
+        UVT --&gt; UPROJ --&gt; UENC
+    end
+
+    UENC --&gt;|"vlm_features"| XVLA["SoftPromptedTransformer"]
+
+    style Full fill:#ffebee,stroke:#f44336
+    style Used fill:#e8f5e9,stroke:#4CAF50
+</div>
+<blockquote>
+<p><strong>移除逻辑</strong> (见 <code>modeling_xvla.py:79-84</code>):
+<code>python
+if hasattr(self.vlm, "language_model"):
+    lm = self.vlm.language_model
+    if hasattr(lm, "model") and hasattr(lm.model, "decoder"):
+        del lm.model.decoder
+    if hasattr(lm, "lm_head"):
+        del lm.lm_head</code></p>
+</blockquote>
+<p><strong>冻结策略：</strong></p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>组件</th>
+<th>默认状态</th>
+<th>配置项</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Vision Tower</td>
+<td>可配置冻结</td>
+<td><code>freeze_vision_encoder</code> (默认 False)</td>
+</tr>
+<tr>
+<td>BART 编码器</td>
+<td>可配置冻结</td>
+<td><code>freeze_language_encoder</code> (默认 False)</td>
+</tr>
+<tr>
+<td>BART 解码器</td>
+<td>已删除</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>LM Head</td>
+<td>已删除</td>
+<td>N/A</td>
+</tr>
+</tbody>
+</table></div>
+<hr />
+<h3 id="22-softpromptedtransformer-软提示-transformer">2.2 SoftPromptedTransformer (软提示 Transformer)<a class="headerlink" href="11.X-VLA_Architecture.html#22-softpromptedtransformer-软提示-transformer" title="Permanent link">#</a></h3>
+<p>SoftPromptedTransformer 是 X-VLA 的核心动作生成模块。它接收 VLM 特征、辅助视觉特征、含噪动作、本体感受状态和时间步信息，通过 24 层标准 Transformer 块进行处理，最终解码出预测动作。</p>
+<p><strong>核心特色：</strong> 每个域 (embodiment) 拥有独立的 32 个可学习软提示 token，通过 <code>nn.Embedding(num_domains, len_soft_prompts * hidden_size)</code> 存储，在前向传播时按 <code>domain_id</code> 索引并拼接到序列末尾。</p>
+<div class="mermaid">
+graph TB
+    subgraph InputPrep["输入准备"]
+        direction LR
+        ACT_N["含噪动作&lt;br/&gt;[B, T, dim_action]"]
+        PROP["本体感受&lt;br/&gt;[B, dim_propio]"]
+        TIME["时间步 t&lt;br/&gt;[B]"]
+
+        TIME --&gt; TE["正弦时间步编码&lt;br/&gt;timestep_embedding()"]
+        TE --&gt;|"[B, dim_time]"| EXPAND_T["扩展至&lt;br/&gt;[B, T, dim_time]"]
+        PROP --&gt; EXPAND_P["扩展至&lt;br/&gt;[B, T, dim_propio]"]
+
+        ACT_N --&gt; CAT_IN["Concat&lt;br/&gt;[action, proprio, time]&lt;br/&gt;[B, T, dim_action+dim_propio+dim_time]"]
+        EXPAND_T --&gt; CAT_IN
+        EXPAND_P --&gt; CAT_IN
+    end
+
+    subgraph Encode["动作编码 (DomainAwareLinear)"]
+        CAT_IN --&gt; AE["action_encoder&lt;br/&gt;DomainAwareLinear"]
+        DID1["domain_id"] --&gt; AE
+        AE --&gt;|"[B, T, hidden_size]"| ACT_TOK["动作 token"]
+    end
+
+    subgraph VisualProj["视觉投影"]
+        VLM_F["vlm_features&lt;br/&gt;[B, T_vlm, D]"] --&gt; VP["vlm_proj&lt;br/&gt;(Linear 或 DomainAwareLinear)"]
+        AUX_F["aux_visual_inputs&lt;br/&gt;[B, T_aux, D]"] --&gt; AP["aux_visual_proj&lt;br/&gt;(Linear 或 DomainAwareLinear)"]
+    end
+
+    subgraph SeqBuild["序列构建"]
+        ACT_TOK --&gt; CONCAT["Concat 所有 token"]
+        VP --&gt; CONCAT
+        AP --&gt; CONCAT
+        CONCAT --&gt;|"[B, T+T_vlm+T_aux, H]"| POS["+ 位置编码&lt;br/&gt;pos_emb[:, :seq_len]"]
+        POS --&gt; SOFT["拼接软提示 token&lt;br/&gt;[B, 32, hidden_size]"]
+        DID2["domain_id"] --&gt; SOFT
+    end
+
+    subgraph TransBlocks["24层 TransformerBlock"]
+        SOFT --&gt; B0["Block 0: LN-&gt;MHSA-&gt;残差-&gt;LN-&gt;MLP-&gt;残差"]
+        B0 --&gt; B1["Block 1"]
+        B1 --&gt; DOTS["..."]
+        DOTS --&gt; B23["Block 23"]
+    end
+
+    subgraph Decode["动作解码"]
+        B23 --&gt; NORM["LayerNorm"]
+        NORM --&gt; SLICE["取前 T 个 token&lt;br/&gt;x[:, :num_actions]"]
+        SLICE --&gt; ADEC["action_decoder&lt;br/&gt;DomainAwareLinear"]
+        DID3["domain_id"] --&gt; ADEC
+        ADEC --&gt;|"[B, T, dim_action]"| OUT["预测动作"]
+    end
+
+    style InputPrep fill:#e3f2fd,stroke:#2196F3
+    style Encode fill:#f3e5f5,stroke:#9C27B0
+    style VisualProj fill:#fff3e0,stroke:#FF9800
+    style SeqBuild fill:#e0f7fa,stroke:#00BCD4
+    style TransBlocks fill:#e8f5e9,stroke:#4CAF50
+    style Decode fill:#fce4ec,stroke:#E91E63
+</div>
+<h4 id="序列拼接顺序">序列拼接顺序<a class="headerlink" href="11.X-VLA_Architecture.html#序列拼接顺序" title="Permanent link">#</a></h4>
+<div class="mermaid">
+graph LR
+    subgraph Sequence["Transformer 输入序列"]
+        direction LR
+        S1["动作 token&lt;br/&gt;[T 个]"]
+        S2["VLM 特征 token&lt;br/&gt;[T_vlm 个]"]
+        S3["辅助视觉 token&lt;br/&gt;[T_aux 个]"]
+        S4["软提示 token&lt;br/&gt;[32 个]"]
+        S1 --&gt; S2 --&gt; S3 --&gt; S4
+    end
+
+    subgraph Output["输出提取"]
+        ONLY["仅解码前 T 个 token&lt;br/&gt;(动作位置)"]
+    end
+
+    S1 -.-&gt;|"action_decoder"| ONLY
+
+    style Sequence fill:#e8f4fd,stroke:#2196F3
+    style Output fill:#fce4ec,stroke:#E91E63
+</div>
+<blockquote>
+<p><strong>设计要点：</strong> 软提示 token 拼接在序列<strong>末尾</strong>，但最终只解码序列<strong>开头</strong>的动作 token 位置。这使得软提示通过注意力机制间接影响动作预测，而非直接参与解码。</p>
+</blockquote>
+<h4 id="单个-transformerblock-pre-ln">单个 TransformerBlock (Pre-LN)<a class="headerlink" href="11.X-VLA_Architecture.html#单个-transformerblock-pre-ln" title="Permanent link">#</a></h4>
+<div class="mermaid">
+graph TB
+    IN["hidden_states&lt;br/&gt;[B, T, H]"] --&gt; LN1["LayerNorm"]
+    LN1 --&gt; MHSA["多头自注意力&lt;br/&gt;(16 heads, head_dim=64)&lt;br/&gt;支持 Flash Attention"]
+    MHSA --&gt; ADD1["+ 残差连接"]
+    IN --&gt; ADD1
+
+    ADD1 --&gt; LN2["LayerNorm"]
+    LN2 --&gt; MLP["MLP&lt;br/&gt;Linear(H, 4H) -&gt; GELU -&gt; Dropout(0.1)&lt;br/&gt;-&gt; Linear(4H, H) -&gt; Dropout(0.1)"]
+    MLP --&gt; ADD2["+ 残差连接"]
+    ADD1 --&gt; ADD2
+
+    ADD2 --&gt; OUT["输出&lt;br/&gt;[B, T, H]"]
+
+    style IN fill:#e3f2fd,stroke:#2196F3
+    style OUT fill:#e8f5e9,stroke:#4CAF50
+</div>
+<hr />
+<h3 id="23-domainawarelinear-域感知线性层">2.3 DomainAwareLinear (域感知线性层)<a class="headerlink" href="11.X-VLA_Architecture.html#23-domainawarelinear-域感知线性层" title="Permanent link">#</a></h3>
+<p>DomainAwareLinear 是 X-VLA 实现多具身支持的核心机制。每个域 (embodiment) 拥有独立的权重矩阵和偏置向量，通过 <code>nn.Embedding</code> 存储，在前向传播时按样本级别的 <code>domain_id</code> 索引选择对应的权重进行计算。</p>
+<div class="mermaid">
+graph TB
+    subgraph WeightStore["权重库 (nn.Embedding)"]
+        W["fc: Embedding(num_domains, output_size * input_size)&lt;br/&gt;每个域一个完整权重矩阵"]
+        B["bias: Embedding(num_domains, output_size)&lt;br/&gt;每个域一个偏置向量"]
+    end
+
+    subgraph Forward["前向传播"]
+        X["输入 x&lt;br/&gt;[B, T, input_size]"]
+        DID["domain_id&lt;br/&gt;[B]"]
+
+        DID --&gt; IDX["索引选择"]
+        W --&gt; IDX
+        B --&gt; IDX
+
+        IDX --&gt;|"weight [B, I, O]"| BMM["批量矩阵乘法&lt;br/&gt;y = matmul(x, weight) + bias"]
+        IDX --&gt;|"bias [B, O]"| BMM
+        X --&gt; BMM
+        BMM --&gt; OUT["输出&lt;br/&gt;[B, T, output_size]"]
+    end
+
+    subgraph Usage["在 X-VLA 中的使用位置"]
+        U1["action_encoder:&lt;br/&gt;DomainAwareLinear(action+propio+time, hidden_size)"]
+        U2["action_decoder:&lt;br/&gt;DomainAwareLinear(hidden_size, dim_action)"]
+        U3["soft_prompt_hub:&lt;br/&gt;Embedding(num_domains, 32*hidden_size)"]
+        U4["vlm_proj (可选):&lt;br/&gt;DomainAwareLinear(multi_modal_dim, hidden_size)"]
+    end
+
+    style WeightStore fill:#fff3e0,stroke:#FF9800
+    style Forward fill:#e8f5e9,stroke:#4CAF50
+    style Usage fill:#e3f2fd,stroke:#2196F3
+</div>
+<blockquote>
+<p><strong>与 GR00T 的 CategorySpecificLinear 对比：</strong> 两者设计思路一致——通过 Embedding 存储多组权重，按 embodiment ID 索引选择。X-VLA 的 DomainAwareLinear 支持 2D 和 3D 输入（自动 squeeze/unsqueeze），且使用 Xavier 均匀初始化权重、零初始化偏置。</p>
+</blockquote>
+<hr />
+<h3 id="24-动作空间管理器-actionspace-registry">2.4 动作空间管理器 (ActionSpace Registry)<a class="headerlink" href="11.X-VLA_Architecture.html#24-动作空间管理器-actionspace-registry" title="Permanent link">#</a></h3>
+<p>X-VLA 通过注册表模式管理多种动作空间，每种动作空间定义了维度、损失计算、预处理和后处理逻辑。</p>
+<div class="mermaid">
+graph TB
+    subgraph Registry["ACTION_REGISTRY (注册表)"]
+        direction TB
+        R1["'ee6d' -&gt; EE6DActionSpace"]
+        R2["'joint' -&gt; JointActionSpace"]
+        R3["'auto' -&gt; AutoActionSpace"]
+        R4["'agibot_ee6d' -&gt; AGIBOTEE6DActionSpace"]
+        R5["'franka_joint7' -&gt; FrankaJoint7ActionSpace"]
+        R6["'so101_bimanual' -&gt; BimanualSO101ActionSpace"]
+    end
+
+    subgraph Builder["build_action_space(name)"]
+        CALL["调用方"] --&gt; LOOKUP["查找注册表"]
+        LOOKUP --&gt; INST["实例化对应类"]
+    end
+
+    subgraph Interface["BaseActionSpace 接口"]
+        I1["dim_action: int&lt;br/&gt;动作维度"]
+        I2["gripper_idx: tuple&lt;br/&gt;夹爪通道索引"]
+        I3["compute_loss(pred, target)&lt;br/&gt;-&gt; dict[str, Tensor]"]
+        I4["preprocess(proprio, action)&lt;br/&gt;-&gt; (proprio, action)"]
+        I5["postprocess(action)&lt;br/&gt;-&gt; action"]
+    end
+
+    Registry --&gt; Builder
+    Builder --&gt; Interface
+
+    style Registry fill:#f3e5f5,stroke:#9C27B0
+    style Builder fill:#e0f7fa,stroke:#00BCD4
+    style Interface fill:#e8f5e9,stroke:#4CAF50
+</div>
+<hr />
+<h2 id="3-训练流水线">3. 训练流水线<a class="headerlink" href="11.X-VLA_Architecture.html#3-训练流水线" title="Permanent link">#</a></h2>
+<p>训练时，模型使用扩散过程（Flow Matching）对动作进行加噪和去噪预测。时间步 <code>t</code> 在 <code>[0, 1)</code> 范围内均匀采样（带批次内偏移以增强多样性），含噪动作通过线性插值生成。</p>
+<div class="mermaid">
+graph TB
+    subgraph DataPrep["数据准备"]
+        direction LR
+        BATCH["训练 Batch"]
+        BATCH --&gt; IMG_P["_prepare_images()&lt;br/&gt;多视角图像堆叠 + 填充"]
+        BATCH --&gt; STATE_P["_prepare_state()&lt;br/&gt;本体感受状态填充"]
+        BATCH --&gt; ACT_P["_prepare_action_targets()&lt;br/&gt;动作目标填充至 chunk_size"]
+        BATCH --&gt; LANG["input_ids&lt;br/&gt;语言 token"]
+        BATCH --&gt; DID_P["_get_domain_id()&lt;br/&gt;域 ID"]
+    end
+
+    subgraph VLMEnc["VLM 编码"]
+        IMG_P --&gt; FWD_VLM["forward_vlm()"]
+        LANG --&gt; FWD_VLM
+        FWD_VLM --&gt;|"vlm_features"| ENC_OUT["编码输出"]
+        FWD_VLM --&gt;|"aux_visual_inputs"| ENC_OUT
+    end
+
+    subgraph Diffusion["扩散加噪"]
+        direction TB
+        T_SAMPLE["时间步采样&lt;br/&gt;t = (rand(1) + arange(B)/B) % (1-1e-5)&lt;br/&gt;均匀分布, 批次内偏移"]
+        ACT_GT["真实动作&lt;br/&gt;[B, chunk_size, dim_action]"]
+        NOISE["高斯噪声&lt;br/&gt;randn_like(action)"]
+
+        T_SAMPLE --&gt; INTERP["线性插值&lt;br/&gt;action_noisy = noise * t + action * (1-t)"]
+        ACT_GT --&gt; INTERP
+        NOISE --&gt; INTERP
+        INTERP --&gt; PREPROC["action_space.preprocess()&lt;br/&gt;预处理 (如清零夹爪通道)"]
+    end
+
+    subgraph TransFwd["Transformer 前向"]
+        ENC_OUT --&gt; TRANS["SoftPromptedTransformer"]
+        PREPROC --&gt;|"action_noisy_m"| TRANS
+        STATE_P --&gt;|"proprio_m"| TRANS
+        DID_P --&gt; TRANS
+        T_SAMPLE --&gt;|"t"| TRANS
+        TRANS --&gt;|"pred_action&lt;br/&gt;[B, chunk_size, dim_action]"| PRED["预测动作"]
+    end
+
+    subgraph LossCalc["分通道损失计算 (ee6d 模式)"]
+        PRED --&gt; LOSS_POS["Position MSE&lt;br/&gt;XYZ 通道 * 500"]
+        PRED --&gt; LOSS_ROT["Rotation MSE&lt;br/&gt;6D旋转通道 * 10"]
+        PRED --&gt; LOSS_GRIP["Gripper BCE&lt;br/&gt;夹爪通道 * 1"]
+        ACT_GT --&gt; LOSS_POS
+        ACT_GT --&gt; LOSS_ROT
+        ACT_GT --&gt; LOSS_GRIP
+
+        LOSS_POS --&gt; TOTAL["total_loss =&lt;br/&gt;position_loss + rotate6D_loss + gripper_loss"]
+        LOSS_ROT --&gt; TOTAL
+        LOSS_GRIP --&gt; TOTAL
+    end
+
+    style DataPrep fill:#e3f2fd,stroke:#2196F3
+    style VLMEnc fill:#fff3e0,stroke:#FF9800
+    style Diffusion fill:#f3e5f5,stroke:#9C27B0
+    style TransFwd fill:#e8f5e9,stroke:#4CAF50
+    style LossCalc fill:#fce4ec,stroke:#E91E63
+</div>
+<h3 id="扩散加噪公式">扩散加噪公式<a class="headerlink" href="11.X-VLA_Architecture.html#扩散加噪公式" title="Permanent link">#</a></h3>
+<div class="highlight"><pre><span></span><code>t ~ Uniform[0, 1)  (带批次内偏移)
+noise ~ N(0, I)
+action_noisy = noise * t + action_gt * (1 - t)
+</code></pre></div>
+
+<p>模型预测的目标是<strong>直接预测去噪后的动作</strong>（而非预测噪声或速度），损失计算在原始动作空间中进行。</p>
+<hr />
+<h2 id="4-推理流水线">4. 推理流水线<a class="headerlink" href="11.X-VLA_Architecture.html#4-推理流水线" title="Permanent link">#</a></h2>
+<p>推理时，模型从纯随机噪声出发，通过迭代去噪逐步恢复动作轨迹。默认使用 10 步去噪。</p>
+<div class="mermaid">
+graph LR
+    subgraph Init["初始化"]
+        X1["纯随机噪声 x1&lt;br/&gt;~ N(0, I)&lt;br/&gt;[B, 32, dim_action]"]
+        A0["初始动作 = 0&lt;br/&gt;[B, 32, dim_action]"]
+        S["去噪步数 = 10"]
+    end
+
+    subgraph VLMOnce["VLM 编码 (仅一次)"]
+        IMG["图像"] --&gt; VLM["forward_vlm()"]
+        TXT["文本"] --&gt; VLM
+        VLM --&gt; ENC["vlm_features&lt;br/&gt;aux_visual_inputs"]
+    end
+
+    subgraph Loop["迭代去噪循环 (10步)"]
+        direction TB
+        STEP10["步骤 10: t=1.0&lt;br/&gt;x_t = x1*1.0 + action*0.0 = x1&lt;br/&gt;-&gt; Transformer -&gt; action"]
+        STEP9["步骤 9: t=0.9&lt;br/&gt;x_t = x1*0.9 + action*0.1&lt;br/&gt;-&gt; Transformer -&gt; action"]
+        STEP8["步骤 8: t=0.8&lt;br/&gt;x_t = x1*0.8 + action*0.2&lt;br/&gt;-&gt; Transformer -&gt; action"]
+        DOTS["..."]
+        STEP1["步骤 1: t=0.1&lt;br/&gt;x_t = x1*0.1 + action*0.9&lt;br/&gt;-&gt; Transformer -&gt; action"]
+        STEP10 --&gt; STEP9 --&gt; STEP8 --&gt; DOTS --&gt; STEP1
+    end
+
+    subgraph Post["后处理"]
+        STEP1 --&gt; PP["action_space.postprocess()&lt;br/&gt;(如 sigmoid 夹爪)"]
+        PP --&gt; FINAL["最终动作轨迹&lt;br/&gt;[B, 32, action_dim]"]
+    end
+
+    Init --&gt; STEP10
+    ENC --&gt; Loop
+
+    style Init fill:#e3f2fd,stroke:#2196F3
+    style VLMOnce fill:#fff3e0,stroke:#FF9800
+    style Loop fill:#e8f5e9,stroke:#4CAF50
+    style Post fill:#fce4ec,stroke:#E91E63
+</div>
+<h3 id="单步去噪展开">单步去噪展开<a class="headerlink" href="11.X-VLA_Architecture.html#单步去噪展开" title="Permanent link">#</a></h3>
+<p><div class="mermaid">
+graph LR
+    subgraph ImageEnc["DaViT Vision Tower"]
+        PIX["pixel_values&lt;br/&gt;[B, num_views, C, H, W]"]
+        FLAT["展平 &amp; 掩码过滤&lt;br/&gt;仅处理有效视角"]
+        DAVIT["DaViT 视觉编码器&lt;br/&gt;_encode_image()"]
+        RESHAPE["重塑为&lt;br/&gt;[B, num_views, tokens, D]"]
+        PIX --&gt; FLAT --&gt; DAVIT --&gt; RESHAPE
+    end
+
+    subgraph TextEnc["BART 文本-图像融合"]
+        IDS["input_ids&lt;br/&gt;[B, seq_len]"] --&gt; EMB["词元嵌入&lt;br/&gt;get_input_embeddings()"]
+        V0["第0视角特征&lt;br/&gt;[B, tokens, D]"]
+        EMB --&gt; MERGE["_merge_input_ids_with_image_features()&lt;br/&gt;图像 token 插入文本序列"]
+        V0 --&gt; MERGE
+        MERGE --&gt; ENC["BART 编码器&lt;br/&gt;language_model.model.encoder"]
+    end
+
+    subgraph Outputs["输出"]
+        ENC --&gt;|"vlm_features&lt;br/&gt;[B, T_vlm, D]"| OUT1["主视觉语言特征"]
+        AUX["辅助视角特征&lt;br/&gt;[B, (num_views-1)*tokens, D]"]
+        RESHAPE --&gt;|"image_features[:, 1:]"| AUX
+    end
+
+    RESHAPE --&gt;|"image_features[:, 0]"| V0
+
+    style ImageEnc fill:#e3f2fd,stroke:#2196F3
+    style TextEnc fill:#fff3e0,stroke:#FF9800
+    style Outputs fill:#e8f5e9,stroke:#4CAF50
+</div>0</p>
+<blockquote>
+<p><strong>与 GR00T 的区别：</strong> GR00T 使用欧拉积分 (<code>action += dt * v</code>) 逐步更新动作；X-VLA 则在每一步直接用模型输出替换 action，下一步再以新的 action 与噪声插值。两者都属于 Flow Matching 框架，但积分方式不同。</p>
+</blockquote>
+<h3 id="动作选择策略-action-chunking">动作选择策略 (Action Chunking)<a class="headerlink" href="11.X-VLA_Architecture.html#动作选择策略-action-chunking" title="Permanent link">#</a></h3>
+<p><div class="mermaid">
+graph LR
+    subgraph ImageEnc["DaViT Vision Tower"]
+        PIX["pixel_values&lt;br/&gt;[B, num_views, C, H, W]"]
+        FLAT["展平 &amp; 掩码过滤&lt;br/&gt;仅处理有效视角"]
+        DAVIT["DaViT 视觉编码器&lt;br/&gt;_encode_image()"]
+        RESHAPE["重塑为&lt;br/&gt;[B, num_views, tokens, D]"]
+        PIX --&gt; FLAT --&gt; DAVIT --&gt; RESHAPE
+    end
+
+    subgraph TextEnc["BART 文本-图像融合"]
+        IDS["input_ids&lt;br/&gt;[B, seq_len]"] --&gt; EMB["词元嵌入&lt;br/&gt;get_input_embeddings()"]
+        V0["第0视角特征&lt;br/&gt;[B, tokens, D]"]
+        EMB --&gt; MERGE["_merge_input_ids_with_image_features()&lt;br/&gt;图像 token 插入文本序列"]
+        V0 --&gt; MERGE
+        MERGE --&gt; ENC["BART 编码器&lt;br/&gt;language_model.model.encoder"]
+    end
+
+    subgraph Outputs["输出"]
+        ENC --&gt;|"vlm_features&lt;br/&gt;[B, T_vlm, D]"| OUT1["主视觉语言特征"]
+        AUX["辅助视角特征&lt;br/&gt;[B, (num_views-1)*tokens, D]"]
+        RESHAPE --&gt;|"image_features[:, 1:]"| AUX
+    end
+
+    RESHAPE --&gt;|"image_features[:, 0]"| V0
+
+    style ImageEnc fill:#e3f2fd,stroke:#2196F3
+    style TextEnc fill:#fff3e0,stroke:#FF9800
+    style Outputs fill:#e8f5e9,stroke:#4CAF50
+</div>1</p>
+<hr />
+<h2 id="5-动作空间详解">5. 动作空间详解<a class="headerlink" href="11.X-VLA_Architecture.html#5-动作空间详解" title="Permanent link">#</a></h2>
+<h3 id="各模式对比">各模式对比<a class="headerlink" href="11.X-VLA_Architecture.html#各模式对比" title="Permanent link">#</a></h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>动作空间</th>
+<th>维度</th>
+<th>布局</th>
+<th>夹爪索引</th>
+<th>损失函数</th>
+<th>适用场景</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>ee6d</strong></td>
+<td>20D</td>
+<td>[XYZ(3)+Rot6D(6)+Gripper(1)] x2 臂</td>
+<td>(9, 19)</td>
+<td>Pos MSE<em>500 + Rot MSE</em>10 + Grip BCE*1</td>
+<td>末端执行器双臂</td>
+</tr>
+<tr>
+<td><strong>joint</strong></td>
+<td>14D</td>
+<td>[Joints(6)+Gripper(1)] x2 臂</td>
+<td>(6, 13)</td>
+<td>Joints MSE<em>1 + Grip BCE</em>0.1</td>
+<td>关节空间双臂</td>
+</tr>
+<tr>
+<td><strong>auto</strong></td>
+<td>可配置</td>
+<td>前 real_dim 维有效, 填充至 max_dim</td>
+<td>无</td>
+<td>MSE*1 (仅前 real_dim 维)</td>
+<td>任意维度自适应</td>
+</tr>
+<tr>
+<td><strong>agibot_ee6d</strong></td>
+<td>20D</td>
+<td>同 ee6d</td>
+<td>(9, 19)</td>
+<td>Pos MSE<em>500 + Rot MSE</em>10 + Grip MSE*10</td>
+<td>AGI-Bot (全 MSE)</td>
+</tr>
+<tr>
+<td><strong>franka_joint7</strong></td>
+<td>20D (实际7D)</td>
+<td>7关节 + 13维填充</td>
+<td>无</td>
+<td>MSE*1 (仅前7维)</td>
+<td>Franka Panda</td>
+</tr>
+<tr>
+<td><strong>so101_bimanual</strong></td>
+<td>20D (实际12D)</td>
+<td>[5关节+Gripper] x2 + 8维填充</td>
+<td>(5, 11)</td>
+<td>MSE<em>1 + Grip MSE</em>1</td>
+<td>SO-101 双臂</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="ee6d-动作布局-20d">ee6d 动作布局 (20D)<a class="headerlink" href="11.X-VLA_Architecture.html#ee6d-动作布局-20d" title="Permanent link">#</a></h3>
+<p><div class="mermaid">
+graph LR
+    subgraph ImageEnc["DaViT Vision Tower"]
+        PIX["pixel_values&lt;br/&gt;[B, num_views, C, H, W]"]
+        FLAT["展平 &amp; 掩码过滤&lt;br/&gt;仅处理有效视角"]
+        DAVIT["DaViT 视觉编码器&lt;br/&gt;_encode_image()"]
+        RESHAPE["重塑为&lt;br/&gt;[B, num_views, tokens, D]"]
+        PIX --&gt; FLAT --&gt; DAVIT --&gt; RESHAPE
+    end
+
+    subgraph TextEnc["BART 文本-图像融合"]
+        IDS["input_ids&lt;br/&gt;[B, seq_len]"] --&gt; EMB["词元嵌入&lt;br/&gt;get_input_embeddings()"]
+        V0["第0视角特征&lt;br/&gt;[B, tokens, D]"]
+        EMB --&gt; MERGE["_merge_input_ids_with_image_features()&lt;br/&gt;图像 token 插入文本序列"]
+        V0 --&gt; MERGE
+        MERGE --&gt; ENC["BART 编码器&lt;br/&gt;language_model.model.encoder"]
+    end
+
+    subgraph Outputs["输出"]
+        ENC --&gt;|"vlm_features&lt;br/&gt;[B, T_vlm, D]"| OUT1["主视觉语言特征"]
+        AUX["辅助视角特征&lt;br/&gt;[B, (num_views-1)*tokens, D]"]
+        RESHAPE --&gt;|"image_features[:, 1:]"| AUX
+    end
+
+    RESHAPE --&gt;|"image_features[:, 0]"| V0
+
+    style ImageEnc fill:#e3f2fd,stroke:#2196F3
+    style TextEnc fill:#fff3e0,stroke:#FF9800
+    style Outputs fill:#e8f5e9,stroke:#4CAF50
+</div>2</p>
+<h3 id="预处理与后处理">预处理与后处理<a class="headerlink" href="11.X-VLA_Architecture.html#预处理与后处理" title="Permanent link">#</a></h3>
+<p><div class="mermaid">
+graph LR
+    subgraph ImageEnc["DaViT Vision Tower"]
+        PIX["pixel_values&lt;br/&gt;[B, num_views, C, H, W]"]
+        FLAT["展平 &amp; 掩码过滤&lt;br/&gt;仅处理有效视角"]
+        DAVIT["DaViT 视觉编码器&lt;br/&gt;_encode_image()"]
+        RESHAPE["重塑为&lt;br/&gt;[B, num_views, tokens, D]"]
+        PIX --&gt; FLAT --&gt; DAVIT --&gt; RESHAPE
+    end
+
+    subgraph TextEnc["BART 文本-图像融合"]
+        IDS["input_ids&lt;br/&gt;[B, seq_len]"] --&gt; EMB["词元嵌入&lt;br/&gt;get_input_embeddings()"]
+        V0["第0视角特征&lt;br/&gt;[B, tokens, D]"]
+        EMB --&gt; MERGE["_merge_input_ids_with_image_features()&lt;br/&gt;图像 token 插入文本序列"]
+        V0 --&gt; MERGE
+        MERGE --&gt; ENC["BART 编码器&lt;br/&gt;language_model.model.encoder"]
+    end
+
+    subgraph Outputs["输出"]
+        ENC --&gt;|"vlm_features&lt;br/&gt;[B, T_vlm, D]"| OUT1["主视觉语言特征"]
+        AUX["辅助视角特征&lt;br/&gt;[B, (num_views-1)*tokens, D]"]
+        RESHAPE --&gt;|"image_features[:, 1:]"| AUX
+    end
+
+    RESHAPE --&gt;|"image_features[:, 0]"| V0
+
+    style ImageEnc fill:#e3f2fd,stroke:#2196F3
+    style TextEnc fill:#fff3e0,stroke:#FF9800
+    style Outputs fill:#e8f5e9,stroke:#4CAF50
+</div>3</p>
+<hr />
+<h2 id="6-关键超参数表">6. 关键超参数表<a class="headerlink" href="11.X-VLA_Architecture.html#6-关键超参数表" title="Permanent link">#</a></h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>参数</th>
+<th>默认值</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>hidden_size</code></td>
+<td>1024</td>
+<td>Transformer 隐藏层维度</td>
+</tr>
+<tr>
+<td><code>depth</code></td>
+<td>24</td>
+<td>Transformer 层数</td>
+</tr>
+<tr>
+<td><code>num_heads</code></td>
+<td>16</td>
+<td>注意力头数 (head_dim = 64)</td>
+</tr>
+<tr>
+<td><code>mlp_ratio</code></td>
+<td>4.0</td>
+<td>MLP 隐藏层倍数 (MLP dim = 4096)</td>
+</tr>
+<tr>
+<td><code>chunk_size</code></td>
+<td>32</td>
+<td>预测的未来动作步数</td>
+</tr>
+<tr>
+<td><code>n_action_steps</code></td>
+<td>32</td>
+<td>每次推理使用的动作步数</td>
+</tr>
+<tr>
+<td><code>num_denoising_steps</code></td>
+<td>10</td>
+<td>推理时去噪步数</td>
+</tr>
+<tr>
+<td><code>num_domains</code></td>
+<td>30</td>
+<td>最大支持的机器人域数量</td>
+</tr>
+<tr>
+<td><code>len_soft_prompts</code></td>
+<td>32</td>
+<td>每个域的可学习软提示 token 数</td>
+</tr>
+<tr>
+<td><code>dim_time</code></td>
+<td>32</td>
+<td>时间步嵌入维度</td>
+</tr>
+<tr>
+<td><code>max_len_seq</code></td>
+<td>512</td>
+<td>最大序列长度 (位置编码)</td>
+</tr>
+<tr>
+<td><code>max_state_dim</code></td>
+<td>32</td>
+<td>最大本体感受状态维度</td>
+</tr>
+<tr>
+<td><code>max_action_dim</code></td>
+<td>20</td>
+<td>最大动作维度 (auto 模式填充目标)</td>
+</tr>
+<tr>
+<td><code>action_mode</code></td>
+<td>"ee6d"</td>
+<td>动作空间模式</td>
+</tr>
+<tr>
+<td><code>dtype</code></td>
+<td>"float32"</td>
+<td>模型精度 ("bfloat16" / "float32")</td>
+</tr>
+<tr>
+<td><code>tokenizer_name</code></td>
+<td>"facebook/bart-large"</td>
+<td>语言分词器</td>
+</tr>
+<tr>
+<td><code>tokenizer_max_length</code></td>
+<td>64</td>
+<td>最大文本 token 长度</td>
+</tr>
+<tr>
+<td><code>use_proprio</code></td>
+<td>True</td>
+<td>是否使用本体感受状态</td>
+</tr>
+<tr>
+<td><code>use_hetero_proj</code></td>
+<td>False</td>
+<td>是否使用域感知视觉投影</td>
+</tr>
+<tr>
+<td><code>optimizer_lr</code></td>
+<td>1e-4</td>
+<td>基础学习率</td>
+</tr>
+<tr>
+<td><code>optimizer_grad_clip_norm</code></td>
+<td>10.0</td>
+<td>梯度裁剪范数</td>
+</tr>
+<tr>
+<td><code>scheduler_warmup_steps</code></td>
+<td>1,000</td>
+<td>学习率预热步数</td>
+</tr>
+<tr>
+<td><code>scheduler_decay_steps</code></td>
+<td>30,000</td>
+<td>余弦衰减总步数</td>
+</tr>
+<tr>
+<td><code>Attention dropout</code></td>
+<td>0.1</td>
+<td>注意力 Dropout 率</td>
+</tr>
+<tr>
+<td><code>MLP dropout</code></td>
+<td>0.1</td>
+<td>MLP Dropout 率</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="优化器配置">优化器配置<a class="headerlink" href="11.X-VLA_Architecture.html#优化器配置" title="Permanent link">#</a></h3>
+<p>X-VLA 使用差分学习率策略：</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>参数组</th>
+<th>学习率</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>VLM 参数 (vision + language)</td>
+<td><code>lr * 0.1</code></td>
+<td>1/10 基础学习率, 稳定优化</td>
+</tr>
+<tr>
+<td>Transformer / 动作头</td>
+<td><code>lr</code></td>
+<td>完整学习率</td>
+</tr>
+<tr>
+<td>软提示</td>
+<td><code>lr * soft_prompt_lr_scale</code></td>
+<td>可配置缩放, 支持独立 warmup</td>
+</tr>
+</tbody>
+</table></div>
+<hr />
+<h2 id="7-关键源文件表">7. 关键源文件表<a class="headerlink" href="11.X-VLA_Architecture.html#7-关键源文件表" title="Permanent link">#</a></h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>组件</th>
+<th>类名</th>
+<th>文件路径</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>主模型</td>
+<td><code>XVLAModel</code></td>
+<td><code>lerobot/policies/xvla/modeling_xvla.py:43</code></td>
+</tr>
+<tr>
+<td>LeRobot 策略封装</td>
+<td><code>XVLAPolicy</code></td>
+<td><code>lerobot/policies/xvla/modeling_xvla.py:271</code></td>
+</tr>
+<tr>
+<td>模型配置</td>
+<td><code>XVLAConfig</code></td>
+<td><code>lerobot/policies/xvla/configuration_xvla.py:41</code></td>
+</tr>
+<tr>
+<td>软提示 Transformer</td>
+<td><code>SoftPromptedTransformer</code></td>
+<td><code>lerobot/policies/xvla/soft_transformer.py:292</code></td>
+</tr>
+<tr>
+<td>Transformer 模块</td>
+<td><code>TransformerBlock</code></td>
+<td><code>lerobot/policies/xvla/soft_transformer.py:258</code></td>
+</tr>
+<tr>
+<td>多头自注意力</td>
+<td><code>Attention</code></td>
+<td><code>lerobot/policies/xvla/soft_transformer.py:92</code></td>
+</tr>
+<tr>
+<td>域感知线性层</td>
+<td><code>DomainAwareLinear</code></td>
+<td><code>lerobot/policies/xvla/soft_transformer.py:215</code></td>
+</tr>
+<tr>
+<td>时间步嵌入</td>
+<td><code>timestep_embedding()</code></td>
+<td><code>lerobot/policies/xvla/soft_transformer.py:183</code></td>
+</tr>
+<tr>
+<td>MLP 模块</td>
+<td><code>Mlp</code></td>
+<td><code>lerobot/policies/xvla/soft_transformer.py:47</code></td>
+</tr>
+<tr>
+<td>动作空间注册表</td>
+<td><code>ACTION_REGISTRY</code></td>
+<td><code>lerobot/policies/xvla/action_hub.py:27</code></td>
+</tr>
+<tr>
+<td>动作空间基类</td>
+<td><code>BaseActionSpace</code></td>
+<td><code>lerobot/policies/xvla/action_hub.py:55</code></td>
+</tr>
+<tr>
+<td>ee6d 动作空间</td>
+<td><code>EE6DActionSpace</code></td>
+<td><code>lerobot/policies/xvla/action_hub.py:113</code></td>
+</tr>
+<tr>
+<td>joint 动作空间</td>
+<td><code>JointActionSpace</code></td>
+<td><code>lerobot/policies/xvla/action_hub.py:175</code></td>
+</tr>
+<tr>
+<td>auto 动作空间</td>
+<td><code>AutoActionSpace</code></td>
+<td><code>lerobot/policies/xvla/action_hub.py:345</code></td>
+</tr>
+<tr>
+<td>Florence2 配置</td>
+<td><code>Florence2Config</code></td>
+<td><code>lerobot/policies/xvla/configuration_florence2.py</code></td>
+</tr>
+<tr>
+<td>Florence2 模型</td>
+<td><code>Florence2ForConditionalGeneration</code></td>
+<td><code>lerobot/policies/xvla/modeling_florence2.py</code></td>
+</tr>
+</tbody>
+</table></div>
+      </div>
+    </main>
+        <aside class="toc">
+            <div class="toc-title">本页目录</div>
+            <ul>
+                <li><a href="11.X-VLA_Architecture.html#1-整体架构概览" class="toc-h2">1. 整体架构概览</a></li>
+                <li><a href="11.X-VLA_Architecture.html#2-核心组件详解" class="toc-h2">2. 核心组件详解</a></li>
+                <li><a href="11.X-VLA_Architecture.html#21-florence2-视觉语言模型-vision-tower-bart-编码器" class="toc-h3">2.1 Florence2 视觉语言模型 (Vision Tower + BART 编码器)</a></li>
+                <li><a href="11.X-VLA_Architecture.html#22-softpromptedtransformer-软提示-transformer" class="toc-h3">2.2 SoftPromptedTransformer (软提示 Transformer)</a></li>
+                <li><a href="11.X-VLA_Architecture.html#23-domainawarelinear-域感知线性层" class="toc-h3">2.3 DomainAwareLinear (域感知线性层)</a></li>
+                <li><a href="11.X-VLA_Architecture.html#24-动作空间管理器-actionspace-registry" class="toc-h3">2.4 动作空间管理器 (ActionSpace Registry)</a></li>
+                <li><a href="11.X-VLA_Architecture.html#3-训练流水线" class="toc-h2">3. 训练流水线</a></li>
+                <li><a href="11.X-VLA_Architecture.html#扩散加噪公式" class="toc-h3">扩散加噪公式</a></li>
+                <li><a href="11.X-VLA_Architecture.html#4-推理流水线" class="toc-h2">4. 推理流水线</a></li>
+                <li><a href="11.X-VLA_Architecture.html#单步去噪展开" class="toc-h3">单步去噪展开</a></li>
+                <li><a href="11.X-VLA_Architecture.html#动作选择策略-action-chunking" class="toc-h3">动作选择策略 (Action Chunking)</a></li>
+                <li><a href="11.X-VLA_Architecture.html#5-动作空间详解" class="toc-h2">5. 动作空间详解</a></li>
+                <li><a href="11.X-VLA_Architecture.html#各模式对比" class="toc-h3">各模式对比</a></li>
+                <li><a href="11.X-VLA_Architecture.html#ee6d-动作布局-20d" class="toc-h3">ee6d 动作布局 (20D)</a></li>
+                <li><a href="11.X-VLA_Architecture.html#预处理与后处理" class="toc-h3">预处理与后处理</a></li>
+                <li><a href="11.X-VLA_Architecture.html#6-关键超参数表" class="toc-h2">6. 关键超参数表</a></li>
+                <li><a href="11.X-VLA_Architecture.html#优化器配置" class="toc-h3">优化器配置</a></li>
+                <li><a href="11.X-VLA_Architecture.html#7-关键源文件表" class="toc-h2">7. 关键源文件表</a></li>
+            </ul>
+        </aside>
+
+    <button class="back-to-top" onclick="window.scrollTo({top:0,behavior:'smooth'})">&#8593;</button>
+
+    <script src="assets/vendor/mermaid/mermaid.min.js"></script>
+    <script defer src="assets/vendor/katex/katex.min.js"></script>
+    <script defer src="assets/vendor/katex/auto-render.min.js"
+            onload="renderMathInElement(document.querySelector('.content-inner'), {
+                delimiters: [
+                    { left: '$$', right: '$$', display: true },
+                    { left: '$', right: '$', display: false }
+                ],
+                ignoredTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code', 'option'],
+                ignoredClasses: ['mermaid', 'diagram'],
+                throwOnError: false
+            });"></script>
+    <script>
+        // Mermaid destroys the source text when it renders, so keep a copy in
+        // order to re-render on theme change.
+        document.querySelectorAll('.mermaid').forEach(el => {
+            el.dataset.src = el.textContent;
+        });
+
+        const prefersDark = window.matchMedia('(prefers-color-scheme: dark)');
+        function currentTheme() {
+            const forced = document.documentElement.getAttribute('data-theme');
+            if (forced) return forced;
+            return prefersDark.matches ? 'dark' : 'light';
+        }
+
+        function initMermaid() {
+            mermaid.initialize({
+                startOnLoad: false,
+                theme: currentTheme() === 'dark' ? 'dark' : 'default',
+                flowchart: { useMaxWidth: true, htmlLabels: true },
+                securityLevel: 'loose'
+            });
+        }
+
+        function renderMermaid() {
+            const nodes = document.querySelectorAll('.mermaid');
+            nodes.forEach(el => {
+                el.removeAttribute('data-processed');
+                el.textContent = el.dataset.src;
+            });
+            // mermaid.run rejects on its internal font probe in some browsers;
+            // the diagrams still render, so swallow it rather than surfacing an
+            // unhandled rejection.
+            if (!nodes.length) return;
+            Promise.resolve(mermaid.run({ nodes: nodes }))
+                .catch(() => {})
+                .then(() => nodes.forEach(applyZoom));
+        }
+
+        /* ---------- Diagram zoom ----------
+           Scale is tracked as a factor of the diagram's NATURAL size (its
+           viewBox), so 100% means 1:1 and one font size looks identical in
+           every diagram on the site. Left to itself mermaid's useMaxWidth
+           stretches each svg to the container, which blows a 3-node diagram
+           up to 3.4x and shrinks a wide one to 0.34x — a 10x spread in
+           apparent font size. FIT_MAX caps the auto-fit at 1:1 (never
+           upscale) and FIT_MIN stops wide diagrams from shrinking to
+           unreadable; anything past that overflows and scrolls/pans. */
+        const MIN_Z = 0.3, MAX_Z = 6, STEP = 1.25;
+        const FIT_MIN = 0.55, FIT_MAX = 1;
+        const PAD = 40;               // .mermaid horizontal padding (20px each side)
+        const zoom = new WeakMap();   // .mermaid -> explicit scale; absent = auto-fit
+
+        function naturalSize(svg) {
+            const vb = svg.viewBox && svg.viewBox.baseVal;
+            if (vb && vb.width) return { w: vb.width, h: vb.height };
+            const r = svg.getBoundingClientRect();
+            return { w: r.width, h: r.height };
+        }
+
+        function fitScale(el, nat) {
+            const avail = el.clientWidth - PAD;
+            if (!nat.w || avail <= 0) return 1;
+            return Math.min(FIT_MAX, Math.max(FIT_MIN, avail / nat.w));
+        }
+
+        function scaleOf(el, nat) {
+            const k = zoom.get(el);
+            return k === undefined ? fitScale(el, nat) : k;
+        }
+
+        function applyZoom(el) {
+            const svg = el.querySelector('svg');
+            if (!svg) return;
+            const nat = naturalSize(svg);
+            if (!nat.w) return;
+            const k = scaleOf(el, nat);
+
+            const label = el.closest('.diagram')?.querySelector('.diagram-zoom');
+            if (label) label.textContent = Math.round(k * 100) + '%';
+
+            // Size the svg explicitly instead of leaving it to useMaxWidth,
+            // so the container gets real scrollbars when the diagram overflows.
+            svg.style.maxWidth = 'none';
+            svg.style.width = (nat.w * k) + 'px';
+            svg.style.height = (nat.h * k) + 'px';
+
+            const overflows = nat.w * k > el.clientWidth - PAD + 1;
+            el.classList.toggle('is-zoomed', overflows);
+            if (!overflows) el.scrollLeft = el.scrollTop = 0;
+        }
+
+        function setZoom(el, k, anchor) {
+            const svg = el.querySelector('svg');
+            if (!svg) return;
+            const nat = naturalSize(svg);
+            const prev = scaleOf(el, nat);
+            if (k !== null) k = Math.min(MAX_Z, Math.max(MIN_Z, k));
+            const next = k === null ? fitScale(el, nat) : k;
+            if (next === prev) return;
+            // Keep the point under the cursor (or the viewport centre) put.
+            const ax = anchor ? anchor.x : el.clientWidth / 2;
+            const ay = anchor ? anchor.y : el.clientHeight / 2;
+            const rx = (el.scrollLeft + ax) / prev;
+            const ry = (el.scrollTop + ay) / prev;
+            if (k === null) zoom.delete(el); else zoom.set(el, k);
+            applyZoom(el);
+            el.scrollLeft = rx * next - ax;
+            el.scrollTop = ry * next - ay;
+        }
+
+        function currentScale(el) {
+            const svg = el.querySelector('svg');
+            return svg ? scaleOf(el, naturalSize(svg)) : 1;
+        }
+
+        function setupDiagrams() {
+            document.querySelectorAll('.mermaid').forEach(el => {
+                const wrap = document.createElement('div');
+                wrap.className = 'diagram';
+                el.parentNode.insertBefore(wrap, el);
+                wrap.appendChild(el);
+
+                const tools = document.createElement('div');
+                tools.className = 'diagram-tools';
+                tools.innerHTML =
+                    '<button type="button" data-act="out" title="缩小">&minus;</button>' +
+                    '<span class="diagram-zoom">100%</span>' +
+                    '<button type="button" data-act="in" title="放大">+</button>' +
+                    '<button type="button" data-act="reset" title="适应宽度">&#9633;</button>' +
+                    '<button type="button" data-act="full" title="全屏">&#10530;</button>';
+                wrap.appendChild(tools);
+
+                tools.addEventListener('click', e => {
+                    const act = e.target.closest('button')?.dataset.act;
+                    if (!act) return;
+                    const k = currentScale(el);
+                    if (act === 'in') setZoom(el, k * STEP);
+                    else if (act === 'out') setZoom(el, k / STEP);
+                    else if (act === 'reset') setZoom(el, null);
+                    else if (act === 'full') {
+                        if (document.fullscreenElement === wrap) document.exitFullscreen();
+                        else wrap.requestFullscreen?.();
+                    }
+                });
+
+                // Ctrl/⌘ + wheel zooms; a plain wheel keeps scrolling the page.
+                el.addEventListener('wheel', e => {
+                    if (!e.ctrlKey && !e.metaKey) return;
+                    e.preventDefault();
+                    const r = el.getBoundingClientRect();
+                    setZoom(el, currentScale(el) * (e.deltaY < 0 ? STEP : 1 / STEP),
+                            { x: e.clientX - r.left, y: e.clientY - r.top });
+                }, { passive: false });
+
+                // Drag to pan once zoomed in.
+                let drag = null;
+                el.addEventListener('pointerdown', e => {
+                    // Pan only matters once the diagram actually overflows.
+                    if (e.button !== 0 || !el.classList.contains('is-zoomed')) return;
+                    drag = { x: e.clientX, y: e.clientY, l: el.scrollLeft, t: el.scrollTop };
+                    el.setPointerCapture(e.pointerId);
+                    el.classList.add('is-panning');
+                });
+                el.addEventListener('pointermove', e => {
+                    if (!drag) return;
+                    el.scrollLeft = drag.l - (e.clientX - drag.x);
+                    el.scrollTop = drag.t - (e.clientY - drag.y);
+                });
+                const endDrag = () => { drag = null; el.classList.remove('is-panning'); };
+                el.addEventListener('pointerup', endDrag);
+                el.addEventListener('pointercancel', endDrag);
+
+                // Double click toggles between auto-fit and true 1:1.
+                el.addEventListener('dblclick', () => setZoom(el, zoom.has(el) ? null : 1));
+            });
+        }
+
+        setupDiagrams();
+        initMermaid();
+        renderMermaid();
+
+        const remeasure = () => document.querySelectorAll('.mermaid').forEach(applyZoom);
+        document.addEventListener('fullscreenchange', remeasure);
+        window.addEventListener('resize', remeasure);
+
+        // Theme toggle
+        const toggle = document.getElementById('theme-toggle');
+        toggle.addEventListener('click', () => {
+            const next = currentTheme() === 'dark' ? 'light' : 'dark';
+            document.documentElement.setAttribute('data-theme', next);
+            try { localStorage.setItem('theme', next); } catch (e) {}
+            initMermaid();
+            renderMermaid();
+        });
+
+        // Follow the OS while the user hasn't made an explicit choice
+        prefersDark.addEventListener('change', () => {
+            if (!document.documentElement.getAttribute('data-theme')) {
+                initMermaid();
+                renderMermaid();
+            }
+        });
+
+        // Back to top button
+        const btn = document.querySelector('.back-to-top');
+        window.addEventListener('scroll', () => {
+            btn.classList.toggle('visible', window.scrollY > 300);
+        });
+
+        // Close sidebar on mobile when clicking a link
+        document.querySelectorAll('.sidebar nav a').forEach(a => {
+            a.addEventListener('click', () => {
+                document.querySelector('.sidebar').classList.remove('open');
+            });
+        });
+
+        // Highlight the TOC entry for the heading currently in view
+        const tocLinks = Array.from(document.querySelectorAll('.toc a'));
+        if (tocLinks.length) {
+            const targets = tocLinks
+                .map(a => document.getElementById(decodeURIComponent(a.hash.slice(1))))
+                .filter(Boolean);
+            const setActive = () => {
+                let current = targets[0];
+                for (const t of targets) {
+                    if (t.getBoundingClientRect().top <= 120) current = t;
+                    else break;
+                }
+                tocLinks.forEach(a => a.classList.toggle(
+                    'active',
+                    current && decodeURIComponent(a.hash.slice(1)) === current.id
+                ));
+            };
+            setActive();
+            let queued = false;
+            window.addEventListener('scroll', () => {
+                if (queued) return;
+                queued = true;
+                requestAnimationFrame(() => { setActive(); queued = false; });
+            });
+        }
+    </script>
+</body>
+</html>

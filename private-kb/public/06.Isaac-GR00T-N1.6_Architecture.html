@@ -1,0 +1,1118 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Isaac-GR00T N1.6 - Robotics Knowledge Base</title>
+    <link rel="icon" href="favicon.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="assets/vendor/katex/katex.min.css">
+    <script>
+        // Applied before first paint so the saved theme doesn't flash.
+        (function () {
+            try {
+                var t = localStorage.getItem('theme');
+                if (t === 'dark' || t === 'light') {
+                    document.documentElement.setAttribute('data-theme', t);
+                }
+            } catch (e) {}
+        })();
+    </script>
+</head>
+<body>
+    <button class="menu-toggle" onclick="document.querySelector('.sidebar').classList.toggle('open')">&#9776;</button>
+    <button class="theme-toggle" id="theme-toggle" title="切换日夜模式" aria-label="切换日夜模式">
+        <span class="icon-light">&#9790;</span><span class="icon-dark">&#9728;</span>
+    </button>
+
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <h2>Robotics Knowledge Base</h2>
+            <p>机器人模型架构知识库</p>
+        </div>
+        <nav>
+            <a href="index.html">Overview</a>
+            <div class="nav-group">VLA 模型</div>
+            <a href="01.Pi0_Architecture.html">Pi0</a>
+            <a href="02.Pi0.5_Architecture.html">Pi0.5</a>
+            <a href="03.Pi0-FAST_Architecture.html">Pi0-FAST</a>
+            <a href="04.Pi-Star-0.6_Architecture.html">π*₀.₆ (Pi-Star-0.6)</a>
+            <a href="05.Pi0.7_Architecture.html">π₀.₇ (Pi-0.7)</a>
+            <a href="06.Isaac-GR00T-N1.6_Architecture.html" class="active">Isaac-GR00T N1.6</a>
+            <a href="07.Isaac-GR00T-N1.5_Architecture.html">Isaac-GR00T N1.5</a>
+            <a href="08.ACT_Architecture.html">ACT</a>
+            <a href="09.SmolVLA_Architecture.html">SmolVLA</a>
+            <a href="10.WALL-OSS_Architecture.html">WALL-OSS / WALL-X</a>
+            <a href="11.X-VLA_Architecture.html">X-VLA</a>
+            <a href="12.Psi0_Architecture.html">Psi0 (ψ₀)</a>
+            <a href="13.DreamZero_Architecture.html">DreamZero</a>
+            <a href="14.FastWAM_Architecture.html">Fast-WAM</a>
+            <div class="nav-group">全身控制 (WBC)</div>
+            <a href="15.GR00T-WBC_Overview.html">GR00T-WBC 总览</a>
+            <a href="16.Decoupled-WBC_Architecture.html" class="nav-child">Decoupled WBC</a>
+            <a href="17.GEAR-SONIC_Architecture.html" class="nav-child">GEAR-SONIC</a>
+            <a href="18.MotionBricks_Architecture.html" class="nav-child">MotionBricks</a>
+            <div class="nav-group">3D 视觉与 VLM</div>
+            <a href="19.VLM3_Architecture.html">VLM³</a>
+        </nav>
+    </aside>
+
+    <main class="content">
+      <div class="content-inner">
+        <h1 id="isaac-gr00t-n16-模型架构">Isaac GR00T N1.6 模型架构<a class="headerlink" href="06.Isaac-GR00T-N1.6_Architecture.html#isaac-gr00t-n16-模型架构" title="Permanent link">#</a></h1>
+<h2 id="1-整体架构概览">1. 整体架构概览<a class="headerlink" href="06.Isaac-GR00T-N1.6_Architecture.html#1-整体架构概览" title="Permanent link">#</a></h2>
+<p>Isaac GR00T N1.6 是 NVIDIA 提出的视觉-语言-动作 (VLA) 通用人形机器人基座模型，3B 参数级。其架构由两部分串联：上游 <strong>Eagle Vision-Language Backbone</strong>（基于 NVIDIA Cosmos-Reason-2B VLM 变体）将图像 + 语言编码成统一的多模态特征序列；下游 <strong>Action Head</strong> 使用 <strong>32 层 AlternateVLDiT</strong>（Diffusion Transformer）通过 <strong>Flow Matching</strong> 把高斯噪声逐步去噪成动作 chunk。为了支持跨形态（cross-embodiment）训练，状态编码器、动作编码器、动作解码器都使用 <strong>CategorySpecificMLP</strong>——同一组层但为每个 embodiment 维护独立权重，最多支持 32 种形态。N1.6 相比 N1.5 的核心改变包括：换用更大的 Cosmos VLM 并解冻顶部 4 层、DiT 层数从 16 翻倍到 32、移除 N1.5 的 post-VLM 4 层 transformer adapter、对大部分形态改为预测 <strong>state-relative action chunks</strong>。</p>
+<div class="mermaid">
+graph TB
+    subgraph Input["输入"]
+        IMG["多视角图像&lt;br/&gt;(原生宽高比, 无 padding)"]
+        TXT["语言指令&lt;br/&gt;(input_ids)"]
+        STATE["机器人状态&lt;br/&gt;[B, state_dim]&lt;br/&gt;(≤ max_state_dim=29)"]
+        EID["embodiment_id&lt;br/&gt;[B] ∈ [0, 32)"]
+    end
+
+    subgraph Backbone["Eagle Backbone (Cosmos-Reason-2B 变体)"]
+        EAGLE["vision_model + language_model&lt;br/&gt;(select_layer=16, 截断后 LLM)&lt;br/&gt;tune_top_llm_layers=4"]
+        VLLN["VLN LayerNorm&lt;br/&gt;(可选)"]
+    end
+
+    subgraph Encoders["Embodiment 条件化编码"]
+        SE["state_encoder&lt;br/&gt;CategorySpecificMLP&lt;br/&gt;29 → 1024 → 1536"]
+        AE["action_encoder&lt;br/&gt;MultiEmbodimentActionEncoder&lt;br/&gt;含 W1/W2/W3 + 正弦时间编码"]
+    end
+
+    subgraph FlowMatch["Flow Matching"]
+        NOISE["x_t = (1 - t) * noise + t * actions&lt;br/&gt;velocity = actions - noise"]
+        TBUCKET["t_discretized = t * 1000"]
+    end
+
+    subgraph DiT["32 层 AlternateVLDiT"]
+        DITCORE["sa_embs = concat(state_features, action_features)&lt;br/&gt;cross-attention 交替 attend&lt;br/&gt;非图像 token / 图像 token&lt;br/&gt;每 2 个 cross block 切换一次&lt;br/&gt;奇数层走 self-attention"]
+    end
+
+    subgraph Decoder["动作解码"]
+        AD["action_decoder&lt;br/&gt;CategorySpecificMLP&lt;br/&gt;1024 → 1024 → 29"]
+        EULER["欧拉积分&lt;br/&gt;x_{t+dt} = x_t + dt * v_t&lt;br/&gt;(4 步, dt = 1/4)"]
+    end
+
+    subgraph Output["输出"]
+        ACT["动作 chunk&lt;br/&gt;[B, 16, action_dim]&lt;br/&gt;(多数 embodiment 为 state-relative)"]
+    end
+
+    IMG --&gt; EAGLE
+    TXT --&gt; EAGLE
+    EAGLE --&gt; VLLN
+    VLLN --&gt;|"backbone_features [B, S, 2048]&lt;br/&gt;+ backbone_attention_mask&lt;br/&gt;+ image_mask"| DITCORE
+
+    STATE --&gt; SE
+    EID --&gt; SE
+    EID --&gt; AE
+    EID --&gt; AD
+
+    NOISE --&gt;|"x_t"| AE
+    TBUCKET --&gt;|"t_discretized"| AE
+    AE --&gt; DITCORE
+    SE --&gt; DITCORE
+    TBUCKET --&gt;|"timestep"| DITCORE
+
+    DITCORE --&gt; AD --&gt; EULER --&gt; ACT
+
+    style Input fill:#e8f4fd,stroke:#2196F3
+    style Backbone fill:#fff3e0,stroke:#FF9800
+    style Encoders fill:#f3e5f5,stroke:#9C27B0
+    style FlowMatch fill:#fff9c4,stroke:#FFC107
+    style DiT fill:#e8f5e9,stroke:#4CAF50
+    style Decoder fill:#e0f2f1,stroke:#009688
+    style Output fill:#fce4ec,stroke:#E91E63
+</div>
+<hr />
+<h2 id="2-核心组件详解">2. 核心组件详解<a class="headerlink" href="06.Isaac-GR00T-N1.6_Architecture.html#2-核心组件详解" title="Permanent link">#</a></h2>
+<h3 id="21-eagle-vision-language-backbone">2.1 Eagle Vision-Language Backbone<a class="headerlink" href="06.Isaac-GR00T-N1.6_Architecture.html#21-eagle-vision-language-backbone" title="Permanent link">#</a></h3>
+<p><code>EagleBackbone</code> (<code>gr00t/model/modules/eagle_backbone.py</code>) 是上游 VLM 包装。N1.6 默认 <code>model_name="nvidia/Eagle-Block2A-2B-v2"</code>——NVIDIA 内部的 <strong>Cosmos-Reason-2B VLM 变体</strong>，用 flash attention + bf16 加载。它由 <code>vision_model</code> + <code>mlp1</code> 视觉投影 + <code>language_model</code> 三段组成。</p>
+<div class="mermaid">
+graph LR
+    subgraph EagleIn["输入"]
+        PIX["pixel_values&lt;br/&gt;(原生宽高比, any-res)"]
+        IDS["input_ids + attention_mask&lt;br/&gt;含图像 token 占位"]
+    end
+
+    subgraph EagleCore["Eagle (Cosmos-Reason-2B 变体)"]
+        VIT["vision_model&lt;br/&gt;(any-res ViT)"]
+        MLP1["mlp1&lt;br/&gt;视觉特征投影"]
+        LLM["language_model&lt;br/&gt;(LLM, 顶部 4 层可训练)&lt;br/&gt;layers 被截断到 select_layer=16"]
+    end
+
+    PIX --&gt; VIT --&gt; MLP1 --&gt; LLM
+    IDS --&gt; LLM
+    LLM --&gt; H["hidden_states[-1]&lt;br/&gt;backbone_features&lt;br/&gt;[B, S, 2048]"]
+    IDS --&gt; IMASK["image_mask = (input_ids == image_token_index)"]
+    IDS --&gt; AMASK["backbone_attention_mask = (attention_mask == 1)"]
+
+    style EagleCore fill:#fff3e0,stroke:#FF9800
+</div>
+<p><strong>关键细节：</strong></p>
+<ul>
+<li>图像保持原生宽高比，无需 padding，由 Eagle 内部 any-res ViT 处理（参见 <a href="https://vla.yilong-zhu.com/Isaac-GR00T/gr00t/model/modules/nvidia/"><code>gr00t/model/modules/nvidia/Eagle-Block2A-2B-v2/</code></a> 内 trust_remote_code 模型）</li>
+<li><code>select_layer=16</code> 截断 LLM 顶部以外的层，仅保留前 16 层做特征提取</li>
+<li><code>tune_top_llm_layers=4</code>：顶部 4 层 LLM 在 pretraining 中解冻，<strong>这是 N1.6 相对 N1.5 的关键改动</strong>（N1.5 是全冻 VLM + 外挂 4 层 transformer adapter）</li>
+<li>输出三件：<code>backbone_features [B, S, 2048]</code>、<code>backbone_attention_mask</code>、<code>image_mask</code>（标识序列中哪些 token 是图像 token；AlternateVLDiT 后续用来分离图像/非图像注意力）</li>
+<li>backbone 输出后过一个可选的 <code>VLN LayerNorm</code> (<code>use_vlln=True</code>) 再送入 DiT</li>
+</ul>
+<hr />
+<h3 id="22-embodiment-条件化的状态动作编码">2.2 Embodiment 条件化的状态/动作编码<a class="headerlink" href="06.Isaac-GR00T-N1.6_Architecture.html#22-embodiment-条件化的状态动作编码" title="Permanent link">#</a></h3>
+<p>GR00T 要在一个模型里同时处理多种机器人（GR1、G1、YAM、Galaxea R1 Pro、Bridge、DROID...），关键设计是 <strong>CategorySpecificLinear</strong>——每个 embodiment id 选一组独立的 (W, b)，同一个网络结构服务 32 种形态。</p>
+<div class="mermaid">
+graph TB
+    subgraph CSL["CategorySpecificLinear"]
+        IN["x: [B, T, input_dim]"] --&gt; SELECT["W[cat_ids] / b[cat_ids]&lt;br/&gt;bmm(x, selected_W) + b"]
+        EID["cat_ids: [B]"] --&gt; SELECT
+        SELECT --&gt; OUT["[B, T, hidden_dim]"]
+    end
+
+    subgraph StateEnc["state_encoder = CategorySpecificMLP"]
+        ST["state [B, state_dim≤29]"] --&gt; SL1["CSL 29 → 1024&lt;br/&gt;+ ReLU"]
+        SL1 --&gt; SL2["CSL 1024 → 1536"]
+        SL2 --&gt; SF["state_features&lt;br/&gt;[B, state_horizon, 1536]"]
+    end
+
+    subgraph ActionEnc["action_encoder = MultiEmbodimentActionEncoder"]
+        NA["noisy actions&lt;br/&gt;[B, 16, 29]"] --&gt; W1["W1 (CSL): 29 → 1536"]
+        TS["t_discretized: [B]&lt;br/&gt;expand to [B, 16]"] --&gt; SIN["SinusoidalPositionalEncoding&lt;br/&gt;dim=1536"]
+        W1 --&gt; CAT2["concat → [B, 16, 3072]"]
+        SIN --&gt; CAT2
+        CAT2 --&gt; W2["W2 (CSL): 3072 → 1536&lt;br/&gt;+ Swish"]
+        W2 --&gt; W3["W3 (CSL): 1536 → 1536"]
+        W3 --&gt; AF["action_features&lt;br/&gt;[B, 16, 1536]"]
+    end
+
+    style CSL fill:#e3f2fd,stroke:#2196F3
+    style StateEnc fill:#f3e5f5,stroke:#9C27B0
+    style ActionEnc fill:#fff3e0,stroke:#FF9800
+</div>
+<p><strong>关键细节：</strong></p>
+<ul>
+<li><code>max_num_embodiments=32</code>，所有 CategorySpecific* 层都给 32 个 (W, b) 拷贝；新增形态后 <code>expand_action_dimension()</code> 可在 input/output 维度上复制原权重做安全扩展（参见 <a href="https://vla.yilong-zhu.com/Isaac-GR00T/gr00t/model/modules/embodiment_conditioned_mlp.py"><code>embodiment_conditioned_mlp.py:66-114</code></a>）</li>
+<li><code>state_dropout_prob</code> + 可学习 <code>mask_token</code>：训练时按概率把状态特征替换为 mask token，提高对状态缺失/噪声的鲁棒性</li>
+<li><code>state_additive_noise_scale</code>：训练时给状态特征加高斯噪声做正则</li>
+<li>action encoder 用 <strong>正弦位置编码（log 频率，base=10000）</strong> 编码 discretized timestep，再与动作嵌入做 concat-fuse（不同于 Pi0 的 MLP fuse + 自定义 period）</li>
+</ul>
+<hr />
+<h3 id="23-alternatevldit-action-head-主干">2.3 AlternateVLDiT (Action Head 主干)<a class="headerlink" href="06.Isaac-GR00T-N1.6_Architecture.html#23-alternatevldit-action-head-主干" title="Permanent link">#</a></h3>
+<p>N1.6 的 Action Head 由 32 层 <code>AlternateVLDiT</code> 组成（<code>gr00t/model/modules/dit.py:289</code>），是 <code>DiT</code> 的子类。每个 block 由 <strong>AdaLayerNorm + Attention + (Cross-Attention)</strong> 构成，时间步 <code>temb</code> 通过 AdaLN 注入到每一层（不是 Pi0 那种把时间塞进序列）。</p>
+<div class="mermaid">
+graph TB
+    subgraph Token["输入序列拼接"]
+        SF2["state_features&lt;br/&gt;[B, state_horizon, 1536]"] --&gt; SAE["sa_embs = concat&lt;br/&gt;[B, state_horizon + 16, 1536]"]
+        AF2["action_features&lt;br/&gt;[B, 16, 1536]"] --&gt; SAE
+        POS["+ position_embedding&lt;br/&gt;(nn.Embedding(max_seq_len=1024))"] --&gt; SAE
+    end
+
+    subgraph DiTLoop["32 个 Transformer Block (interleave)"]
+        direction TB
+        IDX["block idx ∈ [0, 32)"]
+        IDX --&gt; COND{"idx % 2 == 1 ?"}
+        COND --&gt;|"奇数层"| SA["Self-Attention&lt;br/&gt;仅 sa_embs 内部"]
+        COND --&gt;|"偶数层 (cross)"| ALT{"idx % (2·attend_text_every_n_blocks=4)&lt;br/&gt;== 0 ?"}
+        ALT --&gt;|"是"| TXT_ATTN["attend to 非图像 token&lt;br/&gt;(非图像 backbone tokens)"]
+        ALT --&gt;|"否"| IMG_ATTN["attend to 图像 token&lt;br/&gt;(图像 backbone tokens)"]
+        SA --&gt; NEXT["next block"]
+        TXT_ATTN --&gt; NEXT
+        IMG_ATTN --&gt; NEXT
+    end
+
+    subgraph TimeInject["时间步注入 (AdaLN)"]
+        TS2["t_discretized [B]"] --&gt; TENC["TimestepEncoder&lt;br/&gt;embedding_dim=inner_dim&lt;br/&gt;(num_attention_heads · attention_head_dim&lt;br/&gt;= 32 · 48 = 1536)"]
+        TENC --&gt; TEMB["temb"]
+        TEMB --&gt; ADA["AdaLayerNorm 注入&lt;br/&gt;每个 block 的 norm1"]
+    end
+
+    subgraph Out["输出投影"]
+        SHIFT["shift, scale = proj_out_1(SiLU(temb)).chunk(2)"]
+        NORM["norm_out → (1 + scale) * x + shift"]
+        PROJ["proj_out_2 → output_dim=1024"]
+    end
+
+    SAE --&gt; IDX
+    NEXT --&gt; SHIFT
+    SHIFT --&gt; NORM --&gt; PROJ --&gt; MO["model_output&lt;br/&gt;[B, T, 1024]"]
+
+    style Token fill:#e3f2fd,stroke:#2196F3
+    style DiTLoop fill:#e8f5e9,stroke:#4CAF50
+    style TimeInject fill:#fff9c4,stroke:#FFC107
+    style Out fill:#fce4ec,stroke:#E91E63
+</div>
+<p><strong>关键细节：</strong></p>
+<ul>
+<li>DiT 内维 <code>inner_dim = num_attention_heads × attention_head_dim = 32 × 48 = 1536</code>，与 <code>input_embedding_dim</code> 对齐</li>
+<li><code>interleave_self_attention=True</code>：奇数 idx 走自注意力（只看 <code>sa_embs</code> 内部），偶数 idx 走 cross-attention 到 Eagle 输出</li>
+<li><strong>AlternateVLDiT 的"交替"机制</strong>：在偶数 cross 层中，按 <code>idx % (2 · attend_text_every_n_blocks)</code> 决定 cross 到"非图像 backbone token"还是"图像 backbone token"——<code>attend_text_every_n_blocks=2</code> 意味着每 4 个 cross block 中 2 个看图、2 个看文，让模型显式区分两种模态的注意力分配</li>
+<li>末端 <code>model_output</code> 拿后 <code>action_horizon=16</code> 个 token 给 <code>action_decoder</code> 解码出预测速度场 <code>v_t</code></li>
+<li>可选 <code>position_embedding</code>（<code>nn.Embedding(1024, 1536)</code>）加在 <code>sa_embs</code> 上作为绝对位置先验</li>
+</ul>
+<hr />
+<h3 id="24-flow-matching-扩散机制">2.4 Flow Matching 扩散机制<a class="headerlink" href="06.Isaac-GR00T-N1.6_Architecture.html#24-flow-matching-扩散机制" title="Permanent link">#</a></h3>
+<p>GR00T 用 <strong>Flow Matching</strong> 而非 DDPM 风格扩散，与 Pi0 / Pi0.5 思路一致，但有两点 GR00T 特色：</p>
+<ol>
+<li><strong>离散化时间步</strong> ——<code>num_timestep_buckets=1000</code>，连续 <code>t</code> 乘以桶数取整后送入 <code>TimestepEncoder</code>，得到 <code>temb</code> 注入到 AdaLN</li>
+<li><strong>方向取反约定</strong> ——Pi0 用 <code>x_t = t·noise + (1-t)·actions</code>，<strong>GR00T 反过来</strong>：<code>x_t = (1-t)·noise + t·actions</code>，对应 <code>velocity = actions - noise</code>；推理时从 <code>t=0</code>（纯噪声）线性走到 <code>t=1</code>（干净动作），步进 <code>dt = +1/N</code>（参见 <code>gr00t_n1d6.py:316</code>）</li>
+</ol>
+<div class="mermaid">
+graph TB
+    subgraph FMTheory["Flow Matching 约定 (GR00T)"]
+        FM["x_t = (1 - t) * noise + t * actions&lt;br/&gt;velocity = actions - noise&lt;br/&gt;&lt;br/&gt;t = 0: x_0 = noise (起点)&lt;br/&gt;t = 1: x_1 = actions (终点)&lt;br/&gt;&lt;br/&gt;训练目标: 预测 velocity"]
+    end
+
+    subgraph TSample["训练时间步采样"]
+        BETA["sample ~ Beta(α=1.5, β=1.0)"]
+        FLIP["t = (1 - sample) · noise_s&lt;br/&gt;(noise_s = 0.999)"]
+    end
+
+    subgraph NoiseProc["加噪"]
+        ACT_GT["真实动作 actions&lt;br/&gt;[B, 16, 29]"]
+        NS["noise ~ N(0,1)&lt;br/&gt;[B, 16, 29]"]
+        XT_TRAIN["x_t = (1-t)·noise + t·actions"]
+        UT["velocity = actions - noise"]
+    end
+
+    subgraph LossC["损失"]
+        PRED["v_t = action_decoder(DiT(...))"]
+        MASK["action_mask&lt;br/&gt;(屏蔽 padding 的 action 维)"]
+        L["loss = sum((v_t - velocity)² · mask) / sum(mask)"]
+    end
+
+    BETA --&gt; FLIP
+    FLIP --&gt;|"t"| XT_TRAIN
+    ACT_GT --&gt; XT_TRAIN
+    NS --&gt; XT_TRAIN
+    ACT_GT --&gt; UT
+    NS --&gt; UT
+    UT --&gt; L
+    PRED --&gt; L
+    MASK --&gt; L
+
+    style FMTheory fill:#e3f2fd,stroke:#2196F3
+    style TSample fill:#fff3e0,stroke:#FF9800
+    style NoiseProc fill:#f3e5f5,stroke:#9C27B0
+    style LossC fill:#fce4ec,stroke:#E91E63
+</div>
+<p><strong>与 Pi0 / 标准扩散的对比：</strong></p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>特性</th>
+<th>Pi0 (Flow Matching)</th>
+<th>GR00T N1.6 (Flow Matching)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>线性路径方向</td>
+<td><code>x_t = t·noise + (1-t)·actions</code></td>
+<td><code>x_t = (1-t)·noise + t·actions</code></td>
+</tr>
+<tr>
+<td>推理积分方向</td>
+<td>t: 1.0 → 0.0（dt=-0.1，10 步）</td>
+<td>t: 0.0 → 1.0（dt=+0.25，<strong>4 步</strong>）</td>
+</tr>
+<tr>
+<td>时间步表示</td>
+<td>正弦周期 [4e-3, 4.0] 注入序列</td>
+<td>1000 个离散桶 + AdaLN 注入每层</td>
+</tr>
+<tr>
+<td>Beta 采样</td>
+<td><code>Beta(1.5, 1.0)</code> 直接用</td>
+<td><code>Beta(1.5, 1.0)</code> 取 <code>(1-sample)·0.999</code></td>
+</tr>
+<tr>
+<td>时间注入位置</td>
+<td>拼成序列里的一个 token</td>
+<td>通过 AdaLN 注入每个 DiT block</td>
+</tr>
+</tbody>
+</table></div>
+<hr />
+<h3 id="25-state-relative-action-chunksn16-新约定">2.5 State-Relative Action Chunks（N1.6 新约定）<a class="headerlink" href="06.Isaac-GR00T-N1.6_Architecture.html#25-state-relative-action-chunksn16-新约定" title="Permanent link">#</a></h3>
+<p>对于大多数 embodiment，N1.6 让模型预测 <strong>相对于当前状态的增量动作</strong>（state-relative），而不是绝对关节角 / 末端位姿。开关在 <code>Gr00tN1d6Config.use_relative_action</code>，相关变换由 <a href="https://vla.yilong-zhu.com/Isaac-GR00T/gr00t/data/"><code>gr00t/data/</code></a> 中的 <code>StateActionProcessor</code> 在数据侧完成：训练时把 GT 转成 relative，推理时把模型输出加回 base state 再下发。</p>
+<p>这一改动的好处是：</p>
+<ul>
+<li>数值范围更稳定（diff 的方差远小于绝对值）</li>
+<li>改善跨 embodiment 泛化——相同任务下不同机器人的绝对状态范围差异很大，相对增量空间更接近</li>
+</ul>
+<hr />
+<h2 id="3-训练流水线">3. 训练流水线<a class="headerlink" href="06.Isaac-GR00T-N1.6_Architecture.html#3-训练流水线" title="Permanent link">#</a></h2>
+<div class="mermaid">
+graph TB
+    subgraph DataPrep["数据准备 (LeRobot v2 schema)"]
+        RAW["原始 episode&lt;br/&gt;(video, state, action) 三元组"] --&gt; SAP["StateActionProcessor&lt;br/&gt;归一化 + 可选 state-relative 变换"]
+        SAP --&gt; COLL["Gr00tN1d6DataCollator&lt;br/&gt;(processing_gr00t_n1d6.py)&lt;br/&gt;构建 vlm_content + state + action"]
+    end
+
+    subgraph Inputs["模型输入"]
+        VLMC["vlm_content&lt;br/&gt;(已编排好图像 + 语言)"]
+        STATE_I["state [B, ≤29]"]
+        ACT_I["action [B, 16, ≤29]&lt;br/&gt;(可能为 relative)"]
+        AM["action_mask [B, 16, ≤29]"]
+        EID2["embodiment_id [B]"]
+    end
+
+    subgraph BackPass["Backbone 前向"]
+        VLMC --&gt; EAGLE_F["EagleBackbone(&lt;br/&gt;input_ids, attention_mask,&lt;br/&gt;pixel_values)"]
+        EAGLE_F --&gt; BFEAT["backbone_features [B, S, 2048]&lt;br/&gt;backbone_attention_mask&lt;br/&gt;image_mask"]
+    end
+
+    subgraph HeadPass["Action Head 前向"]
+        BFEAT --&gt; VLLN_OP["VLN LayerNorm"]
+        STATE_I --&gt; SE_OP["state_encoder + 可选 dropout/noise"]
+        EID2 --&gt; SE_OP
+        EID2 --&gt; AE_OP
+        ACT_I --&gt; NOISY["sample t ~ flip(Beta(1.5,1)) · 0.999&lt;br/&gt;noise ~ N(0,1)&lt;br/&gt;x_t = (1-t)·noise + t·actions&lt;br/&gt;velocity = actions - noise"]
+        NOISY --&gt; AE_OP["action_encoder&lt;br/&gt;(W1/concat-sin/W2-Swish/W3)"]
+        SE_OP --&gt; CAT3["sa_embs = concat(state, action)&lt;br/&gt;+ position_embedding"]
+        AE_OP --&gt; CAT3
+        CAT3 --&gt; DIT_F["AlternateVLDiT (32 层)&lt;br/&gt;cross-attend 到 VLLN(backbone)"]
+        VLLN_OP --&gt; DIT_F
+        DIT_F --&gt; DEC["action_decoder → v_t"]
+    end
+
+    subgraph LossB["损失 + 反传"]
+        DEC --&gt; MSE["F.mse_loss(v_t, velocity, reduction='none')&lt;br/&gt;· action_mask"]
+        AM --&gt; MSE
+        NOISY --&gt; MSE
+        MSE --&gt; SUM["loss = sum(action_loss) / (sum(mask)+1e-6)"]
+        SUM --&gt; BACK["反向传播&lt;br/&gt;(HuggingFace Trainer + DeepSpeed)"]
+    end
+
+    style DataPrep fill:#e8f4fd,stroke:#2196F3
+    style Inputs fill:#fff3e0,stroke:#FF9800
+    style BackPass fill:#f3e5f5,stroke:#9C27B0
+    style HeadPass fill:#e8f5e9,stroke:#4CAF50
+    style LossB fill:#fce4ec,stroke:#E91E63
+</div>
+<p><strong>训练设置要点：</strong></p>
+<ul>
+<li>框架：HuggingFace <code>Trainer</code> 包装为 <a href="https://vla.yilong-zhu.com/Isaac-GR00T/gr00t/experiment/trainer.py"><code>Gr00tTrainer</code></a>（加了轻量 profiling）</li>
+<li>多卡：DeepSpeed（<a href="https://vla.yilong-zhu.com/Isaac-GR00T/gr00t/configs/"><code>gr00t/configs/deepspeed/</code></a> 内 ZeRO 配置）</li>
+<li>入口：<a href="https://vla.yilong-zhu.com/Isaac-GR00T/gr00t/experiment/launch_train.py"><code>gr00t/experiment/launch_train.py</code></a>（完整训练）/ <a href="https://vla.yilong-zhu.com/Isaac-GR00T/gr00t/experiment/launch_finetune.py"><code>launch_finetune.py</code></a>（finetune）</li>
+<li>三个可调粒度：<code>tune_projector</code>（state/action 编解码器）、<code>tune_diffusion_model</code>（DiT 主体）、<code>tune_vlln</code>（输出层归一化）—— finetune 时常只解冻 projector + DiT，VLM 完全冻结</li>
+<li>backbone 内 <code>tune_top_llm_layers=4</code>：仅解冻 LLM 顶部 4 层；<code>tune_llm/tune_visual</code> 默认 False</li>
+<li>bf16 训练 + flash attention（强制要求）</li>
+<li>数据：<strong>sharded iterable dataset</strong> 支持分布式高速加载（N1.6 新增）</li>
+<li><code>action_mask</code> 同时屏蔽 padding 的动作维度（不同 embodiment 实际 action_dim 不同，都 pad 到 29）和 padding 的 horizon 位置</li>
+</ul>
+<hr />
+<h2 id="4-推理流水线">4. 推理流水线<a class="headerlink" href="06.Isaac-GR00T-N1.6_Architecture.html#4-推理流水线" title="Permanent link">#</a></h2>
+<div class="mermaid">
+graph TB
+    subgraph PreProc["输入准备"]
+        OBS["观测&lt;br/&gt;{video.*: ndarray&lt;br/&gt;state.*: ndarray&lt;br/&gt;annotation.*: str}"] --&gt; POL["Gr00tPolicy.get_action()&lt;br/&gt;(gr00t/policy/gr00t_policy.py)"]
+        POL --&gt; VLMG["build vlm_content&lt;br/&gt;(processing_gr00t_n1d6)"]
+        POL --&gt; NORM_S["normalize state"]
+    end
+
+    subgraph Backbone["Backbone (单次前向)"]
+        VLMG --&gt; EAGLE_I["EagleBackbone forward&lt;br/&gt;output hidden_states[-1]"]
+        EAGLE_I --&gt; BF["backbone_features [B, S, 2048]&lt;br/&gt;backbone_attention_mask&lt;br/&gt;image_mask"]
+    end
+
+    subgraph EncOnce["编码状态 (单次)"]
+        NORM_S --&gt; SE_I["state_encoder"]
+        EID3["embodiment_id"] --&gt; SE_I
+        SE_I --&gt; SFI["state_features [B, state_horizon, 1536]"]
+    end
+
+    subgraph Denoise["4 步 Flow Matching 去噪"]
+        INIT["x_0 = randn(B, 16, 29)&lt;br/&gt;dt = 1 / 4 = 0.25"]
+        STEP["for step in range(4):&lt;br/&gt;  t_cont = step / 4&lt;br/&gt;  t_discretized = int(t_cont · 1000)"]
+
+        subgraph DSTEP["单步"]
+            X_T["x_t (当前动作)"] --&gt; AE_I["action_encoder(x_t, t, eid)"]
+            AE_I --&gt; SAE_I["sa_embs = cat(state_features, action_features)&lt;br/&gt;+ pos_emb"]
+            SAE_I --&gt; DIT_I["AlternateVLDiT.forward&lt;br/&gt;cross-attend 到 backbone"]
+            BF --&gt; DIT_I
+            DIT_I --&gt; DEC_I["action_decoder → pred"]
+            DEC_I --&gt; VT["v_t = pred[:, -16:]"]
+        end
+
+        VT --&gt; UPD["x_{t+dt} = x_t + dt · v_t"]
+        UPD --&gt; X_T
+    end
+
+    subgraph PostProc["后处理"]
+        UPD --&gt; UN["反归一化"]
+        UN --&gt; REL{"use_relative_action ?"}
+        REL --&gt;|"是"| ADD["+ base state → 绝对动作"]
+        REL --&gt;|"否"| KEEP["直接输出"]
+        ADD --&gt; OUT_A["action chunk&lt;br/&gt;[16, action_dim_real]"]
+        KEEP --&gt; OUT_A
+    end
+
+    INIT --&gt; X_T
+    STEP --&gt; AE_I
+
+    style PreProc fill:#e3f2fd,stroke:#2196F3
+    style Backbone fill:#fff3e0,stroke:#FF9800
+    style EncOnce fill:#f3e5f5,stroke:#9C27B0
+    style Denoise fill:#e8f5e9,stroke:#4CAF50
+    style PostProc fill:#fce4ec,stroke:#E91E63
+</div>
+<p><strong>推理优化要点：</strong></p>
+<ul>
+<li><strong>Backbone 只跑一次</strong>：4 步去噪共享同一份 <code>backbone_features</code> / <code>backbone_attention_mask</code> / <code>image_mask</code>（在 <code>Gr00tN1d6ActionHead.get_action_with_features</code> 里实现）</li>
+<li><strong>状态编码也只跑一次</strong>：<code>state_features</code> 在循环外算好</li>
+<li>每步仅算 action 编码 + DiT 32 层 + 解码 → 16 步动作</li>
+<li>仅 4 步去噪即可（vs Pi0 的 10 步），配合 <code>torch.compile</code> 在 RTX 5090 / H100 上可达 27 Hz 端到端</li>
+<li>部署：<a href="https://vla.yilong-zhu.com/Isaac-GR00T/scripts/deployment/"><code>scripts/deployment/</code></a> 支持 TensorRT / ONNX 导出</li>
+<li>Server-Client 模式：<a href="https://vla.yilong-zhu.com/Isaac-GR00T/gr00t/eval/run_gr00t_server.py"><code>gr00t/eval/run_gr00t_server.py</code></a> + <a href="https://vla.yilong-zhu.com/Isaac-GR00T/gr00t/policy/server_client.py"><code>PolicyClient</code></a> 通过 RESTful API 把策略与仿真环境解耦</li>
+</ul>
+<hr />
+<h2 id="5-关键超参数表">5. 关键超参数表<a class="headerlink" href="06.Isaac-GR00T-N1.6_Architecture.html#5-关键超参数表" title="Permanent link">#</a></h2>
+<h3 id="模型结构参数">模型结构参数<a class="headerlink" href="06.Isaac-GR00T-N1.6_Architecture.html#模型结构参数" title="Permanent link">#</a></h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>参数</th>
+<th>值</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>model_name</code></td>
+<td><code>nvidia/Eagle-Block2A-2B-v2</code></td>
+<td>Eagle backbone (Cosmos-Reason-2B 变体)</td>
+</tr>
+<tr>
+<td><code>backbone_embedding_dim</code></td>
+<td>2048</td>
+<td>Backbone 输出维度</td>
+</tr>
+<tr>
+<td><code>select_layer</code></td>
+<td>16</td>
+<td>LLM 截断保留层数</td>
+</tr>
+<tr>
+<td><code>tune_top_llm_layers</code></td>
+<td>4</td>
+<td>训练时解冻的 LLM 顶部层数</td>
+</tr>
+<tr>
+<td><code>tune_llm / tune_visual</code></td>
+<td>False / False</td>
+<td>默认全冻视觉与底部 LLM</td>
+</tr>
+<tr>
+<td><code>hidden_size</code></td>
+<td>1024</td>
+<td>解码后 hidden 维度</td>
+</tr>
+<tr>
+<td><code>input_embedding_dim</code></td>
+<td>1536</td>
+<td>state/action 编码后的维度，也是 DiT inner_dim</td>
+</tr>
+<tr>
+<td><code>max_seq_len</code></td>
+<td>1024</td>
+<td>位置嵌入最大长度</td>
+</tr>
+<tr>
+<td><code>max_num_embodiments</code></td>
+<td>32</td>
+<td>CategorySpecific 层的形态数</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="diffusion-transformer-alternatevldit">Diffusion Transformer (AlternateVLDiT)<a class="headerlink" href="06.Isaac-GR00T-N1.6_Architecture.html#diffusion-transformer-alternatevldit" title="Permanent link">#</a></h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>参数</th>
+<th>值</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>num_layers</code></td>
+<td><strong>32</strong></td>
+<td>DiT 层数（N1.5 是 16）</td>
+</tr>
+<tr>
+<td><code>num_attention_heads</code></td>
+<td>32</td>
+<td>注意力头数</td>
+</tr>
+<tr>
+<td><code>attention_head_dim</code></td>
+<td>48</td>
+<td>每头维度</td>
+</tr>
+<tr>
+<td>inner_dim</td>
+<td>1536</td>
+<td>= 32 × 48</td>
+</tr>
+<tr>
+<td><code>norm_type</code></td>
+<td><code>ada_norm</code></td>
+<td>AdaLayerNorm</td>
+</tr>
+<tr>
+<td><code>dropout</code></td>
+<td>0.2</td>
+<td>DiT dropout</td>
+</tr>
+<tr>
+<td><code>interleave_self_attention</code></td>
+<td>True</td>
+<td>奇数层自注意力，偶数层 cross</td>
+</tr>
+<tr>
+<td><code>attend_text_every_n_blocks</code></td>
+<td>2</td>
+<td>文/图 cross 切换周期（每 4 个 cross block 中 2 文 2 图）</td>
+</tr>
+<tr>
+<td><code>output_dim</code></td>
+<td>1024</td>
+<td>投影回 hidden_size</td>
+</tr>
+<tr>
+<td><code>use_vlln</code></td>
+<td>True</td>
+<td>backbone 输出后过 LayerNorm</td>
+</tr>
+<tr>
+<td><code>add_pos_embed</code></td>
+<td>True</td>
+<td>加 <code>nn.Embedding(1024, 1536)</code> 位置嵌入</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="动作生成">动作生成<a class="headerlink" href="06.Isaac-GR00T-N1.6_Architecture.html#动作生成" title="Permanent link">#</a></h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>参数</th>
+<th>值</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>action_horizon</code></td>
+<td>16</td>
+<td>单次预测的动作步数</td>
+</tr>
+<tr>
+<td><code>max_action_dim</code></td>
+<td>29</td>
+<td>动作维度上限（padding 用）</td>
+</tr>
+<tr>
+<td><code>max_state_dim</code></td>
+<td>29</td>
+<td>状态维度上限</td>
+</tr>
+<tr>
+<td><code>use_relative_action</code></td>
+<td>False (config 默认)</td>
+<td>多数 embodiment 在数据侧设为 True，输出 state-relative</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="flow-matching">Flow Matching<a class="headerlink" href="06.Isaac-GR00T-N1.6_Architecture.html#flow-matching" title="Permanent link">#</a></h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>参数</th>
+<th>值</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>num_inference_timesteps</code></td>
+<td><strong>4</strong></td>
+<td>推理去噪步数</td>
+</tr>
+<tr>
+<td><code>noise_beta_alpha</code></td>
+<td>1.5</td>
+<td>Beta 采样 α</td>
+</tr>
+<tr>
+<td><code>noise_beta_beta</code></td>
+<td>1.0</td>
+<td>Beta 采样 β</td>
+</tr>
+<tr>
+<td><code>noise_s</code></td>
+<td>0.999</td>
+<td>时间步缩放（避免 t=1）</td>
+</tr>
+<tr>
+<td><code>num_timestep_buckets</code></td>
+<td>1000</td>
+<td>timestep 离散化桶数</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="训练正则">训练正则<a class="headerlink" href="06.Isaac-GR00T-N1.6_Architecture.html#训练正则" title="Permanent link">#</a></h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>参数</th>
+<th>值</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>state_dropout_prob</code></td>
+<td>0.0</td>
+<td>状态特征 dropout 概率（finetune 可能 &gt;0）</td>
+</tr>
+<tr>
+<td><code>state_additive_noise_scale</code></td>
+<td>0.0</td>
+<td>状态特征加性噪声尺度</td>
+</tr>
+<tr>
+<td><code>attn_dropout</code></td>
+<td>0.2</td>
+<td>注意力 dropout</td>
+</tr>
+<tr>
+<td><code>model_dtype</code></td>
+<td><code>bfloat16</code></td>
+<td>训练精度</td>
+</tr>
+<tr>
+<td><code>use_flash_attention</code></td>
+<td>True</td>
+<td>强制 flash attention</td>
+</tr>
+<tr>
+<td><code>backbone_trainable_params_fp32</code></td>
+<td>True</td>
+<td>可训练参数 cast 回 fp32</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="推理性能来自-readme">推理性能（来自 README）<a class="headerlink" href="06.Isaac-GR00T-N1.6_Architecture.html#推理性能来自-readme" title="Permanent link">#</a></h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>设备</th>
+<th>模式</th>
+<th>Data</th>
+<th>Backbone</th>
+<th>Action Head</th>
+<th>E2E</th>
+<th>频率</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>RTX 5090</td>
+<td>torch.compile</td>
+<td>2 ms</td>
+<td>18 ms</td>
+<td>16 ms</td>
+<td>37 ms</td>
+<td>27.3 Hz</td>
+</tr>
+<tr>
+<td>H100</td>
+<td>torch.compile</td>
+<td>4 ms</td>
+<td>23 ms</td>
+<td>11 ms</td>
+<td>38 ms</td>
+<td>26.3 Hz</td>
+</tr>
+<tr>
+<td>RTX 4090</td>
+<td>torch.compile</td>
+<td>2 ms</td>
+<td>25 ms</td>
+<td>17 ms</td>
+<td>44 ms</td>
+<td>22.8 Hz</td>
+</tr>
+<tr>
+<td>Jetson Thor</td>
+<td>torch.compile</td>
+<td>5 ms</td>
+<td>39 ms</td>
+<td>61 ms</td>
+<td>105 ms</td>
+<td>9.5 Hz</td>
+</tr>
+</tbody>
+</table></div>
+<hr />
+<h2 id="6-关键源文件表">6. 关键源文件表<a class="headerlink" href="06.Isaac-GR00T-N1.6_Architecture.html#6-关键源文件表" title="Permanent link">#</a></h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>组件</th>
+<th>类名 / 函数</th>
+<th>文件路径</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>主模型</td>
+<td><code>Gr00tN1d6</code></td>
+<td><code>gr00t/model/gr00t_n1d6/gr00t_n1d6.py:411</code></td>
+</tr>
+<tr>
+<td>Action Head</td>
+<td><code>Gr00tN1d6ActionHead</code></td>
+<td><code>gr00t/model/gr00t_n1d6/gr00t_n1d6.py:19</code></td>
+</tr>
+<tr>
+<td>配置</td>
+<td><code>Gr00tN1d6Config</code></td>
+<td><code>gr00t/configs/model/gr00t_n1d6.py:13</code></td>
+</tr>
+<tr>
+<td>VL Backbone</td>
+<td><code>EagleBackbone</code></td>
+<td><code>gr00t/model/modules/eagle_backbone.py:8</code></td>
+</tr>
+<tr>
+<td>Diffusion Transformer</td>
+<td><code>AlternateVLDiT</code> / <code>DiT</code></td>
+<td><code>gr00t/model/modules/dit.py:289</code> / <code>:172</code></td>
+</tr>
+<tr>
+<td>Embodiment 线性层</td>
+<td><code>CategorySpecificLinear</code> / <code>MLP</code></td>
+<td><code>gr00t/model/modules/embodiment_conditioned_mlp.py:44</code> / <code>:128</code></td>
+</tr>
+<tr>
+<td>动作编码器</td>
+<td><code>MultiEmbodimentActionEncoder</code></td>
+<td><code>gr00t/model/modules/embodiment_conditioned_mlp.py:162</code></td>
+</tr>
+<tr>
+<td>时间步正弦编码</td>
+<td><code>SinusoidalPositionalEncoding</code></td>
+<td><code>gr00t/model/modules/embodiment_conditioned_mlp.py:11</code></td>
+</tr>
+<tr>
+<td>数据 collator</td>
+<td><code>Gr00tN1d6DataCollator</code></td>
+<td><code>gr00t/model/gr00t_n1d6/processing_gr00t_n1d6.py</code></td>
+</tr>
+<tr>
+<td>推理策略</td>
+<td><code>Gr00tPolicy</code></td>
+<td><code>gr00t/policy/gr00t_policy.py:46</code></td>
+</tr>
+<tr>
+<td>Server</td>
+<td><code>run_gr00t_server.py</code></td>
+<td><code>gr00t/eval/run_gr00t_server.py</code></td>
+</tr>
+<tr>
+<td>训练入口</td>
+<td><code>launch_train.py</code> / <code>launch_finetune.py</code></td>
+<td><code>gr00t/experiment/</code></td>
+</tr>
+<tr>
+<td>Trainer 包装</td>
+<td><code>Gr00tTrainer</code></td>
+<td><code>gr00t/experiment/trainer.py</code></td>
+</tr>
+</tbody>
+</table></div>
+      </div>
+    </main>
+        <aside class="toc">
+            <div class="toc-title">本页目录</div>
+            <ul>
+                <li><a href="06.Isaac-GR00T-N1.6_Architecture.html#1-整体架构概览" class="toc-h2">1. 整体架构概览</a></li>
+                <li><a href="06.Isaac-GR00T-N1.6_Architecture.html#2-核心组件详解" class="toc-h2">2. 核心组件详解</a></li>
+                <li><a href="06.Isaac-GR00T-N1.6_Architecture.html#21-eagle-vision-language-backbone" class="toc-h3">2.1 Eagle Vision-Language Backbone</a></li>
+                <li><a href="06.Isaac-GR00T-N1.6_Architecture.html#22-embodiment-条件化的状态动作编码" class="toc-h3">2.2 Embodiment 条件化的状态/动作编码</a></li>
+                <li><a href="06.Isaac-GR00T-N1.6_Architecture.html#23-alternatevldit-action-head-主干" class="toc-h3">2.3 AlternateVLDiT (Action Head 主干)</a></li>
+                <li><a href="06.Isaac-GR00T-N1.6_Architecture.html#24-flow-matching-扩散机制" class="toc-h3">2.4 Flow Matching 扩散机制</a></li>
+                <li><a href="06.Isaac-GR00T-N1.6_Architecture.html#25-state-relative-action-chunksn16-新约定" class="toc-h3">2.5 State-Relative Action Chunks（N1.6 新约定）</a></li>
+                <li><a href="06.Isaac-GR00T-N1.6_Architecture.html#3-训练流水线" class="toc-h2">3. 训练流水线</a></li>
+                <li><a href="06.Isaac-GR00T-N1.6_Architecture.html#4-推理流水线" class="toc-h2">4. 推理流水线</a></li>
+                <li><a href="06.Isaac-GR00T-N1.6_Architecture.html#5-关键超参数表" class="toc-h2">5. 关键超参数表</a></li>
+                <li><a href="06.Isaac-GR00T-N1.6_Architecture.html#模型结构参数" class="toc-h3">模型结构参数</a></li>
+                <li><a href="06.Isaac-GR00T-N1.6_Architecture.html#diffusion-transformer-alternatevldit" class="toc-h3">Diffusion Transformer (AlternateVLDiT)</a></li>
+                <li><a href="06.Isaac-GR00T-N1.6_Architecture.html#动作生成" class="toc-h3">动作生成</a></li>
+                <li><a href="06.Isaac-GR00T-N1.6_Architecture.html#flow-matching" class="toc-h3">Flow Matching</a></li>
+                <li><a href="06.Isaac-GR00T-N1.6_Architecture.html#训练正则" class="toc-h3">训练正则</a></li>
+                <li><a href="06.Isaac-GR00T-N1.6_Architecture.html#推理性能来自-readme" class="toc-h3">推理性能（来自 README）</a></li>
+                <li><a href="06.Isaac-GR00T-N1.6_Architecture.html#6-关键源文件表" class="toc-h2">6. 关键源文件表</a></li>
+            </ul>
+        </aside>
+
+    <button class="back-to-top" onclick="window.scrollTo({top:0,behavior:'smooth'})">&#8593;</button>
+
+    <script src="assets/vendor/mermaid/mermaid.min.js"></script>
+    <script defer src="assets/vendor/katex/katex.min.js"></script>
+    <script defer src="assets/vendor/katex/auto-render.min.js"
+            onload="renderMathInElement(document.querySelector('.content-inner'), {
+                delimiters: [
+                    { left: '$$', right: '$$', display: true },
+                    { left: '$', right: '$', display: false }
+                ],
+                ignoredTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code', 'option'],
+                ignoredClasses: ['mermaid', 'diagram'],
+                throwOnError: false
+            });"></script>
+    <script>
+        // Mermaid destroys the source text when it renders, so keep a copy in
+        // order to re-render on theme change.
+        document.querySelectorAll('.mermaid').forEach(el => {
+            el.dataset.src = el.textContent;
+        });
+
+        const prefersDark = window.matchMedia('(prefers-color-scheme: dark)');
+        function currentTheme() {
+            const forced = document.documentElement.getAttribute('data-theme');
+            if (forced) return forced;
+            return prefersDark.matches ? 'dark' : 'light';
+        }
+
+        function initMermaid() {
+            mermaid.initialize({
+                startOnLoad: false,
+                theme: currentTheme() === 'dark' ? 'dark' : 'default',
+                flowchart: { useMaxWidth: true, htmlLabels: true },
+                securityLevel: 'loose'
+            });
+        }
+
+        function renderMermaid() {
+            const nodes = document.querySelectorAll('.mermaid');
+            nodes.forEach(el => {
+                el.removeAttribute('data-processed');
+                el.textContent = el.dataset.src;
+            });
+            // mermaid.run rejects on its internal font probe in some browsers;
+            // the diagrams still render, so swallow it rather than surfacing an
+            // unhandled rejection.
+            if (!nodes.length) return;
+            Promise.resolve(mermaid.run({ nodes: nodes }))
+                .catch(() => {})
+                .then(() => nodes.forEach(applyZoom));
+        }
+
+        /* ---------- Diagram zoom ----------
+           Scale is tracked as a factor of the diagram's NATURAL size (its
+           viewBox), so 100% means 1:1 and one font size looks identical in
+           every diagram on the site. Left to itself mermaid's useMaxWidth
+           stretches each svg to the container, which blows a 3-node diagram
+           up to 3.4x and shrinks a wide one to 0.34x — a 10x spread in
+           apparent font size. FIT_MAX caps the auto-fit at 1:1 (never
+           upscale) and FIT_MIN stops wide diagrams from shrinking to
+           unreadable; anything past that overflows and scrolls/pans. */
+        const MIN_Z = 0.3, MAX_Z = 6, STEP = 1.25;
+        const FIT_MIN = 0.55, FIT_MAX = 1;
+        const PAD = 40;               // .mermaid horizontal padding (20px each side)
+        const zoom = new WeakMap();   // .mermaid -> explicit scale; absent = auto-fit
+
+        function naturalSize(svg) {
+            const vb = svg.viewBox && svg.viewBox.baseVal;
+            if (vb && vb.width) return { w: vb.width, h: vb.height };
+            const r = svg.getBoundingClientRect();
+            return { w: r.width, h: r.height };
+        }
+
+        function fitScale(el, nat) {
+            const avail = el.clientWidth - PAD;
+            if (!nat.w || avail <= 0) return 1;
+            return Math.min(FIT_MAX, Math.max(FIT_MIN, avail / nat.w));
+        }
+
+        function scaleOf(el, nat) {
+            const k = zoom.get(el);
+            return k === undefined ? fitScale(el, nat) : k;
+        }
+
+        function applyZoom(el) {
+            const svg = el.querySelector('svg');
+            if (!svg) return;
+            const nat = naturalSize(svg);
+            if (!nat.w) return;
+            const k = scaleOf(el, nat);
+
+            const label = el.closest('.diagram')?.querySelector('.diagram-zoom');
+            if (label) label.textContent = Math.round(k * 100) + '%';
+
+            // Size the svg explicitly instead of leaving it to useMaxWidth,
+            // so the container gets real scrollbars when the diagram overflows.
+            svg.style.maxWidth = 'none';
+            svg.style.width = (nat.w * k) + 'px';
+            svg.style.height = (nat.h * k) + 'px';
+
+            const overflows = nat.w * k > el.clientWidth - PAD + 1;
+            el.classList.toggle('is-zoomed', overflows);
+            if (!overflows) el.scrollLeft = el.scrollTop = 0;
+        }
+
+        function setZoom(el, k, anchor) {
+            const svg = el.querySelector('svg');
+            if (!svg) return;
+            const nat = naturalSize(svg);
+            const prev = scaleOf(el, nat);
+            if (k !== null) k = Math.min(MAX_Z, Math.max(MIN_Z, k));
+            const next = k === null ? fitScale(el, nat) : k;
+            if (next === prev) return;
+            // Keep the point under the cursor (or the viewport centre) put.
+            const ax = anchor ? anchor.x : el.clientWidth / 2;
+            const ay = anchor ? anchor.y : el.clientHeight / 2;
+            const rx = (el.scrollLeft + ax) / prev;
+            const ry = (el.scrollTop + ay) / prev;
+            if (k === null) zoom.delete(el); else zoom.set(el, k);
+            applyZoom(el);
+            el.scrollLeft = rx * next - ax;
+            el.scrollTop = ry * next - ay;
+        }
+
+        function currentScale(el) {
+            const svg = el.querySelector('svg');
+            return svg ? scaleOf(el, naturalSize(svg)) : 1;
+        }
+
+        function setupDiagrams() {
+            document.querySelectorAll('.mermaid').forEach(el => {
+                const wrap = document.createElement('div');
+                wrap.className = 'diagram';
+                el.parentNode.insertBefore(wrap, el);
+                wrap.appendChild(el);
+
+                const tools = document.createElement('div');
+                tools.className = 'diagram-tools';
+                tools.innerHTML =
+                    '<button type="button" data-act="out" title="缩小">&minus;</button>' +
+                    '<span class="diagram-zoom">100%</span>' +
+                    '<button type="button" data-act="in" title="放大">+</button>' +
+                    '<button type="button" data-act="reset" title="适应宽度">&#9633;</button>' +
+                    '<button type="button" data-act="full" title="全屏">&#10530;</button>';
+                wrap.appendChild(tools);
+
+                tools.addEventListener('click', e => {
+                    const act = e.target.closest('button')?.dataset.act;
+                    if (!act) return;
+                    const k = currentScale(el);
+                    if (act === 'in') setZoom(el, k * STEP);
+                    else if (act === 'out') setZoom(el, k / STEP);
+                    else if (act === 'reset') setZoom(el, null);
+                    else if (act === 'full') {
+                        if (document.fullscreenElement === wrap) document.exitFullscreen();
+                        else wrap.requestFullscreen?.();
+                    }
+                });
+
+                // Ctrl/⌘ + wheel zooms; a plain wheel keeps scrolling the page.
+                el.addEventListener('wheel', e => {
+                    if (!e.ctrlKey && !e.metaKey) return;
+                    e.preventDefault();
+                    const r = el.getBoundingClientRect();
+                    setZoom(el, currentScale(el) * (e.deltaY < 0 ? STEP : 1 / STEP),
+                            { x: e.clientX - r.left, y: e.clientY - r.top });
+                }, { passive: false });
+
+                // Drag to pan once zoomed in.
+                let drag = null;
+                el.addEventListener('pointerdown', e => {
+                    // Pan only matters once the diagram actually overflows.
+                    if (e.button !== 0 || !el.classList.contains('is-zoomed')) return;
+                    drag = { x: e.clientX, y: e.clientY, l: el.scrollLeft, t: el.scrollTop };
+                    el.setPointerCapture(e.pointerId);
+                    el.classList.add('is-panning');
+                });
+                el.addEventListener('pointermove', e => {
+                    if (!drag) return;
+                    el.scrollLeft = drag.l - (e.clientX - drag.x);
+                    el.scrollTop = drag.t - (e.clientY - drag.y);
+                });
+                const endDrag = () => { drag = null; el.classList.remove('is-panning'); };
+                el.addEventListener('pointerup', endDrag);
+                el.addEventListener('pointercancel', endDrag);
+
+                // Double click toggles between auto-fit and true 1:1.
+                el.addEventListener('dblclick', () => setZoom(el, zoom.has(el) ? null : 1));
+            });
+        }
+
+        setupDiagrams();
+        initMermaid();
+        renderMermaid();
+
+        const remeasure = () => document.querySelectorAll('.mermaid').forEach(applyZoom);
+        document.addEventListener('fullscreenchange', remeasure);
+        window.addEventListener('resize', remeasure);
+
+        // Theme toggle
+        const toggle = document.getElementById('theme-toggle');
+        toggle.addEventListener('click', () => {
+            const next = currentTheme() === 'dark' ? 'light' : 'dark';
+            document.documentElement.setAttribute('data-theme', next);
+            try { localStorage.setItem('theme', next); } catch (e) {}
+            initMermaid();
+            renderMermaid();
+        });
+
+        // Follow the OS while the user hasn't made an explicit choice
+        prefersDark.addEventListener('change', () => {
+            if (!document.documentElement.getAttribute('data-theme')) {
+                initMermaid();
+                renderMermaid();
+            }
+        });
+
+        // Back to top button
+        const btn = document.querySelector('.back-to-top');
+        window.addEventListener('scroll', () => {
+            btn.classList.toggle('visible', window.scrollY > 300);
+        });
+
+        // Close sidebar on mobile when clicking a link
+        document.querySelectorAll('.sidebar nav a').forEach(a => {
+            a.addEventListener('click', () => {
+                document.querySelector('.sidebar').classList.remove('open');
+            });
+        });
+
+        // Highlight the TOC entry for the heading currently in view
+        const tocLinks = Array.from(document.querySelectorAll('.toc a'));
+        if (tocLinks.length) {
+            const targets = tocLinks
+                .map(a => document.getElementById(decodeURIComponent(a.hash.slice(1))))
+                .filter(Boolean);
+            const setActive = () => {
+                let current = targets[0];
+                for (const t of targets) {
+                    if (t.getBoundingClientRect().top <= 120) current = t;
+                    else break;
+                }
+                tocLinks.forEach(a => a.classList.toggle(
+                    'active',
+                    current && decodeURIComponent(a.hash.slice(1)) === current.id
+                ));
+            };
+            setActive();
+            let queued = false;
+            window.addEventListener('scroll', () => {
+                if (queued) return;
+                queued = true;
+                requestAnimationFrame(() => { setActive(); queued = false; });
+            });
+        }
+    </script>
+</body>
+</html>

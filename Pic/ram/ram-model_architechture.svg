@@ -1,0 +1,98 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 720" role="img" aria-label="RAM architecture diagram">
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#2698BA"/>
+    </marker>
+    <style>
+      .bg { fill: #ffffff; }
+      .title { font: 700 34px Inter, Arial, sans-serif; fill: #1f2933; }
+      .subtitle { font: 500 16px Inter, Arial, sans-serif; fill: #5f6b7a; }
+      .label { font: 600 18px Inter, Arial, sans-serif; fill: #1f2933; }
+      .small { font: 500 14px Inter, Arial, sans-serif; fill: #5f6b7a; }
+      .tiny { font: 500 12px Inter, Arial, sans-serif; fill: #6c757d; }
+      .box { fill: #f8fbfc; stroke: #2698BA; stroke-width: 3; rx: 18; }
+      .box2 { fill: #ffffff; stroke: #d0d7de; stroke-width: 2; rx: 14; }
+      .accent { fill: #2698BA; stroke: #2698BA; stroke-width: 3; rx: 18; }
+      .accentText { font: 700 18px Inter, Arial, sans-serif; fill: #ffffff; }
+      .arrow { stroke: #2698BA; stroke-width: 3.2; fill: none; marker-end: url(#arrow); }
+      .arrowSoft { stroke: #9fb7c4; stroke-width: 2.5; fill: none; marker-end: url(#arrow); }
+      .chip { fill: #eaf6fa; stroke: #b7dfe9; stroke-width: 1.6; rx: 999; }
+    </style>
+  </defs>
+  <rect class="bg" x="0" y="0" width="1280" height="720"/>
+
+  <text class="title" x="640" y="56" text-anchor="middle">RAM Architecture</text>
+  <text class="subtitle" x="640" y="88" text-anchor="middle">GroundingDINO + SAM2 -> VGGT-1B -> RAMNet -> VLM planning -> Fairino execution</text>
+
+  <rect class="chip" x="240" y="120" width="800" height="38" rx="19"/>
+  <text class="tiny" x="640" y="145" text-anchor="middle">Inputs: RGB image, prompt, checkpoints, template_dir, config.yaml, robot/camera calibration</text>
+
+  <rect class="box" x="70" y="210" width="245" height="130"/>
+  <text class="label" x="192.5" y="252" text-anchor="middle">Step 1</text>
+  <text class="small" x="192.5" y="282" text-anchor="middle">VLM object discovery</text>
+  <text class="tiny" x="192.5" y="307" text-anchor="middle">RamVLM + GroundingDINO + SAM2</text>
+  <text class="tiny" x="192.5" y="330" text-anchor="middle">Outputs detections.npy + vlm_objects.json</text>
+
+  <rect class="box" x="365" y="210" width="245" height="130"/>
+  <text class="label" x="487.5" y="252" text-anchor="middle">Step 2</text>
+  <text class="small" x="487.5" y="282" text-anchor="middle">3D pose and object priors</text>
+  <text class="tiny" x="487.5" y="307" text-anchor="middle">VGGT-1B + RAMNet + template lookup</text>
+  <text class="tiny" x="487.5" y="330" text-anchor="middle">Outputs ram_objects_meta.npy + vggt_depth_ext.npy</text>
+
+  <rect class="box" x="660" y="210" width="245" height="130"/>
+  <text class="label" x="782.5" y="252" text-anchor="middle">Step 3</text>
+  <text class="small" x="782.5" y="282" text-anchor="middle">Task decomposition</text>
+  <text class="tiny" x="782.5" y="307" text-anchor="middle">qwen3.5-flash + RAM object description</text>
+  <text class="tiny" x="782.5" y="330" text-anchor="middle">Outputs vlm_subtasks.json + vlm_actions.json</text>
+
+  <rect class="box" x="955" y="210" width="245" height="130"/>
+  <text class="label" x="1077.5" y="252" text-anchor="middle">Step 4</text>
+  <text class="small" x="1077.5" y="282" text-anchor="middle">Trajectory execution</text>
+  <text class="tiny" x="1077.5" y="307" text-anchor="middle">ConstraintParser + PathPlanner</text>
+  <text class="tiny" x="1077.5" y="330" text-anchor="middle">Outputs robot waypoints and Fairino motion</text>
+
+  <path class="arrow" d="M 315 275 L 365 275"/>
+  <path class="arrow" d="M 610 275 L 660 275"/>
+  <path class="arrow" d="M 905 275 L 955 275"/>
+
+  <rect class="box2" x="110" y="414" width="240" height="180"/>
+  <text class="label" x="230" y="448" text-anchor="middle">RAMNet</text>
+  <text class="tiny" x="230" y="476" text-anchor="middle">Frozen DINOv2-B/14 backbone</text>
+  <text class="tiny" x="230" y="498" text-anchor="middle">3 layers x 768 = 2304D features</text>
+  <text class="tiny" x="230" y="520" text-anchor="middle">1-layer view adapter</text>
+  <text class="tiny" x="230" y="542" text-anchor="middle">4-layer shape encoder</text>
+  <text class="tiny" x="230" y="564" text-anchor="middle">4-layer map adapter</text>
+  <text class="tiny" x="230" y="586" text-anchor="middle">1x1 Conv decoder: 2304 -> 512 -> 256 -> 3</text>
+
+  <rect class="box2" x="380" y="414" width="240" height="180"/>
+  <text class="label" x="500" y="448" text-anchor="middle">Template assets</text>
+  <text class="tiny" x="500" y="476" text-anchor="middle">128 rendered views per object</text>
+  <text class="tiny" x="500" y="498" text-anchor="middle">BOP-style scene_gt / rgb / depth / mask / nocs</text>
+  <text class="tiny" x="500" y="520" text-anchor="middle">obj_000561.ply + 000561.pkl</text>
+  <text class="tiny" x="500" y="542" text-anchor="middle">contact_point, plane, hinge, grasp primitives</text>
+  <text class="tiny" x="500" y="564" text-anchor="middle">category priors live in visions/ram/template</text>
+
+  <rect class="box2" x="650" y="414" width="240" height="180"/>
+  <text class="label" x="770" y="448" text-anchor="middle">Planning grammar</text>
+  <text class="tiny" x="770" y="476" text-anchor="middle">ConstraintParser with 14 operators</text>
+  <text class="tiny" x="770" y="498" text-anchor="middle">Object size, contact points, planes, rotation axes</text>
+  <text class="tiny" x="770" y="520" text-anchor="middle">PathPlanner max_steps = 300</text>
+  <text class="tiny" x="770" y="542" text-anchor="middle">stop_threshold = 0.001, target_map_weight = 2</text>
+  <text class="tiny" x="770" y="564" text-anchor="middle">Voxel map -> robot waypoints</text>
+
+  <rect class="box2" x="920" y="414" width="240" height="180"/>
+  <text class="label" x="1040" y="448" text-anchor="middle">Execution layer</text>
+  <text class="tiny" x="1040" y="476" text-anchor="middle">RobotArm + ZEDCamera + RealSense435Camera</text>
+  <text class="tiny" x="1040" y="498" text-anchor="middle">Camera intrinsics, gripper offset, workspace limits</text>
+  <text class="tiny" x="1040" y="520" text-anchor="middle">TrajectoryGenerator converts voxel path to poses</text>
+  <text class="tiny" x="1040" y="542" text-anchor="middle">Fairino tip_moveto + MoveL + MoveC</text>
+  <text class="tiny" x="1040" y="564" text-anchor="middle">Closed loop is still external to the model</text>
+
+  <path class="arrowSoft" d="M 230 340 L 230 414"/>
+  <path class="arrowSoft" d="M 500 340 L 500 414"/>
+  <path class="arrowSoft" d="M 770 340 L 770 414"/>
+  <path class="arrowSoft" d="M 1040 340 L 1040 414"/>
+
+  <rect class="chip" x="220" y="632" width="840" height="38" rx="19"/>
+  <text class="tiny" x="640" y="657" text-anchor="middle">Outputs: inspectable JSON / NPY / PLY artifacts, not a hidden end-to-end policy</text>
+</svg>

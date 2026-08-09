@@ -1,0 +1,115 @@
+- 源文件：gl_cv.jpg
+- 来源：用户提供 OCR 文本，2026-08-08
+- 用途：优秀简历 bullet 语法抽取；后续用于把用户机器人项目迁移成专业中英文简历表达。
+
+- 基本信息
+  - 公司：阿里巴巴·高德集团
+  - 职位：具身智能大模型算法专家；高德具身机器人"途途"核心算法成员
+  - 时间：2022.07 - 至今
+  - 背景："途途"于 2026-04-19 北京亦庄半马首发，定位"智能导盲犬"；原文称其为全球首款开放环境全自主具身机器人。下述项目被描述为"途途"核心能力。
+
+- 项目 1：具身项目 VLN & VLA - 基于 VLA 的具身视觉跟踪与 VLN 导航基座 ABot-NO
+  - 时间：2025.04 - 2025.10
+  - 角色：Embodied Visual Tracking 项目负责人；ABot-NO Instruction-Goal / Object-Goal 核心贡献者
+
+  - 中文 bullet 版
+    - 负责基于 VLA 的具身视觉跟踪，在拥挤、遮挡、干扰等困难场景下，以 Qwen2.5-VL-3B + Flow Matching Head 为基座，在 SFT 模型上进一步进行多智能体对抗 RL 后训练。
+    - 将遮挡和干扰显式建模为语言条件的对抗博弈：Follower 执行"持续跟随目标"，Blocker 执行"制造遮挡与重识别困难"，使跟踪模型在主动干扰下学习重识别与跟随策略。
+    - 在 SFT 阶段结合仿真采集数据与 VQA 数据，以保留 VLM 先验；RL 阶段采用 GRPO + LoRA，通过组内相对优势稳定更新策略。
+    - 在 EVT-Bench 达到学术界 SOTA，单人场景跟踪成功率 92.1%；原文称 3B 模型全面超越银河通用 / 字节 SEED 的 7B 竞品。
+    - 以通讯作者投稿 ECCV 2026，原文标注已录用。
+    - 参与高德 ABot 导航基座大模型，原文描述为 Qwen3-4B3 + Flow Matching Action Head，统一五类导航任务并真机部署于 Unitree Go2 + Orin NX。
+    - 负责 Instruction-Goal、Object-Goal 两类导航任务的 Habitat 仿真训练数据采集、模型训练与仿真评测。
+
+  - English bullet version
+    - Led VLA-based embodied visual tracking for crowded and occluded scenes by post-training a Qwen2.5-VL-3B + Flow Matching Head model with multi-agent adversarial RL on top of SFT.
+    - Formulated occlusion and distractor interference as a language-conditioned adversarial game, where a Follower learns to continuously track the target while a Blocker learns to create occlusion and re-identification difficulty.
+    - Combined simulation-collected trajectories with VQA data during SFT to retain VLM priors, then applied GRPO + LoRA with group-relative advantages to stabilize adversarial policy updates.
+    - Achieved academic SOTA on EVT-Bench with 92.1% single-person tracking success rate; reported that the 3B model outperformed 7B competitors from Galaxy General Robotics and ByteDance SEED.
+    - Contributed to AutoNavi ABot-NO navigation foundation model, described as Qwen3-4B3 + Flow Matching Action Head, unifying five navigation task families and deploying on Unitree Go2 + Orin NX.
+    - Owned Habitat data generation, training, and simulation evaluation for Instruction-Goal and Object-Goal navigation tasks.
+
+- 项目 2：具身项目 MotionVLA 动作生成大模型
+  - 时间：2025.11 - 2026.05
+  - 角色：技术负责人；负责动作数据生成、生成模型架构设计与训练、RL/后训练、Orin 端侧部署
+
+  - 中文 bullet 版
+    - 面向四足动作数据稀缺问题，负责 Video2Motion 数据生成，微调 Wan2.2 生成机器狗动作视频。
+    - 设计 Identity Consistency Loss 缓解跨帧 identity drift，并基于 CLIP 相似度等质量指标搭建多级过滤流程，最终产出 19 维机器狗关节动作。
+    - 拟开源 Quad-Imaginarium 数据集，包含 7,488 个机器狗动作 / 18.5 小时数据；以通讯作者身份投稿 CoRL 2026。
+    - 参考 MoT 架构设计 MotionVLA 文本-动作双模态专家架构：以 GPT-2 初始化 Transformer 骨干，文本与动作作为平级模态共享 self-attention。
+    - 冻结文本分支以保持语言模型语义能力，同时在共享注意力层接入独立参数化的动作专家分支；架构末端加入 Diffusion Head，在动作隐空间进行流形扩散并直接生成 joints 数据。
+    - 设计 RL 后训练方案：VLA 对同一指令采样多条候选动作，在物理仿真中 rollout，以任务执行成功率与运动稳定性为奖励，并用 GRPO 组内相对优势更新生成策略。
+    - 原文报告真机执行成功率从 40% 提升至 95%；拟以第一作者投稿 AAAI 2027。
+    - 通过 ONNX 转换与实时推理流水线将模型部署到 NVIDIA Orin，端到端延迟 0.5 s。
+
+  - English bullet version
+    - Led Video2Motion data generation for quadruped motion learning under severe public-data scarcity by fine-tuning Wan2.2 to synthesize robot-dog motion videos.
+    - Designed an Identity Consistency Loss to reduce cross-frame identity drift and built CLIP-based multi-stage quality filtering to produce 19-D robot-dog joint actions.
+    - Planned the Quad-Imaginarium dataset release with 7,488 quadruped actions and 18.5 hours of motion data; submitted to CoRL 2026 as corresponding author.
+    - Architected MotionVLA as a MoT-inspired text-action dual-modal expert model, initializing the Transformer backbone from GPT-2 and treating text and action as peer modalities under shared self-attention.
+    - Preserved language semantics by freezing the text branch, inserted independently parameterized action experts into shared attention layers, and added a Diffusion Head for manifold diffusion in action latent space.
+    - Designed GRPO-based RL post-training where the VLA samples multiple candidate motions per instruction, rolls them out in physics simulation, and optimizes task success and motion stability with group-relative advantages.
+    - Reported real-robot execution success improvement from 40% to 95% and deployed the model on NVIDIA Orin through ONNX conversion with 0.5 s end-to-end latency.
+
+- 项目 3：视觉车道级端到端定位 DiffVL
+  - 时间：2024.01 - 2025.04
+  - 角色：技术一号位；0-1 研发不依赖高精地图的端侧车道级定位模型
+  - 成果：ICRA 2026 已录用
+
+  - 中文 bullet 版
+    - 0-1 负责 DiffVL 视觉车道级端到端定位模型，将视觉定位重塑为基于 Diffusion 的 GPS 轨迹去噪任务。
+    - 联合建模 GPS 时序轨迹、UD 地图与视觉信号，通过时序注意力约束保证轨迹平滑、避免跳变，并通过逆向扩散逐步去噪含噪轨迹。
+    - 构建多模态条件融合：图像特征转 BEV，UD 地图转拓扑表示，深度网络补全几何线索，三路条件共同约束扩散去噪过程。
+    - 使用大模型合成夜间、阴雨等长尾困难场景图像，补齐训练分布并提升困难场景覆盖。
+    - 三个分支均采用 MobileDet-0.25 骨干并结合量化，满足车机端实时推理。
+    - 支撑高德车道级导航从 50 城覆盖扩展至全国，累计交付 280 万辆车机，并提升整体车道级定位准召。
+
+  - English bullet version
+    - Led 0-to-1 development of DiffVL, an edge-side lane-level visual localization model that reformulates localization as diffusion-based GPS trajectory denoising without relying on HD maps.
+    - Jointly modeled GPS temporal trajectories, UD maps, and visual observations, using temporal attention constraints and reverse diffusion to denoise noisy trajectories while avoiding discontinuous jumps.
+    - Built multimodal diffusion conditioning from image-to-BEV features, UD-map topology representation, and depth-network geometry completion.
+    - Improved long-tail coverage by synthesizing night and rainy images with large generative models to fill difficult-scenario training gaps.
+    - Adopted MobileDet-0.25 backbones and quantization across all three branches to meet real-time in-vehicle inference constraints.
+    - Supported AutoNavi lane-level navigation expansion from 50 cities to nationwide coverage, with cumulative delivery to 2.8M in-vehicle units.
+
+- 项目 4：云端视觉定位模型 VPS
+  - 时间：2023.05 - 2023.12
+
+  - 中文 bullet 版
+    - 研发 Image-Retrieval 式视觉定位，从车机图像抽取 global descriptor，并与云端视觉底库进行 cross-matching。
+    - 取 top-1 最相似图像对应 GPS 作为绑路结果，解决高架主辅路、立交、城市峡谷等复杂拓扑下的 GPS 错层与漂移。
+    - 融合 SOCOL、猎鹰、ADAS、高铁等多源异构数据，适配多规格摄像头。
+    - 采用 N-tuplets metric learning 降噪，并结合 GradCAM-based attention loss 与语义分割协同训练提升判别性。
+    - 规模化落地高德打车派单、接送驾起点降偏航、抓路判偏等业务场景，降低起点偏航率与错绑路率。
+
+  - English bullet version
+    - Developed image-retrieval-based cloud visual localization by extracting global descriptors from vehicle images and cross-matching them against a cloud visual database.
+    - Used the GPS of the top-1 matched image as the road-binding result to correct layer mismatch and GPS drift in elevated roads, interchanges, and urban canyons.
+    - Adapted heterogeneous data from SOCOL, Falcon, ADAS, and high-speed-rail sources across multiple camera specifications.
+    - Improved visual discriminability with N-tuplets metric learning, GradCAM-based attention loss, and semantic-segmentation co-training.
+    - Deployed the system across AutoNavi ride-hailing dispatch, pickup deviation reduction, road-snapping diagnosis, and related point-line business scenarios.
+
+- 项目 5：早期项目 - 视觉里程计 VO / AR 打车 / 高精地图感知
+  - 时间：2022.07 - 2023.05
+
+  - 中文 bullet 版
+    - 面向无 IMU 车型研发视觉车道级 VO，用于基于视觉里程计的位姿推演。
+    - 在机场、商场、火车站等场景搭建 AR 打车视觉定位能力，用于识别上车点并引导司乘汇合。
+    - 参与高精地图感知任务，包括车道线、地面标志物、车牌检测。
+
+  - English bullet version
+    - Developed lane-level visual odometry for vehicles without IMU support to enable vision-only pose propagation.
+    - Built AR ride-hailing visual localization for airports, malls, and railway stations to identify pickup points and guide driver-passenger rendezvous.
+    - Contributed to HD-map perception tasks including lane-line, ground-mark, and license-plate detection.
+
+- 需确认的语句或逻辑问题
+  - "Qwen3-4B3" 可能是 OCR 或命名错误，需确认真实模型名。
+  - "flowmacthinghead" 应统一为 Flow Matching Head，但需要先确认真实模块命名。
+  - "ECCV 2026 已录用"、"ICRA 2026 已录用" 是强 publication claim，需要确认真实录用状态。
+  - "全球首款开放环境全自主具身机器人"、"业界首个"、"学术界 SOTA"、"3B 全面超越 7B" 都是强 claim，复用时需要 benchmark、外部报道或论文证据支撑。
+  - "真机执行成功率 40% -> 95%" 需要补充任务定义、测试次数、测试环境和 baseline。
+  - "HQ 高精地图" 可能是 OCR 噪声；如果没有 HQ 这个内部术语，应改为 "HD 高精地图"。
+  - "UD 地图 -> 拓打卜表示" 明显是 OCR 错字，较可能是 "UD 地图 -> 拓扑表示"。
+  - "三分支均采 MobileDet-0.25 骨干 + 量量化" 有 OCR 重复，较可能是 "三分支均采用 MobileDet-0.25 骨干 + 量化"。
+  - "接送驾起点降偏航" 与 "点线业务" 是业务术语，建议确认内部标准表述后再迁移到英文简历。

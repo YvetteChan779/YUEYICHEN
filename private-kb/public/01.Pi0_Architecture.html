@@ -1,0 +1,1155 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pi0 - Robotics Knowledge Base</title>
+    <link rel="icon" href="favicon.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="assets/vendor/katex/katex.min.css">
+    <script>
+        // Applied before first paint so the saved theme doesn't flash.
+        (function () {
+            try {
+                var t = localStorage.getItem('theme');
+                if (t === 'dark' || t === 'light') {
+                    document.documentElement.setAttribute('data-theme', t);
+                }
+            } catch (e) {}
+        })();
+    </script>
+</head>
+<body>
+    <button class="menu-toggle" onclick="document.querySelector('.sidebar').classList.toggle('open')">&#9776;</button>
+    <button class="theme-toggle" id="theme-toggle" title="切换日夜模式" aria-label="切换日夜模式">
+        <span class="icon-light">&#9790;</span><span class="icon-dark">&#9728;</span>
+    </button>
+
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <h2>Robotics Knowledge Base</h2>
+            <p>机器人模型架构知识库</p>
+        </div>
+        <nav>
+            <a href="index.html">Overview</a>
+            <div class="nav-group">VLA 模型</div>
+            <a href="01.Pi0_Architecture.html" class="active">Pi0</a>
+            <a href="02.Pi0.5_Architecture.html">Pi0.5</a>
+            <a href="03.Pi0-FAST_Architecture.html">Pi0-FAST</a>
+            <a href="04.Pi-Star-0.6_Architecture.html">π*₀.₆ (Pi-Star-0.6)</a>
+            <a href="05.Pi0.7_Architecture.html">π₀.₇ (Pi-0.7)</a>
+            <a href="06.Isaac-GR00T-N1.6_Architecture.html">Isaac-GR00T N1.6</a>
+            <a href="07.Isaac-GR00T-N1.5_Architecture.html">Isaac-GR00T N1.5</a>
+            <a href="08.ACT_Architecture.html">ACT</a>
+            <a href="09.SmolVLA_Architecture.html">SmolVLA</a>
+            <a href="10.WALL-OSS_Architecture.html">WALL-OSS / WALL-X</a>
+            <a href="11.X-VLA_Architecture.html">X-VLA</a>
+            <a href="12.Psi0_Architecture.html">Psi0 (ψ₀)</a>
+            <a href="13.DreamZero_Architecture.html">DreamZero</a>
+            <a href="14.FastWAM_Architecture.html">Fast-WAM</a>
+            <div class="nav-group">全身控制 (WBC)</div>
+            <a href="15.GR00T-WBC_Overview.html">GR00T-WBC 总览</a>
+            <a href="16.Decoupled-WBC_Architecture.html" class="nav-child">Decoupled WBC</a>
+            <a href="17.GEAR-SONIC_Architecture.html" class="nav-child">GEAR-SONIC</a>
+            <a href="18.MotionBricks_Architecture.html" class="nav-child">MotionBricks</a>
+            <div class="nav-group">3D 视觉与 VLM</div>
+            <a href="19.VLM3_Architecture.html">VLM³</a>
+        </nav>
+    </aside>
+
+    <main class="content">
+      <div class="content-inner">
+        <h1 id="pi0-physical-intelligence-zero-模型架构">Pi0 (Physical Intelligence Zero) 模型架构<a class="headerlink" href="01.Pi0_Architecture.html#pi0-physical-intelligence-zero-模型架构" title="Permanent link">#</a></h1>
+<h2 id="1-整体架构概览">1. 整体架构概览<a class="headerlink" href="01.Pi0_Architecture.html#1-整体架构概览" title="Permanent link">#</a></h2>
+<p>Pi0 是 Physical Intelligence 提出的视觉-语言-动作 (VLA) 模型，采用 <strong>PaliGemma (SigLIP + Gemma 2B)</strong> 作为视觉语言主干网络，配合独立的 <strong>Gemma 300M Action Expert</strong> 进行动作生成。其核心创新在于 <strong>双流 Transformer 注意力机制</strong>——VLM 前缀序列与动作专家后缀序列共享同一组 Transformer 层，通过精心设计的混合注意力掩码实现信息的单向流动；动作生成采�� <strong>Flow Matching</strong> 而非标准扩散模型，通过欧拉积分将高斯噪声迭代映射为动作轨迹。</p>
+<div class="mermaid">
+graph TB
+    subgraph Input["输入"]
+        IMG["相机图像&lt;br/&gt;(多视角支持)&lt;br/&gt;[B, C, 224, 224]"]
+        TXT["语言指令&lt;br/&gt;(Tokenized)&lt;br/&gt;[B, max_len=48]"]
+        STATE["机器人状态&lt;br/&gt;[B, state_dim]&lt;br/&gt;(填充至 max_state_dim=32)"]
+    end
+
+    subgraph VLM["PaliGemma 视觉语言主干 (Prefix Stream)"]
+        SIGLIP["SigLIP 视觉编码器"]
+        PROJ_V["视觉投影层"]
+        EMB_L["Gemma 2B 词元嵌入&lt;br/&gt;embed_dim * sqrt(dim)"]
+        MERGE["拼接: 图像嵌入 + 语言嵌入&lt;br/&gt;(双向注意力)"]
+    end
+
+    subgraph Expert["Gemma 300M Action Expert (Suffix Stream)"]
+        S_PROJ["状态投影&lt;br/&gt;Linear(32 → 1024)"]
+        A_PROJ["动作投影&lt;br/&gt;Linear(32 → 1024)"]
+        T_EMB["时间步编码&lt;br/&gt;正弦位置编码"]
+        FUSE["动作-时间融合 MLP&lt;br/&gt;Concat → SiLU → Linear"]
+    end
+
+    subgraph DualStream["双流 Transformer (18层共享)"]
+        DS["Prefix (VLM, 2048维) ‖ Suffix (Expert, 1024维)&lt;br/&gt;共享注意力层 + 混合注意力掩码&lt;br/&gt;RoPE 位置编码"]
+    end
+
+    subgraph FlowMatch["Flow Matching 输出"]
+        OUT_PROJ["动作输出投影&lt;br/&gt;Linear(1024 → 32)"]
+        EULER["欧拉积分去噪&lt;br/&gt;(10步迭代)"]
+    end
+
+    subgraph Output["输出"]
+        ACT["预测动作轨迹&lt;br/&gt;[B, chunk_size=50, action_dim]"]
+    end
+
+    IMG --&gt; SIGLIP --&gt; PROJ_V --&gt; MERGE
+    TXT --&gt; EMB_L --&gt; MERGE
+    MERGE --&gt;|"前缀嵌入&lt;br/&gt;[B, prefix_len, 2048]"| DS
+
+    STATE --&gt; S_PROJ
+    S_PROJ --&gt; FUSE
+    A_PROJ --&gt; FUSE
+    T_EMB --&gt; FUSE
+    FUSE --&gt;|"后缀嵌入&lt;br/&gt;[B, 1+chunk_size, 1024]"| DS
+
+    DS --&gt;|"后缀输出"| OUT_PROJ
+    OUT_PROJ --&gt; EULER --&gt; ACT
+
+    style Input fill:#e8f4fd,stroke:#2196F3
+    style VLM fill:#fff3e0,stroke:#FF9800
+    style Expert fill:#f3e5f5,stroke:#9C27B0
+    style DualStream fill:#e8f5e9,stroke:#4CAF50
+    style FlowMatch fill:#fff9c4,stroke:#FFC107
+    style Output fill:#fce4ec,stroke:#E91E63
+</div>
+<hr />
+<h2 id="2-核心组件详解">2. 核心组件详解<a class="headerlink" href="01.Pi0_Architecture.html#2-核心组件详解" title="Permanent link">#</a></h2>
+<h3 id="21-paligemma-视觉语言模型-siglip-gemma-2b">2.1 PaliGemma 视觉语言模型 (SigLIP + Gemma 2B)<a class="headerlink" href="01.Pi0_Architecture.html#21-paligemma-视觉语言模型-siglip-gemma-2b" title="Permanent link">#</a></h3>
+<p>PaliGemma 是 Google 提出的视觉语言模型，由 <strong>SigLIP 视觉编码器</strong> 和 <strong>Gemma 2B 语言模型</strong> 组成。在 Pi0 中，PaliGemma 的作用是将图像和语言指令编码为统一的视觉语言特征序列，作为双流 Transformer 的前缀 (Prefix) 输入。</p>
+<div class="mermaid">
+graph LR
+    subgraph SigLIP["SigLIP 视觉编码器 (vision_tower)"]
+        PIX["pixel_values&lt;br/&gt;[B, C, 224, 224]&lt;br/&gt;归一化至 [-1, 1]"] --&gt; PATCH["Patch 嵌入&lt;br/&gt;+ 位置嵌入"]
+        PATCH --&gt; VIT["Vision Transformer&lt;br/&gt;多层 Self-Attention"]
+        VIT --&gt; VFEAT["图像特征&lt;br/&gt;[B, num_patches, vision_dim]"]
+    end
+
+    subgraph VisionProj["视觉投影 (multi_modal_projector)"]
+        VFEAT --&gt; MPROJ["线性投影&lt;br/&gt;vision_dim → 2048"]
+    end
+
+    subgraph GemmaLM["Gemma 2B 语言模型 (language_model)"]
+        TK["语言 Token&lt;br/&gt;[B, seq_len]"] --&gt; EMBT["词元嵌入&lt;br/&gt;embed_tokens"]
+        EMBT --&gt; SCALE["缩放: emb * sqrt(dim)"]
+        MPROJ --&gt;|"图像嵌入"| CONCAT["拼接至序列"]
+        SCALE --&gt;|"语言嵌入"| CONCAT
+        CONCAT --&gt; GEMMA["Gemma 2B&lt;br/&gt;18层 Transformer&lt;br/&gt;hidden_size=2048&lt;br/&gt;heads=8, kv_heads=1&lt;br/&gt;head_dim=256&lt;br/&gt;mlp_dim=16384"]
+    end
+
+    GEMMA --&gt; PFEAT["前缀特征&lt;br/&gt;[B, prefix_len, 2048]"]
+
+    style SigLIP fill:#e3f2fd,stroke:#2196F3
+    style VisionProj fill:#f3e5f5,stroke:#9C27B0
+    style GemmaLM fill:#e8f5e9,stroke:#4CAF50
+</div>
+<p><strong>关键细节：</strong></p>
+<ul>
+<li>SigLIP 输入图像需归一化至 <code>[-1, 1]</code> 范围，支持 <code>resize_with_pad</code> 保持宽高比</li>
+<li>语言嵌入在送入 Transformer 前需乘以 <code>sqrt(embed_dim)</code> 进行缩放</li>
+<li>多相机图像逐一编码后拼接，缺失相机用 <code>-1</code> 填充并设置掩码为 0</li>
+<li>PaliGemma 使用 <code>vocab_size=257152</code>，<code>image_token_index=257152</code></li>
+</ul>
+<hr />
+<h3 id="22-action-expert-gemma-300m">2.2 Action Expert (Gemma 300M)<a class="headerlink" href="01.Pi0_Architecture.html#22-action-expert-gemma-300m" title="Permanent link">#</a></h3>
+<p>Action Expert 是一个独立的 Gemma 300M 模型，负责处理机器人状态、含噪动作和时间步信息。它与 VLM 共享 Transformer 层的注意力计算，但拥有独立的参数（自己的 Q/K/V 投影、MLP 等）。</p>
+<div class="mermaid">
+graph TB
+    subgraph StateEnc["状态编码"]
+        ST["机器人状态&lt;br/&gt;[B, state_dim]"] --&gt; PAD_S["零填充至 max_state_dim=32"]
+        PAD_S --&gt; SP["state_proj&lt;br/&gt;Linear(32 → 1024)"]
+        SP --&gt; SE["状态嵌入&lt;br/&gt;[B, 1, 1024]"]
+    end
+
+    subgraph TimeEnc["时间步编码"]
+        T["时间步 t&lt;br/&gt;[B]"] --&gt; SIN["正弦-余弦位置编码&lt;br/&gt;create_sinusoidal_pos_embedding&lt;br/&gt;dim=1024&lt;br/&gt;period: [4e-3, 4.0]"]
+        SIN --&gt; TE["时间嵌入&lt;br/&gt;[B, 1024]&lt;br/&gt;→ 扩展至 [B, chunk_size, 1024]"]
+    end
+
+    subgraph ActionEnc["动作编码 + 时间融合"]
+        NA["含噪动作 x_t&lt;br/&gt;[B, chunk_size, 32]"] --&gt; AP["action_in_proj&lt;br/&gt;Linear(32 → 1024)"]
+        AP --&gt; AE["动作嵌入&lt;br/&gt;[B, chunk_size, 1024]"]
+        AE --&gt; CAT["Concat(动作嵌入, 时间嵌入)&lt;br/&gt;[B, chunk_size, 2048]"]
+        TE --&gt; CAT
+        CAT --&gt; MLP_IN["action_time_mlp_in&lt;br/&gt;Linear(2048 → 1024)"]
+        MLP_IN --&gt; SILU["SiLU 激活"]
+        SILU --&gt; MLP_OUT["action_time_mlp_out&lt;br/&gt;Linear(1024 → 1024)"]
+        MLP_OUT --&gt; ATE["融合嵌入&lt;br/&gt;[B, chunk_size, 1024]"]
+    end
+
+    subgraph SuffixBuild["后缀序列构建"]
+        SE --&gt; SCAT["Concat(状态, 融合嵌入)&lt;br/&gt;[B, 1+chunk_size, 1024]"]
+        ATE --&gt; SCAT
+    end
+
+    subgraph ExpertModel["Gemma 300M 参数"]
+        SPEC["hidden_size=1024&lt;br/&gt;depth=18层&lt;br/&gt;mlp_dim=4096&lt;br/&gt;heads=8, kv_heads=1&lt;br/&gt;head_dim=256&lt;br/&gt;无 embed_tokens (设为 None)"]
+    end
+
+    SCAT --&gt; SUFFIX_OUT["后缀嵌入 → 双流 Transformer"]
+
+    style StateEnc fill:#e3f2fd,stroke:#2196F3
+    style TimeEnc fill:#fff3e0,stroke:#FF9800
+    style ActionEnc fill:#f3e5f5,stroke:#9C27B0
+    style SuffixBuild fill:#e8f5e9,stroke:#4CAF50
+    style ExpertModel fill:#fff9c4,stroke:#FFC107
+</div>
+<p><strong>关键细节：</strong></p>
+<ul>
+<li>Action Expert 的 <code>embed_tokens</code> 被设为 <code>None</code>，不使用词元嵌入</li>
+<li>状态嵌入作为单个 token 插入后缀序列开头，注意力掩码标记为 <code>1</code>（因果起点）</li>
+<li>动作 token 使用特殊的注意力掩码：首个动作 token 标记为 <code>1</code>，其余为 <code>0</code>，形成分块因果结构</li>
+</ul>
+<hr />
+<h3 id="23-双流-transformer-注意力机制">2.3 双流 Transformer 注意力机制<a class="headerlink" href="01.Pi0_Architecture.html#23-双流-transformer-注意力机制" title="Permanent link">#</a></h3>
+<p>Pi0 的核心创新是双流 Transformer：<strong>VLM 前缀序列 (Prefix)</strong> 和 <strong>Action Expert 后缀序列 (Suffix)</strong> 共享同一组 18 层 Transformer，但通过混合注意力掩码实现差异化的信息流动。</p>
+<div class="mermaid">
+graph TB
+    subgraph DualStreamLayer["单层双流 Transformer 计算"]
+        subgraph PrefixPath["Prefix 路径 (VLM, 2048维)"]
+            P_IN["prefix_embeds&lt;br/&gt;[B, prefix_len, 2048]"]
+            P_LN["input_layernorm"]
+            P_QKV["VLM 的 Q/K/V 投影&lt;br/&gt;(Gemma 2B 参数)"]
+        end
+
+        subgraph SuffixPath["Suffix 路径 (Expert, 1024维)"]
+            S_IN["suffix_embeds&lt;br/&gt;[B, suffix_len, 1024]"]
+            S_LN["input_layernorm"]
+            S_QKV["Expert 的 Q/K/V 投影&lt;br/&gt;(Gemma 300M 参数)"]
+        end
+
+        subgraph SharedAttn["共享注意力计算"]
+            CATQ["Concat Q: [prefix_Q | suffix_Q]"]
+            CATK["Concat K: [prefix_K | suffix_K]"]
+            CATV["Concat V: [prefix_V | suffix_V]"]
+            ROPE["RoPE 旋转位置编码&lt;br/&gt;(共享 cos/sin)"]
+            ATTN["联合注意力计算&lt;br/&gt;+ 混合注意力掩码"]
+        end
+
+        subgraph SplitOut["分割输出"]
+            SPLIT["按位置分割注意力输出"]
+            P_OUT["prefix: o_proj (VLM)&lt;br/&gt;→ 残差 → MLP → 残差"]
+            S_OUT["suffix: o_proj (Expert)&lt;br/&gt;→ 残差 → MLP → 残差"]
+        end
+    end
+
+    P_IN --&gt; P_LN --&gt; P_QKV --&gt; CATQ &amp; CATK &amp; CATV
+    S_IN --&gt; S_LN --&gt; S_QKV --&gt; CATQ &amp; CATK &amp; CATV
+    CATQ &amp; CATK &amp; CATV --&gt; ROPE --&gt; ATTN
+    ATTN --&gt; SPLIT --&gt; P_OUT &amp; S_OUT
+
+    style PrefixPath fill:#fff3e0,stroke:#FF9800
+    style SuffixPath fill:#f3e5f5,stroke:#9C27B0
+    style SharedAttn fill:#e8f5e9,stroke:#4CAF50
+    style SplitOut fill:#e3f2fd,stroke:#2196F3
+</div>
+<h4 id="混合注意力掩码">混合注意力掩码<a class="headerlink" href="01.Pi0_Architecture.html#混合注意力掩码" title="Permanent link">#</a></h4>
+<p>注意力掩码通过 <code>att_masks</code> 整数向量和 <code>make_att_2d_masks</code> 函数构建，实现以下规则：</p>
+<p><strong>掩码规则：</strong></p>
+<ul>
+<li><strong>Prefix ↔ Prefix</strong>：双向注意力（图像和语言 token 互相可见）</li>
+<li><strong>Suffix → Prefix</strong>：允许（动作 token 可以看到所有 VLM token）</li>
+<li><strong>Prefix → Suffix</strong>：阻断（VLM token 不能看到动作 token）</li>
+<li><strong>Suffix ↔ Suffix</strong>：因果注意力（动作 token 仅看到自身及之前的 token）</li>
+</ul>
+<p><strong>注意力矩阵示意：</strong></p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Q \ K</th>
+<th>img</th>
+<th>lang</th>
+<th>state</th>
+<th>act_0</th>
+<th>act_1</th>
+<th>...</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>img</td>
+<td>✓</td>
+<td>✓</td>
+<td>✗</td>
+<td>✗</td>
+<td>✗</td>
+<td>✗</td>
+</tr>
+<tr>
+<td>lang</td>
+<td>✓</td>
+<td>✓</td>
+<td>✗</td>
+<td>✗</td>
+<td>✗</td>
+<td>✗</td>
+</tr>
+<tr>
+<td>state</td>
+<td>✓</td>
+<td>✓</td>
+<td>✓</td>
+<td>✗</td>
+<td>✗</td>
+<td>✗</td>
+</tr>
+<tr>
+<td>act_0</td>
+<td>✓</td>
+<td>✓</td>
+<td>✓</td>
+<td>✓</td>
+<td>✗</td>
+<td>✗</td>
+</tr>
+<tr>
+<td>act_1</td>
+<td>✓</td>
+<td>✓</td>
+<td>✓</td>
+<td>✓</td>
+<td>✓</td>
+<td>✗</td>
+</tr>
+<tr>
+<td>...</td>
+<td>✓</td>
+<td>✓</td>
+<td>✓</td>
+<td>✓</td>
+<td>✓</td>
+<td>✓</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>实现方式：</strong></p>
+<ul>
+<li>图像和语言 token 的 <code>att_mask = 0</code>（双向）</li>
+<li>状态 token 的 <code>att_mask = 1</code>（因果起点）</li>
+<li>首个动作 token 的 <code>att_mask = 1</code>，其余动作 token 的 <code>att_mask = 0</code></li>
+<li>通过 <code>cumsum</code> 累积求和构造 2D 注意力掩码：<code>cumsum[:, None, :] &lt;= cumsum[:, :, None]</code></li>
+</ul>
+<hr />
+<h3 id="24-flow-matching-扩散机制">2.4 Flow Matching 扩散机制<a class="headerlink" href="01.Pi0_Architecture.html#24-flow-matching-扩散机制" title="Permanent link">#</a></h3>
+<p>Pi0 采用 Flow Matching（流匹配）而非标准扩散模型来生成动作。</p>
+<h4 id="直觉理解从噪声到动作的导航">直觉理解：从噪声到动作的"导航"<a class="headerlink" href="01.Pi0_Architecture.html#直觉理解从噪声到动作的导航" title="Permanent link">#</a></h4>
+<p>想象你站在一片浓雾（随机噪声）中，你的目标是走到一个精确的目的地（真实的机器人动作）。Flow Matching 要做的事情就是：<strong>训练一个"导航仪"，告诉你在雾中的每一个位置应该朝哪个方向、以多快的速度走，才能最终到达目的地。</strong></p>
+<p>具体来说，分三步理解：</p>
+<p><strong>第一步——定义一条"直线公路"（线性插值路径）</strong></p>
+<p>在噪声和真实动作之间，画一条最简单的直线路径。用时间 $t$ 来标记你在这条路上的位置：</p>
+<p>$$x_t = t \times \text{noise} + (1 - t) \times \text{actions}$$</p>
+<ul>
+<li>$t = 0$ 时：$x_0 = \text{actions}$，你就在目的地（干净动作）</li>
+<li>$t = 1$ 时：$x_1 = \text{noise}$，你在纯噪声中，完全迷路</li>
+<li>$t = 0.5$ 时：$x_{0.5}$ 是噪声和动作各占一半的混合体</li>
+</ul>
+<p>这条路径是人为规定的，不需要学习——它只是告诉我们"从噪声到动作，中间状态长什么样"。</p>
+<p><strong>第二步——计算"速度场"（训练目标）</strong></p>
+<p>既然路径是一条直线，那沿着这条路走的"速度"（方向 + 快慢）在任何位置都是恒定的：</p>
+<p>$$u_t = \frac{d\,x_t}{d\,t} = \text{noise} - \text{actions}$$</p>
+<p>这就是<strong>速度场</strong>——它的含义是"从动作指向噪声的方向"。反过来说，如果我们沿 $-u_t$ 方向走，就是从噪声走向动作。训练时，我们让模型去学习预测这个速度场 $u_t$。</p>
+<p><strong>第三步——推理时"逆向行走"（欧拉积分）</strong></p>
+<p>推理时，我们从纯噪声 $x_1$ 出发，用模型预测的速度场一步一步走回 $x_0$（干净动作）：</p>
+<p>$$x_{t - \Delta t} = x_t + \Delta t \times v_t \quad (\Delta t = -0.1, \text{共走 10 步})$$</p>
+<p>其中 $v_t$ 是模型对速度场的预测。每走一步，动作就变得更"清晰"一点，10 步之后就从一团噪声变成了合理的动作轨迹。</p>
+<blockquote>
+<p><strong>类比总结：</strong> 标准扩散模型像是在迷宫里摸索（随机微分方程，路径弯曲复杂，需要几百步），而 Flow Matching 像是在笔直的公路上开车（常微分方程，路径简单直接，10 步就到）。公路是人为修好的（线性插值），模型只需要学会"沿着公路开"（预测速度场）。</p>
+</blockquote>
+<div class="mermaid">
+graph TB
+    subgraph FlowMatchTheory["Flow Matching 理论"]
+        direction TB
+        THEORY["线性路径定义:&lt;br/&gt;x_t = t * noise + (1 - t) * actions&lt;br/&gt;&lt;br/&gt;速度场目标:&lt;br/&gt;u_t = noise - actions&lt;br/&gt;&lt;br/&gt;t = 0 时: x_0 = actions (干净动作)&lt;br/&gt;t = 1 时: x_1 = noise (纯噪声)&lt;br/&gt;&lt;br/&gt;模型学习预测 u_t, 使得:&lt;br/&gt;v_t ≈ u_t = d(x_t)/dt"]
+    end
+
+    subgraph TimeSampling["训练时间步采样"]
+        BETA["t ~ Beta(alpha=1.5, beta=1.0)&lt;br/&gt;偏向大 t 值 (靠近噪声端)"]
+        SCALE["缩放: t = t * 0.999 + 0.001&lt;br/&gt;避免 t=0 和 t=1 的极端值"]
+    end
+
+    subgraph NoiseProcess["加噪过程"]
+        ACT_GT["真实动作 actions&lt;br/&gt;[B, 50, 32]"]
+        NOISE["高斯噪声 noise&lt;br/&gt;~ N(0, 1)&lt;br/&gt;[B, 50, 32]"]
+        NOISY["含噪动作 x_t&lt;br/&gt;= t * noise + (1-t) * actions"]
+        TARGET["速度目标 u_t&lt;br/&gt;= noise - actions"]
+    end
+
+    BETA --&gt; SCALE
+    SCALE --&gt;|"t"| NOISY
+    ACT_GT --&gt; NOISY
+    NOISE --&gt; NOISY
+    ACT_GT --&gt; TARGET
+    NOISE --&gt; TARGET
+
+    subgraph LossComp["损失计算"]
+        PRED["模型预测 v_t&lt;br/&gt;(双流 Transformer 输出)"]
+        LOSS["Loss = MSE(u_t, v_t)&lt;br/&gt;对所有维度取均值"]
+    end
+
+    TARGET --&gt; LOSS
+    PRED --&gt; LOSS
+
+    style FlowMatchTheory fill:#e3f2fd,stroke:#2196F3
+    style TimeSampling fill:#fff3e0,stroke:#FF9800
+    style NoiseProcess fill:#f3e5f5,stroke:#9C27B0
+    style LossComp fill:#fce4ec,stroke:#E91E63
+</div>
+<p><strong>与标准扩散模型的区别：</strong></p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>特性</th>
+<th>标准扩散 (DDPM)</th>
+<th>Flow Matching (Pi0)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>噪声调度</td>
+<td>固定余弦/线性调度</td>
+<td>线性插值路径</td>
+</tr>
+<tr>
+<td>预测目标</td>
+<td>预测噪声 epsilon</td>
+<td>预测速度场 u_t</td>
+</tr>
+<tr>
+<td>推理步数</td>
+<td>通常 50-1000 步</td>
+<td>仅 10 步</td>
+</tr>
+<tr>
+<td>时间步采样</td>
+<td>均匀采样</td>
+<td>Beta(1.5, 1.0) 分布</td>
+</tr>
+<tr>
+<td>数学基础</td>
+<td>随机微分方程 (SDE)</td>
+<td>常微分方程 (ODE)</td>
+</tr>
+</tbody>
+</table></div>
+<hr />
+<h2 id="3-训练流水线">3. 训练流水线<a class="headerlink" href="01.Pi0_Architecture.html#3-训练流水线" title="Permanent link">#</a></h2>
+<p>训练时，模型接收图像、语言、状态和真实动作，通过 Flow Matching 加噪后预测速度场，以 MSE 损失进行优化。</p>
+<div class="mermaid">
+graph TB
+    subgraph DataPrep["数据准备"]
+        IMG_RAW["原始图像&lt;br/&gt;[B, C, H, W]"] --&gt; IMG_PROC["预处理&lt;br/&gt;resize_with_pad → 224x224&lt;br/&gt;归一化至 [-1, 1]"]
+        LANG_RAW["语言指令"] --&gt; LANG_PROC["Tokenize&lt;br/&gt;max_length=48"]
+        STATE_RAW["状态向量"] --&gt; STATE_PROC["零填充至&lt;br/&gt;max_state_dim=32&lt;br/&gt;MEAN_STD 归一化"]
+        ACT_RAW["动作轨迹"] --&gt; ACT_PROC["零填充至&lt;br/&gt;max_action_dim=32&lt;br/&gt;MEAN_STD 归一化"]
+    end
+
+    subgraph NoiseSample["Flow Matching 采样"]
+        ACT_PROC --&gt; FLOW
+        NOISE_S["noise ~ N(0,1)&lt;br/&gt;[B, 50, 32]"] --&gt; FLOW
+        TIME_S["t ~ Beta(1.5, 1.0)&lt;br/&gt;缩放至 [0.001, 1.0]"] --&gt; FLOW
+        FLOW["x_t = t * noise + (1-t) * actions&lt;br/&gt;u_t = noise - actions"]
+    end
+
+    subgraph Embedding["嵌入构建"]
+        IMG_PROC --&gt; EMBED_P["embed_prefix()&lt;br/&gt;SigLIP 编码图像&lt;br/&gt;+ 嵌入语言 token"]
+        LANG_PROC --&gt; EMBED_P
+        EMBED_P --&gt; PREFIX["前缀嵌入 + pad_mask + att_mask"]
+
+        STATE_PROC --&gt; EMBED_S["embed_suffix()&lt;br/&gt;状态投影 + 动作时间融合"]
+        FLOW --&gt;|"x_t, t"| EMBED_S
+        EMBED_S --&gt; SUFFIX["后缀嵌入 + pad_mask + att_mask"]
+    end
+
+    subgraph MaskBuild["注意力掩码构建"]
+        PREFIX --&gt;|"pad_mask, att_mask"| MASK["make_att_2d_masks()&lt;br/&gt;→ 4D 注意力掩码"]
+        SUFFIX --&gt;|"pad_mask, att_mask"| MASK
+    end
+
+    subgraph Forward["双流前向传播"]
+        PREFIX --&gt;|"prefix_embeds"| DUAL["PaliGemmaWithExpertModel.forward()&lt;br/&gt;18层共享注意力计算"]
+        SUFFIX --&gt;|"suffix_embeds"| DUAL
+        MASK --&gt; DUAL
+        DUAL --&gt;|"suffix_out[:, -chunk_size:]"| OUT_P["action_out_proj&lt;br/&gt;Linear(1024 → 32)"]
+        OUT_P --&gt; V_T["预测速度 v_t"]
+    end
+
+    subgraph LossCalc["损失计算"]
+        FLOW --&gt;|"u_t"| MSE["MSE Loss&lt;br/&gt;= mean((u_t - v_t)^2)&lt;br/&gt;截断至 original_action_dim"]
+        V_T --&gt; MSE
+        MSE --&gt; BACKWARD["反向传播"]
+    end
+
+    style DataPrep fill:#e8f4fd,stroke:#2196F3
+    style NoiseSample fill:#fff3e0,stroke:#FF9800
+    style Embedding fill:#f3e5f5,stroke:#9C27B0
+    style MaskBuild fill:#e0f7fa,stroke:#00BCD4
+    style Forward fill:#e8f5e9,stroke:#4CAF50
+    style LossCalc fill:#fce4ec,stroke:#E91E63
+</div>
+<hr />
+<h2 id="4-推理流水线">4. 推理流水线<a class="headerlink" href="01.Pi0_Architecture.html#4-推理流水线" title="Permanent link">#</a></h2>
+<p>推理时，模型采用 <strong>KV Cache 优化</strong>：先对前缀（图像+语言）做一次前向传播并缓存 Key/Value，后续 10 步去噪仅需处理后缀（状态+动作），大幅减少计算量。</p>
+<div class="mermaid">
+graph TB
+    subgraph PrefixCache["第一阶段: 前缀编码 (仅执行一次)"]
+        IMG_I["图像"] --&gt; EP["embed_prefix()"]
+        LANG_I["语言指令"] --&gt; EP
+        EP --&gt; PFX["前缀嵌入"]
+        PFX --&gt; VLM_FWD["PaliGemma 前向传播&lt;br/&gt;inputs_embeds=[prefix, None]&lt;br/&gt;use_cache=True"]
+        VLM_FWD --&gt; KVC["past_key_values&lt;br/&gt;(KV Cache)"]
+    end
+
+    subgraph Init["初始化"]
+        NOISE_I["x_0 = noise ~ N(0,1)&lt;br/&gt;[B, 50, 32]"]
+        DT["dt = -1/10 = -0.1&lt;br/&gt;从 t=1.0 → t=0.0"]
+    end
+
+    subgraph DenoiseLoop["第二阶段: 迭代去噪 (10步欧拉积分)"]
+        direction TB
+        STEP["对于 step = 0, 1, ..., 9:&lt;br/&gt;  t = 1.0 + step * dt"]
+
+        subgraph SingleStep["单步去噪 (denoise_step)"]
+            X_T["当前 x_t"] --&gt; ES["embed_suffix(state, x_t, t)&lt;br/&gt;构建后缀嵌入"]
+            ES --&gt; ATT_BUILD["构建注意力掩码&lt;br/&gt;suffix → prefix (KV Cache) 可见&lt;br/&gt;suffix 内部因果"]
+            ATT_BUILD --&gt; EXP_FWD["Expert 前向传播&lt;br/&gt;inputs_embeds=[None, suffix]&lt;br/&gt;past_key_values=KV Cache"]
+            EXP_FWD --&gt; SOUT["suffix_out[:, -chunk_size:]"]
+            SOUT --&gt; AOUT["action_out_proj → v_t"]
+        end
+
+        AOUT --&gt; EULER["欧拉更新:&lt;br/&gt;x_{t+dt} = x_t + dt * v_t"]
+        EULER --&gt;|"循环"| X_T
+    end
+
+    subgraph FinalOut["输出"]
+        EULER --&gt; FINAL["最终动作轨迹&lt;br/&gt;x_final = x_0 (去噪后)&lt;br/&gt;[B, 50, action_dim]&lt;br/&gt;截断至 original_action_dim"]
+    end
+
+    KVC --&gt; EXP_FWD
+    NOISE_I --&gt; X_T
+
+    style PrefixCache fill:#e3f2fd,stroke:#2196F3
+    style Init fill:#fff3e0,stroke:#FF9800
+    style DenoiseLoop fill:#e8f5e9,stroke:#4CAF50
+    style SingleStep fill:#e0f2f1,stroke:#009688
+    style FinalOut fill:#fce4ec,stroke:#E91E63
+</div>
+<h3 id="欧拉积分细节-单步展开">欧拉积分细节 -- 单步展开<a class="headerlink" href="01.Pi0_Architecture.html#欧拉积分细节-单步展开" title="Permanent link">#</a></h3>
+<div class="mermaid">
+graph LR
+    XT["x_t&lt;br/&gt;(当前含噪动作)"] --&gt; EMBED["embed_suffix()&lt;br/&gt;状态 + 动作时间融合"]
+    STATE_I["state"] --&gt; EMBED
+    T_I["timestep t"] --&gt; EMBED
+    EMBED --&gt; EXPERT["Gemma 300M Expert&lt;br/&gt;(使用 KV Cache)"]
+    KV["prefix KV Cache"] --&gt; EXPERT
+    EXPERT --&gt; VT["预测速度 v_t"]
+    XT --&gt; EULER_S["x_{t+dt} = x_t + dt * v_t&lt;br/&gt;dt = -0.1"]
+    VT --&gt; EULER_S
+    EULER_S --&gt; XT1["x_{t+dt}"]
+
+    style EXPERT fill:#e8f5e9,stroke:#4CAF50
+    style EULER_S fill:#fff9c4,stroke:#FFC107
+</div>
+<p><strong>推理优化要点：</strong></p>
+<ul>
+<li>前缀仅编码一次，KV Cache 在 10 步去噪中复用</li>
+<li>推理时设置 <code>_attn_implementation = "eager"</code>，确保兼容自定义注意力掩码</li>
+<li>时间步从 <code>t=1.0</code>（纯噪声）线性递减至 <code>t≈0.0</code>（干净动作）</li>
+</ul>
+<hr />
+<h2 id="5-关键超参数表">5. 关键超参数表<a class="headerlink" href="01.Pi0_Architecture.html#5-关键超参数表" title="Permanent link">#</a></h2>
+<h3 id="模型结构参数">模型结构参数<a class="headerlink" href="01.Pi0_Architecture.html#模型结构参数" title="Permanent link">#</a></h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>参数</th>
+<th>值</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>paligemma_variant</code></td>
+<td><code>gemma_2b</code></td>
+<td>VLM 主干变体</td>
+</tr>
+<tr>
+<td><code>action_expert_variant</code></td>
+<td><code>gemma_300m</code></td>
+<td>动作专家变体</td>
+</tr>
+<tr>
+<td>VLM hidden_size</td>
+<td>2048</td>
+<td>Gemma 2B 隐藏维度</td>
+</tr>
+<tr>
+<td>VLM depth</td>
+<td>18</td>
+<td>Gemma 2B Transformer 层数</td>
+</tr>
+<tr>
+<td>VLM mlp_dim</td>
+<td>16384</td>
+<td>Gemma 2B MLP 中间维度</td>
+</tr>
+<tr>
+<td>VLM num_heads / kv_heads</td>
+<td>8 / 1</td>
+<td>Gemma 2B 注意力头数 (GQA)</td>
+</tr>
+<tr>
+<td>VLM head_dim</td>
+<td>256</td>
+<td>每个注意力头的维度</td>
+</tr>
+<tr>
+<td>Expert hidden_size</td>
+<td>1024</td>
+<td>Gemma 300M 隐藏维度</td>
+</tr>
+<tr>
+<td>Expert depth</td>
+<td>18</td>
+<td>Gemma 300M Transformer 层数</td>
+</tr>
+<tr>
+<td>Expert mlp_dim</td>
+<td>4096</td>
+<td>Gemma 300M MLP 中间维度</td>
+</tr>
+<tr>
+<td>Expert num_heads / kv_heads</td>
+<td>8 / 1</td>
+<td>Gemma 300M 注意力头数 (GQA)</td>
+</tr>
+<tr>
+<td>Expert head_dim</td>
+<td>256</td>
+<td>每个注意力头的维度</td>
+</tr>
+<tr>
+<td><code>vocab_size</code></td>
+<td>257152</td>
+<td>词表大小</td>
+</tr>
+<tr>
+<td><code>image_resolution</code></td>
+<td>(224, 224)</td>
+<td>输入图像分辨率</td>
+</tr>
+<tr>
+<td><code>hidden_activation</code></td>
+<td><code>gelu_pytorch_tanh</code></td>
+<td>激活函数</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="动作生成参数">动作生成参数<a class="headerlink" href="01.Pi0_Architecture.html#动作生成参数" title="Permanent link">#</a></h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>参数</th>
+<th>值</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>chunk_size</code></td>
+<td>50</td>
+<td>预测的动作步数 (action_horizon)</td>
+</tr>
+<tr>
+<td><code>n_action_steps</code></td>
+<td>50</td>
+<td>执行的动作步数</td>
+</tr>
+<tr>
+<td><code>max_state_dim</code></td>
+<td>32</td>
+<td>状态向量最大维度 (零填充)</td>
+</tr>
+<tr>
+<td><code>max_action_dim</code></td>
+<td>32</td>
+<td>动作向量最大维度 (零填充)</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="flow-matching-参数">Flow Matching 参数<a class="headerlink" href="01.Pi0_Architecture.html#flow-matching-参数" title="Permanent link">#</a></h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>参数</th>
+<th>值</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>num_inference_steps</code></td>
+<td>10</td>
+<td>推理去噪步数</td>
+</tr>
+<tr>
+<td><code>time_sampling_beta_alpha</code></td>
+<td>1.5</td>
+<td>Beta 分布 alpha 参数</td>
+</tr>
+<tr>
+<td><code>time_sampling_beta_beta</code></td>
+<td>1.0</td>
+<td>Beta 分布 beta 参数</td>
+</tr>
+<tr>
+<td><code>time_sampling_scale</code></td>
+<td>0.999</td>
+<td>时间步缩放因子</td>
+</tr>
+<tr>
+<td><code>time_sampling_offset</code></td>
+<td>0.001</td>
+<td>时间步偏移量</td>
+</tr>
+<tr>
+<td><code>min_period</code></td>
+<td>4e-3</td>
+<td>正弦编码最小周期</td>
+</tr>
+<tr>
+<td><code>max_period</code></td>
+<td>4.0</td>
+<td>正弦编码最大周期</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="训练参数">训练参数<a class="headerlink" href="01.Pi0_Architecture.html#训练参数" title="Permanent link">#</a></h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>参数</th>
+<th>值</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>optimizer_lr</code></td>
+<td>2.5e-5</td>
+<td>峰值学习率</td>
+</tr>
+<tr>
+<td><code>optimizer_betas</code></td>
+<td>(0.9, 0.95)</td>
+<td>AdamW beta 参数</td>
+</tr>
+<tr>
+<td><code>optimizer_weight_decay</code></td>
+<td>0.01</td>
+<td>权重衰减</td>
+</tr>
+<tr>
+<td><code>optimizer_grad_clip_norm</code></td>
+<td>1.0</td>
+<td>梯度裁剪范数</td>
+</tr>
+<tr>
+<td><code>scheduler_warmup_steps</code></td>
+<td>1000</td>
+<td>学习率预热步数</td>
+</tr>
+<tr>
+<td><code>scheduler_decay_steps</code></td>
+<td>30000</td>
+<td>余弦衰减总步数</td>
+</tr>
+<tr>
+<td><code>scheduler_decay_lr</code></td>
+<td>2.5e-6</td>
+<td>最终学习率</td>
+</tr>
+<tr>
+<td><code>tokenizer_max_length</code></td>
+<td>48</td>
+<td>语言 token 最大长度</td>
+</tr>
+<tr>
+<td><code>dtype</code></td>
+<td><code>float32</code> / <code>bfloat16</code></td>
+<td>训练精度</td>
+</tr>
+<tr>
+<td><code>freeze_vision_encoder</code></td>
+<td>False</td>
+<td>是否冻结视觉编码器</td>
+</tr>
+<tr>
+<td><code>train_expert_only</code></td>
+<td>False</td>
+<td>是否仅训练 Expert</td>
+</tr>
+<tr>
+<td><code>gradient_checkpointing</code></td>
+<td>False</td>
+<td>梯度检查点 (省显存)</td>
+</tr>
+</tbody>
+</table></div>
+<hr />
+<h2 id="6-关键源文件表">6. 关键源文件表<a class="headerlink" href="01.Pi0_Architecture.html#6-关键源文件表" title="Permanent link">#</a></h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>组件</th>
+<th>类名</th>
+<th>文件路径</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>策略入口</td>
+<td><code>PI0Policy</code></td>
+<td><code>lerobot/policies/pi0/modeling_pi0.py:926</code></td>
+</tr>
+<tr>
+<td>核心模型</td>
+<td><code>PI0Pytorch</code></td>
+<td><code>lerobot/policies/pi0/modeling_pi0.py:536</code></td>
+</tr>
+<tr>
+<td>双流模型</td>
+<td><code>PaliGemmaWithExpertModel</code></td>
+<td><code>lerobot/policies/pi0/modeling_pi0.py:330</code></td>
+</tr>
+<tr>
+<td>模型配置</td>
+<td><code>PI0Config</code></td>
+<td><code>lerobot/policies/pi0/configuration_pi0.py:31</code></td>
+</tr>
+<tr>
+<td>Gemma 配置</td>
+<td><code>GemmaConfig</code> / <code>get_gemma_config</code></td>
+<td><code>lerobot/policies/pi0/modeling_pi0.py:294</code></td>
+</tr>
+<tr>
+<td>注意力掩码</td>
+<td><code>make_att_2d_masks</code></td>
+<td><code>lerobot/policies/pi0/modeling_pi0.py:103</code></td>
+</tr>
+<tr>
+<td>层计算</td>
+<td><code>compute_layer_complete</code></td>
+<td><code>lerobot/policies/pi0/modeling_pi0.py:221</code></td>
+</tr>
+<tr>
+<td>正弦位置编码</td>
+<td><code>create_sinusoidal_pos_embedding</code></td>
+<td><code>lerobot/policies/pi0/modeling_pi0.py:75</code></td>
+</tr>
+<tr>
+<td>Beta 采样</td>
+<td><code>sample_beta</code></td>
+<td><code>lerobot/policies/pi0/modeling_pi0.py:95</code></td>
+</tr>
+<tr>
+<td>图像处理</td>
+<td><code>resize_with_pad_torch</code></td>
+<td><code>lerobot/policies/pi0/modeling_pi0.py:146</code></td>
+</tr>
+<tr>
+<td>预训练加载</td>
+<td><code>PaliGemmaForConditionalGeneration</code></td>
+<td><code>transformers</code> (HuggingFace)</td>
+</tr>
+<tr>
+<td>动作专家</td>
+<td><code>GemmaForCausalLM</code></td>
+<td><code>transformers</code> (HuggingFace)</td>
+</tr>
+</tbody>
+</table></div>
+      </div>
+    </main>
+        <aside class="toc">
+            <div class="toc-title">本页目录</div>
+            <ul>
+                <li><a href="01.Pi0_Architecture.html#1-整体架构概览" class="toc-h2">1. 整体架构概览</a></li>
+                <li><a href="01.Pi0_Architecture.html#2-核心组件详解" class="toc-h2">2. 核心组件详解</a></li>
+                <li><a href="01.Pi0_Architecture.html#21-paligemma-视觉语言模型-siglip-gemma-2b" class="toc-h3">2.1 PaliGemma 视觉语言模型 (SigLIP + Gemma 2B)</a></li>
+                <li><a href="01.Pi0_Architecture.html#22-action-expert-gemma-300m" class="toc-h3">2.2 Action Expert (Gemma 300M)</a></li>
+                <li><a href="01.Pi0_Architecture.html#23-双流-transformer-注意力机制" class="toc-h3">2.3 双流 Transformer 注意力机制</a></li>
+                <li><a href="01.Pi0_Architecture.html#24-flow-matching-扩散机制" class="toc-h3">2.4 Flow Matching 扩散机制</a></li>
+                <li><a href="01.Pi0_Architecture.html#3-训练流水线" class="toc-h2">3. 训练流水线</a></li>
+                <li><a href="01.Pi0_Architecture.html#4-推理流水线" class="toc-h2">4. 推理流水线</a></li>
+                <li><a href="01.Pi0_Architecture.html#欧拉积分细节-单步展开" class="toc-h3">欧拉积分细节 -- 单步展开</a></li>
+                <li><a href="01.Pi0_Architecture.html#5-关键超参数表" class="toc-h2">5. 关键超参数表</a></li>
+                <li><a href="01.Pi0_Architecture.html#模型结构参数" class="toc-h3">模型结构参数</a></li>
+                <li><a href="01.Pi0_Architecture.html#动作生成参数" class="toc-h3">动作生成参数</a></li>
+                <li><a href="01.Pi0_Architecture.html#flow-matching-参数" class="toc-h3">Flow Matching 参数</a></li>
+                <li><a href="01.Pi0_Architecture.html#训练参数" class="toc-h3">训练参数</a></li>
+                <li><a href="01.Pi0_Architecture.html#6-关键源文件表" class="toc-h2">6. 关键源文件表</a></li>
+            </ul>
+        </aside>
+
+    <button class="back-to-top" onclick="window.scrollTo({top:0,behavior:'smooth'})">&#8593;</button>
+
+    <script src="assets/vendor/mermaid/mermaid.min.js"></script>
+    <script defer src="assets/vendor/katex/katex.min.js"></script>
+    <script defer src="assets/vendor/katex/auto-render.min.js"
+            onload="renderMathInElement(document.querySelector('.content-inner'), {
+                delimiters: [
+                    { left: '$$', right: '$$', display: true },
+                    { left: '$', right: '$', display: false }
+                ],
+                ignoredTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code', 'option'],
+                ignoredClasses: ['mermaid', 'diagram'],
+                throwOnError: false
+            });"></script>
+    <script>
+        // Mermaid destroys the source text when it renders, so keep a copy in
+        // order to re-render on theme change.
+        document.querySelectorAll('.mermaid').forEach(el => {
+            el.dataset.src = el.textContent;
+        });
+
+        const prefersDark = window.matchMedia('(prefers-color-scheme: dark)');
+        function currentTheme() {
+            const forced = document.documentElement.getAttribute('data-theme');
+            if (forced) return forced;
+            return prefersDark.matches ? 'dark' : 'light';
+        }
+
+        function initMermaid() {
+            mermaid.initialize({
+                startOnLoad: false,
+                theme: currentTheme() === 'dark' ? 'dark' : 'default',
+                flowchart: { useMaxWidth: true, htmlLabels: true },
+                securityLevel: 'loose'
+            });
+        }
+
+        function renderMermaid() {
+            const nodes = document.querySelectorAll('.mermaid');
+            nodes.forEach(el => {
+                el.removeAttribute('data-processed');
+                el.textContent = el.dataset.src;
+            });
+            // mermaid.run rejects on its internal font probe in some browsers;
+            // the diagrams still render, so swallow it rather than surfacing an
+            // unhandled rejection.
+            if (!nodes.length) return;
+            Promise.resolve(mermaid.run({ nodes: nodes }))
+                .catch(() => {})
+                .then(() => nodes.forEach(applyZoom));
+        }
+
+        /* ---------- Diagram zoom ----------
+           Scale is tracked as a factor of the diagram's NATURAL size (its
+           viewBox), so 100% means 1:1 and one font size looks identical in
+           every diagram on the site. Left to itself mermaid's useMaxWidth
+           stretches each svg to the container, which blows a 3-node diagram
+           up to 3.4x and shrinks a wide one to 0.34x — a 10x spread in
+           apparent font size. FIT_MAX caps the auto-fit at 1:1 (never
+           upscale) and FIT_MIN stops wide diagrams from shrinking to
+           unreadable; anything past that overflows and scrolls/pans. */
+        const MIN_Z = 0.3, MAX_Z = 6, STEP = 1.25;
+        const FIT_MIN = 0.55, FIT_MAX = 1;
+        const PAD = 40;               // .mermaid horizontal padding (20px each side)
+        const zoom = new WeakMap();   // .mermaid -> explicit scale; absent = auto-fit
+
+        function naturalSize(svg) {
+            const vb = svg.viewBox && svg.viewBox.baseVal;
+            if (vb && vb.width) return { w: vb.width, h: vb.height };
+            const r = svg.getBoundingClientRect();
+            return { w: r.width, h: r.height };
+        }
+
+        function fitScale(el, nat) {
+            const avail = el.clientWidth - PAD;
+            if (!nat.w || avail <= 0) return 1;
+            return Math.min(FIT_MAX, Math.max(FIT_MIN, avail / nat.w));
+        }
+
+        function scaleOf(el, nat) {
+            const k = zoom.get(el);
+            return k === undefined ? fitScale(el, nat) : k;
+        }
+
+        function applyZoom(el) {
+            const svg = el.querySelector('svg');
+            if (!svg) return;
+            const nat = naturalSize(svg);
+            if (!nat.w) return;
+            const k = scaleOf(el, nat);
+
+            const label = el.closest('.diagram')?.querySelector('.diagram-zoom');
+            if (label) label.textContent = Math.round(k * 100) + '%';
+
+            // Size the svg explicitly instead of leaving it to useMaxWidth,
+            // so the container gets real scrollbars when the diagram overflows.
+            svg.style.maxWidth = 'none';
+            svg.style.width = (nat.w * k) + 'px';
+            svg.style.height = (nat.h * k) + 'px';
+
+            const overflows = nat.w * k > el.clientWidth - PAD + 1;
+            el.classList.toggle('is-zoomed', overflows);
+            if (!overflows) el.scrollLeft = el.scrollTop = 0;
+        }
+
+        function setZoom(el, k, anchor) {
+            const svg = el.querySelector('svg');
+            if (!svg) return;
+            const nat = naturalSize(svg);
+            const prev = scaleOf(el, nat);
+            if (k !== null) k = Math.min(MAX_Z, Math.max(MIN_Z, k));
+            const next = k === null ? fitScale(el, nat) : k;
+            if (next === prev) return;
+            // Keep the point under the cursor (or the viewport centre) put.
+            const ax = anchor ? anchor.x : el.clientWidth / 2;
+            const ay = anchor ? anchor.y : el.clientHeight / 2;
+            const rx = (el.scrollLeft + ax) / prev;
+            const ry = (el.scrollTop + ay) / prev;
+            if (k === null) zoom.delete(el); else zoom.set(el, k);
+            applyZoom(el);
+            el.scrollLeft = rx * next - ax;
+            el.scrollTop = ry * next - ay;
+        }
+
+        function currentScale(el) {
+            const svg = el.querySelector('svg');
+            return svg ? scaleOf(el, naturalSize(svg)) : 1;
+        }
+
+        function setupDiagrams() {
+            document.querySelectorAll('.mermaid').forEach(el => {
+                const wrap = document.createElement('div');
+                wrap.className = 'diagram';
+                el.parentNode.insertBefore(wrap, el);
+                wrap.appendChild(el);
+
+                const tools = document.createElement('div');
+                tools.className = 'diagram-tools';
+                tools.innerHTML =
+                    '<button type="button" data-act="out" title="缩小">&minus;</button>' +
+                    '<span class="diagram-zoom">100%</span>' +
+                    '<button type="button" data-act="in" title="放大">+</button>' +
+                    '<button type="button" data-act="reset" title="适应宽度">&#9633;</button>' +
+                    '<button type="button" data-act="full" title="全屏">&#10530;</button>';
+                wrap.appendChild(tools);
+
+                tools.addEventListener('click', e => {
+                    const act = e.target.closest('button')?.dataset.act;
+                    if (!act) return;
+                    const k = currentScale(el);
+                    if (act === 'in') setZoom(el, k * STEP);
+                    else if (act === 'out') setZoom(el, k / STEP);
+                    else if (act === 'reset') setZoom(el, null);
+                    else if (act === 'full') {
+                        if (document.fullscreenElement === wrap) document.exitFullscreen();
+                        else wrap.requestFullscreen?.();
+                    }
+                });
+
+                // Ctrl/⌘ + wheel zooms; a plain wheel keeps scrolling the page.
+                el.addEventListener('wheel', e => {
+                    if (!e.ctrlKey && !e.metaKey) return;
+                    e.preventDefault();
+                    const r = el.getBoundingClientRect();
+                    setZoom(el, currentScale(el) * (e.deltaY < 0 ? STEP : 1 / STEP),
+                            { x: e.clientX - r.left, y: e.clientY - r.top });
+                }, { passive: false });
+
+                // Drag to pan once zoomed in.
+                let drag = null;
+                el.addEventListener('pointerdown', e => {
+                    // Pan only matters once the diagram actually overflows.
+                    if (e.button !== 0 || !el.classList.contains('is-zoomed')) return;
+                    drag = { x: e.clientX, y: e.clientY, l: el.scrollLeft, t: el.scrollTop };
+                    el.setPointerCapture(e.pointerId);
+                    el.classList.add('is-panning');
+                });
+                el.addEventListener('pointermove', e => {
+                    if (!drag) return;
+                    el.scrollLeft = drag.l - (e.clientX - drag.x);
+                    el.scrollTop = drag.t - (e.clientY - drag.y);
+                });
+                const endDrag = () => { drag = null; el.classList.remove('is-panning'); };
+                el.addEventListener('pointerup', endDrag);
+                el.addEventListener('pointercancel', endDrag);
+
+                // Double click toggles between auto-fit and true 1:1.
+                el.addEventListener('dblclick', () => setZoom(el, zoom.has(el) ? null : 1));
+            });
+        }
+
+        setupDiagrams();
+        initMermaid();
+        renderMermaid();
+
+        const remeasure = () => document.querySelectorAll('.mermaid').forEach(applyZoom);
+        document.addEventListener('fullscreenchange', remeasure);
+        window.addEventListener('resize', remeasure);
+
+        // Theme toggle
+        const toggle = document.getElementById('theme-toggle');
+        toggle.addEventListener('click', () => {
+            const next = currentTheme() === 'dark' ? 'light' : 'dark';
+            document.documentElement.setAttribute('data-theme', next);
+            try { localStorage.setItem('theme', next); } catch (e) {}
+            initMermaid();
+            renderMermaid();
+        });
+
+        // Follow the OS while the user hasn't made an explicit choice
+        prefersDark.addEventListener('change', () => {
+            if (!document.documentElement.getAttribute('data-theme')) {
+                initMermaid();
+                renderMermaid();
+            }
+        });
+
+        // Back to top button
+        const btn = document.querySelector('.back-to-top');
+        window.addEventListener('scroll', () => {
+            btn.classList.toggle('visible', window.scrollY > 300);
+        });
+
+        // Close sidebar on mobile when clicking a link
+        document.querySelectorAll('.sidebar nav a').forEach(a => {
+            a.addEventListener('click', () => {
+                document.querySelector('.sidebar').classList.remove('open');
+            });
+        });
+
+        // Highlight the TOC entry for the heading currently in view
+        const tocLinks = Array.from(document.querySelectorAll('.toc a'));
+        if (tocLinks.length) {
+            const targets = tocLinks
+                .map(a => document.getElementById(decodeURIComponent(a.hash.slice(1))))
+                .filter(Boolean);
+            const setActive = () => {
+                let current = targets[0];
+                for (const t of targets) {
+                    if (t.getBoundingClientRect().top <= 120) current = t;
+                    else break;
+                }
+                tocLinks.forEach(a => a.classList.toggle(
+                    'active',
+                    current && decodeURIComponent(a.hash.slice(1)) === current.id
+                ));
+            };
+            setActive();
+            let queued = false;
+            window.addEventListener('scroll', () => {
+                if (queued) return;
+                queued = true;
+                requestAnimationFrame(() => { setActive(); queued = false; });
+            });
+        }
+    </script>
+</body>
+</html>

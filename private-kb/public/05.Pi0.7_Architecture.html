@@ -1,0 +1,1127 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>π₀.₇ (Pi-0.7) - Robotics Knowledge Base</title>
+    <link rel="icon" href="favicon.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="assets/vendor/katex/katex.min.css">
+    <script>
+        // Applied before first paint so the saved theme doesn't flash.
+        (function () {
+            try {
+                var t = localStorage.getItem('theme');
+                if (t === 'dark' || t === 'light') {
+                    document.documentElement.setAttribute('data-theme', t);
+                }
+            } catch (e) {}
+        })();
+    </script>
+</head>
+<body>
+    <button class="menu-toggle" onclick="document.querySelector('.sidebar').classList.toggle('open')">&#9776;</button>
+    <button class="theme-toggle" id="theme-toggle" title="切换日夜模式" aria-label="切换日夜模式">
+        <span class="icon-light">&#9790;</span><span class="icon-dark">&#9728;</span>
+    </button>
+
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <h2>Robotics Knowledge Base</h2>
+            <p>机器人模型架构知识库</p>
+        </div>
+        <nav>
+            <a href="index.html">Overview</a>
+            <div class="nav-group">VLA 模型</div>
+            <a href="01.Pi0_Architecture.html">Pi0</a>
+            <a href="02.Pi0.5_Architecture.html">Pi0.5</a>
+            <a href="03.Pi0-FAST_Architecture.html">Pi0-FAST</a>
+            <a href="04.Pi-Star-0.6_Architecture.html">π*₀.₆ (Pi-Star-0.6)</a>
+            <a href="05.Pi0.7_Architecture.html" class="active">π₀.₇ (Pi-0.7)</a>
+            <a href="06.Isaac-GR00T-N1.6_Architecture.html">Isaac-GR00T N1.6</a>
+            <a href="07.Isaac-GR00T-N1.5_Architecture.html">Isaac-GR00T N1.5</a>
+            <a href="08.ACT_Architecture.html">ACT</a>
+            <a href="09.SmolVLA_Architecture.html">SmolVLA</a>
+            <a href="10.WALL-OSS_Architecture.html">WALL-OSS / WALL-X</a>
+            <a href="11.X-VLA_Architecture.html">X-VLA</a>
+            <a href="12.Psi0_Architecture.html">Psi0 (ψ₀)</a>
+            <a href="13.DreamZero_Architecture.html">DreamZero</a>
+            <a href="14.FastWAM_Architecture.html">Fast-WAM</a>
+            <div class="nav-group">全身控制 (WBC)</div>
+            <a href="15.GR00T-WBC_Overview.html">GR00T-WBC 总览</a>
+            <a href="16.Decoupled-WBC_Architecture.html" class="nav-child">Decoupled WBC</a>
+            <a href="17.GEAR-SONIC_Architecture.html" class="nav-child">GEAR-SONIC</a>
+            <a href="18.MotionBricks_Architecture.html" class="nav-child">MotionBricks</a>
+            <div class="nav-group">3D 视觉与 VLM</div>
+            <a href="19.VLM3_Architecture.html">VLM³</a>
+        </nav>
+    </aside>
+
+    <main class="content">
+      <div class="content-inner">
+        <h1 id="π07-pi-07-训练范式与数据">π₀.₇ (Pi-0.7) 训练范式与数据<a class="headerlink" href="05.Pi0.7_Architecture.html#π07-pi-07-训练范式与数据" title="Permanent link">#</a></h1>
+<p>π₀.₇ 是 Physical Intelligence 2026 年 4 月发布的 VLA（arXiv:2604.15483），定位为 <strong>"steerable generalist robotic foundation model"</strong>。它最大的卖点不在新主干，而是在 <strong>prompt 里塞进了多模态 context conditioning</strong>：除了语言指令，还给模型喂 episode metadata（速度 / 质量 / 是否出错 / 控制模式）+ 一/多张 subgoal images（由 BAGEL 14B 世界模型生成）。这套 prompt 设计让模型可以同时吃下示范、(suboptimal) 自主轨迹、人类纠错、网络视频、非机器人数据等异构源，而不会被低质量数据拖垮。</p>
+<p>模型本身（5B 总参，4B Gemma3 VLM + 860M flow matching action expert + MEM 历史编码器）在 π₀.₆ 之上加了 multi-modal context conditioning 与历史压缩，本文档因此把重心放在 <strong>训练范式 + 数据</strong>，架构部分仅在第 2 节作为一节带过。</p>
+<hr />
+<h2 id="1-整体定位与论文出处">1. 整体定位与论文出处<a class="headerlink" href="05.Pi0.7_Architecture.html#1-整体定位与论文出处" title="Permanent link">#</a></h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>项目</th>
+<th>内容</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>论文</td>
+<td>"π₀.₇: a Steerable Generalist Robotic Foundation Model with Emergent Capabilities"</td>
+</tr>
+<tr>
+<td>arXiv</td>
+<td><a href="https://arxiv.org/abs/2604.15483">2604.15483</a>（2026-04-16）</td>
+</tr>
+<tr>
+<td>作者</td>
+<td>Physical Intelligence (~80 人)</td>
+</tr>
+<tr>
+<td>官方 blog</td>
+<td><a href="https://www.pi.website/blog/pi07">pi.website/blog/pi07</a> / <a href="https://pi.website/pi07">pi.website/pi07</a></td>
+</tr>
+<tr>
+<td>代码</td>
+<td><strong>未公开</strong>（OpenPI 中目前到 π₀ / π₀.₅ / π₀-FAST，π₀.₆ / π*₀.₆ / π₀.₇ 均无开源实现）</td>
+</tr>
+<tr>
+<td>在 Pi 系列中的位置</td>
+<td>π₀ → π₀.₅ → π₀.₆ → π*₀.₆ → <strong>π₀.₇</strong></td>
+</tr>
+</tbody>
+</table></div>
+<p>π₀.₇ 想解决的问题用一句话：<strong>"naive 地把异构数据（含 failure、自主轨迹）扔进一个模型训出来的策略会向所有 mode 平均，结果一塌糊涂。"</strong> 解法不是过滤数据，而是<strong>给每条数据贴标签</strong>，让模型在训练时学到"这条数据是用什么策略 / 多快 / 多准确做出来的"，在推理时用 prompt 显式要求"只走 quality=5、mistake=false 的那种"。</p>
+<hr />
+<h2 id="2-网络架构简短一节">2. 网络架构（简短一节）<a class="headerlink" href="05.Pi0.7_Architecture.html#2-网络架构简短一节" title="Permanent link">#</a></h2>
+<blockquote>
+<p>⚠️ <strong>架构是 π₀.₆ + MEM + 多模态 context 的组合</strong>，论文 Sec. VI-B 给出明确数字（5B 总参、4B Gemma3 backbone、860M action expert）。下游细节未公开（cross-attn 周期、layer 数等）见 <a href="01.Pi0_Architecture.html">Pi0_Architecture.md</a> 与 π₀.₆ 论文 [42]；MEM 视频历史编码器见 <a href="https://arxiv.org/abs/2503.04822">arXiv 引用 [37]</a>。</p>
+</blockquote>
+<div class="mermaid">
+graph TB
+    subgraph Prompt["Multimodal Context Ct (核心创新)"]
+        L["Task instruction ℓ&lt;br/&gt;(粗粒度: 'clean the kitchen')"]
+        LH["Subtask instruction ℓ̂&lt;br/&gt;(细粒度: 'open the fridge')"]
+        META["Episode metadata m&lt;br/&gt;{speed, quality, mistake}"]
+        CM["Control mode c&lt;br/&gt;{joint, ee}"]
+        SG["Subgoal images g&lt;br/&gt;(real future / BAGEL-generated)"]
+    end
+
+    subgraph Obs["观测"]
+        IMG["最多 4 路相机&lt;br/&gt;(每路最多 6 帧历史)&lt;br/&gt;448x448"]
+        STATE["关节配置 qt&lt;br/&gt;(含历史, 线性 projection)"]
+    end
+
+    subgraph History["MEM 视频历史编码器"]
+        VENC["Gemma3 视觉编码器&lt;br/&gt;400M, 时空压缩&lt;br/&gt;history → 单帧 token 数"]
+    end
+
+    subgraph Backbone["VLM Backbone (Gemma3 4B)"]
+        VLM["block-causal attention&lt;br/&gt;KI 训练 (stop-grad from action expert)"]
+    end
+
+    subgraph WorldModel["lightweight world model (训练 + 推理时)"]
+        BAGEL["BAGEL 14B (Mixture-of-Transformers)&lt;br/&gt;从 (o_t, ℓ̂, m) 生成 subgoal 图&lt;br/&gt;web-scale 预训练 (image gen / editing)"]
+    end
+
+    subgraph ActionExpert["Action Expert (860M, Flow Matching)"]
+        AE["50 action tokens&lt;br/&gt;(50-step chunk)&lt;br/&gt;AdaRMSNorm 注入 t&lt;br/&gt;5 denoising steps&lt;br/&gt;cross-attend 到 VLM&lt;br/&gt;RTC (Real-Time Chunking)"]
+    end
+
+    IMG --&gt; VENC --&gt; VLM
+    STATE --&gt; VLM
+
+    L --&gt; VLM
+    LH --&gt; VLM
+    META --&gt; VLM
+    CM --&gt; VLM
+    SG --&gt; VLM
+
+    BAGEL -.-&gt; SG
+
+    VLM --&gt; AE
+    AE --&gt; ACT["输出: 50-step action chunk&lt;br/&gt;(执行其中 Ĥ ∈ {15, 25} 步)"]
+
+    style Prompt fill:#ffebee,stroke:#E53935
+    style Obs fill:#e8f4fd,stroke:#2196F3
+    style History fill:#fff3e0,stroke:#FF9800
+    style Backbone fill:#f3e5f5,stroke:#9C27B0
+    style WorldModel fill:#fff9c4,stroke:#FFC107
+    style ActionExpert fill:#e8f5e9,stroke:#4CAF50
+</div>
+<p>论文明确披露的架构数字：</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>模块</th>
+<th>参数</th>
+<th>来源</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>总参数</td>
+<td>~5B</td>
+<td>Sec. VI-B</td>
+</tr>
+<tr>
+<td>VLM backbone</td>
+<td>Gemma3 4B（含 400M 视觉编码器）</td>
+<td>Sec. VI-B</td>
+</tr>
+<tr>
+<td>Action expert</td>
+<td>860M</td>
+<td>Sec. VI-B</td>
+</tr>
+<tr>
+<td>MEM 历史编码器</td>
+<td>与 vision encoder 共享，时空压缩</td>
+<td>Sec. VI-B + ref [37]</td>
+</tr>
+<tr>
+<td>BAGEL 世界模型</td>
+<td><strong>14B, Mixture-of-Transformers</strong></td>
+<td>Sec. V-B + ref [105]</td>
+</tr>
+<tr>
+<td>相机数</td>
+<td>最多 4 路（front + 2 wrist + optional rear）</td>
+<td>Sec. VI-B</td>
+</tr>
+<tr>
+<td>历史帧</td>
+<td>最多 6 帧 / 路，stride 1 s，整体 dropout=0.3</td>
+<td>Sec. VI-B</td>
+</tr>
+<tr>
+<td>输入分辨率</td>
+<td>448 × 448</td>
+<td>Sec. VI-B</td>
+</tr>
+<tr>
+<td>动作 chunk 长</td>
+<td>50 步</td>
+<td>Sec. VI-B</td>
+</tr>
+<tr>
+<td>Denoising steps</td>
+<td>5（推理）</td>
+<td>Sec. VII</td>
+</tr>
+<tr>
+<td>执行步数</td>
+<td>15 或 25（取决于任务）</td>
+<td>Sec. VII</td>
+</tr>
+<tr>
+<td>控制频率</td>
+<td>50 Hz（多数）/ 20 Hz（UR5e）</td>
+<td>Sec. VIII</td>
+</tr>
+<tr>
+<td>RTC 训练延迟模拟</td>
+<td>0–12 timesteps（即 240 ms @50 Hz）</td>
+<td>Sec. VI-B</td>
+</tr>
+</tbody>
+</table></div>
+<p>新增 vs π₀.₆：</p>
+<ul>
+<li><strong>MEM 视频历史编码器</strong>（[ref 37]）— 把多帧历史压缩成单帧 token 数，使训练时帧数变化不影响 token 数</li>
+<li><strong>State 编码改用 linear projection</strong>（π₀.₆ 用离散 token），每个历史帧的 state 是独立 token</li>
+<li><strong>block-causal attention mask</strong>：观测 + subgoal 图 token 在内部双向 attend；后续文本 token 用 causal</li>
+<li><strong>AdaRMSNorm</strong> 注入 flow matching timestep（替代 AdaLN）</li>
+<li><strong>Real-time action chunking (RTC)</strong> — 训练时模拟 0-12 步推理延迟，使推理时即便延迟也能给出平滑动作</li>
+</ul>
+<blockquote>
+<p>⚠️ <strong>架构推测</strong>：action expert 内部 layer 数、hidden_dim、与 VLM 的 cross-attn 周期等论文未公布。CFG（classifier-free guidance）权重 β ∈ {1.3, 1.7, 2.2} 在 episode metadata 上施加，是明确披露。</p>
+</blockquote>
+<hr />
+<h2 id="3-训练范式diverse-context-conditioning核心">3. 训练范式：diverse context conditioning（核心）<a class="headerlink" href="05.Pi0.7_Architecture.html#3-训练范式diverse-context-conditioning核心" title="Permanent link">#</a></h2>
+<h3 id="31-prompt-结构">3.1 prompt 结构<a class="headerlink" href="05.Pi0.7_Architecture.html#31-prompt-结构" title="Permanent link">#</a></h3>
+<p>每条训练样本的 prompt 长这样（论文 Sec. V-E 原例）：</p>
+<div class="highlight"><pre><span></span><code>&lt;Multi-view observation&gt; &lt;Multi-view subgoals&gt;
+Task: peel vegetables.
+Subtask: pick up the peeler.
+Speed: 8000.  Quality: 5.  Mistake: false.
+Control Mode: joint.
+&lt;Proprioception&gt;
+</code></pre></div>
+
+<p>5 个组件：</p>
+<ol>
+<li><strong>Task instruction ℓ</strong> — 粗粒度任务描述（e.g. "clean the kitchen"）</li>
+<li><strong>Subtask instruction ℓ̂</strong> — 细粒度当前 step（e.g. "open the fridge door"）</li>
+<li><strong>Subgoal images g</strong> — 1～n 张未来期望状态图（多视角），来自 (a) 训练集的未来真实帧，或 (b) BAGEL 世界模型生成</li>
+<li><strong>Episode metadata m</strong> — 3 维：speed / quality / mistake</li>
+<li><strong>Control mode c</strong> — <code>{joint, ee}</code> 二值</li>
+</ol>
+<p>训练时 <strong>每个组件独立随机 dropout</strong>，使同一组权重既能在 "只给任务" 模式跑、也能在 "任务+metadata+subgoal" 模式跑：</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>组件</th>
+<th>dropout 率</th>
+<th>备注</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Subgoal images（整体）</td>
+<td>训练时只 25% 样本含 subgoal</td>
+<td>否则太"作弊"（变成 inverse dynamics）</td>
+</tr>
+<tr>
+<td>Subtask instruction ℓ̂（仅在含 subgoal 时）</td>
+<td>30%</td>
+<td>subgoal 已经含 subtask 语义</td>
+</tr>
+<tr>
+<td>Episode metadata（整体）</td>
+<td>15%</td>
+<td>训练 unconditional 分支</td>
+</tr>
+<tr>
+<td>单个 metadata 分量（speed / quality / mistake）</td>
+<td>各 5%</td>
+<td>训练 partial conditioning</td>
+</tr>
+<tr>
+<td>Control mode</td>
+<td><strong>不 dropout</strong></td>
+<td>必须始终给定</td>
+</tr>
+<tr>
+<td>整段历史帧</td>
+<td>30%</td>
+<td>让模型对帧数变化鲁棒</td>
+</tr>
+<tr>
+<td>Rear view（若有）</td>
+<td>30%</td>
+<td>不同机器人是否带 rear cam 不同</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="32-metadata-的具体定义">3.2 metadata 的具体定义<a class="headerlink" href="05.Pi0.7_Architecture.html#32-metadata-的具体定义" title="Permanent link">#</a></h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>字段</th>
+<th>取值</th>
+<th>用途</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Overall speed</td>
+<td>episode 步数（整数，以 500 步为 bin）</td>
+<td>长 = 慢；短 = 快</td>
+</tr>
+<tr>
+<td>Overall quality</td>
+<td>1–5 整数</td>
+<td>人工评分，5 为最高</td>
+</tr>
+<tr>
+<td>Mistake</td>
+<td>bool（per segment）</td>
+<td>该段内是否有错误（如抓空、做错 subtask）</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>推理时怎么设置</strong>（论文 Sec. VII）：</p>
+<ul>
+<li>speed = 该任务训练集中 15 百分位的步数（要求"接近最快"）</li>
+<li>quality = 5（永远要最高）</li>
+<li>mistake = false（永远要无错）</li>
+</ul>
+<p>这是把"出错的训练样本"留在数据集里、但只在 mistake=true 时学到那种行为；推理时永远不要它。</p>
+<h3 id="33-subgoal-image-训练方式">3.3 Subgoal image 训练方式<a class="headerlink" href="05.Pi0.7_Architecture.html#33-subgoal-image-训练方式" title="Permanent link">#</a></h3>
+<p>世界模型 gψ 用 BAGEL 14B 初始化（image editing / gen 大模型），目标函数是标准 flow matching loss：</p>
+<div class="highlight"><pre><span></span><code>max EDg [ L_CFM (g*, gψ(o, ℓ̂, m)) ]
+</code></pre></div>
+
+<p>其中 g* 是 episode 末尾的真实帧。 训练数据：高质量子集 + web 图像数据 + egocentric 人类视频（共享视觉概念）。</p>
+<p>VLA 训练 subgoal 通道时混合两类输入：</p>
+<ul>
+<li><strong>0.25 概率</strong>：取 episode 末尾的真实帧（与世界模型预测目标一致）</li>
+<li><strong>0.75 概率</strong>：取未来 0–4 秒内的随机真实帧</li>
+<li><strong>额外</strong>：在 batch 中加入由 gψ 生成的合成 subgoal，以减小 train/test 分布偏移</li>
+</ul>
+<p>推理时：sub-goal 在 (i) subtask ℓ̂ 变化时，或 (ii) 距上次生成 ≥ 4 s 时刷新；用异步线程跑，不阻塞 50 Hz 动作循环。</p>
+<h3 id="34-cfgclassifier-free-guidance于-metadata">3.4 CFG（classifier-free guidance）于 metadata<a class="headerlink" href="05.Pi0.7_Architecture.html#34-cfgclassifier-free-guidance于-metadata" title="Permanent link">#</a></h3>
+<p>由于训练时 metadata 有 dropout，同一组权重既学到 conditional 也学到 unconditional 模式，因此能做 CFG：</p>
+<div class="highlight"><pre><span></span><code>∇log πθ(a|o, Ct) + β·(∇log πθ(a|o, Ct) − ∇log πθ(a|o, Ct_uncond))
+</code></pre></div>
+
+<p>β ∈ {1.3, 1.7, 2.2} — 在 metadata 上施加 guidance，用于强化 high-quality / high-speed 的动作风格。</p>
+<h3 id="35-知识隔离-ki-沿用">3.5 知识隔离 (KI) 沿用<a class="headerlink" href="05.Pi0.7_Architecture.html#35-知识隔离-ki-沿用" title="Permanent link">#</a></h3>
+<p>VLM backbone 用 next-token / FAST tokens 的 cross-entropy 监督；action expert 用 flow matching MSE。Action expert 通过 cross-attn 读取 VLM 激活，<strong>但梯度不回传 VLM</strong>（stop-grad）。这套从 π₀.₅ 延续到 π₀.₆ 再到 π₀.₇ 没变。</p>
+<hr />
+<h2 id="4-数据组成">4. 数据组成<a class="headerlink" href="05.Pi0.7_Architecture.html#4-数据组成" title="Permanent link">#</a></h2>
+<p>π₀.₇ 训练数据是 Pi 系列里最丰富的一次，按 "context 怎么给" 划分而非按"数据源"划分。</p>
+<h3 id="41-数据源清单论文-sec-vi-a">4.1 数据源清单（论文 Sec. VI-A）<a class="headerlink" href="05.Pi0.7_Architecture.html#41-数据源清单论文-sec-vi-a" title="Permanent link">#</a></h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>数据源</th>
+<th>用途 / 标注</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>示范数据</strong></td>
+<td>多机器人平台（静态/移动、单/双臂、in-house/in-the-wild 家庭环境）的标准 BC 数据</td>
+</tr>
+<tr>
+<td><strong>大量自主评估数据</strong></td>
+<td>来自历代 Pi 模型评估时收集的 rollouts（含 failure）— 用 metadata 标签区分质量</td>
+</tr>
+<tr>
+<td><strong>人类干预数据</strong></td>
+<td>DAgger-style 实时纠错</td>
+</tr>
+<tr>
+<td><strong>开源机器人数据集</strong></td>
+<td>类似 OXE 风格的公开 cross-embodiment 数据</td>
+</tr>
+<tr>
+<td><strong>egocentric 人类视频</strong></td>
+<td>没有动作标签，做 vision representation co-training</td>
+</tr>
+<tr>
+<td><strong>非机器人数据 (web)</strong></td>
+<td>物体定位、属性预测、VQA、纯文本预测</td>
+</tr>
+<tr>
+<td><strong>video-language</strong></td>
+<td>室内机器人视频 captioning + web 视频</td>
+</tr>
+</tbody>
+</table></div>
+<p>最关键的策略：<strong>把 π*₀.₆ 的 RL 训练 rollouts 作为"高质量 autonomous data"喂进 π₀.₇</strong>，等价于把 RL specialist 的能力 distill 进 generalist。这就是为什么 π₀.₇ 能在 espresso、box building、folding 等任务上<strong>直接 out-of-the-box 匹敌 π*₀.₆ specialist</strong>（论文 Fig. 6）。</p>
+<h3 id="42-评估机器人平台论文-sec-viii">4.2 评估机器人平台（论文 Sec. VIII）<a class="headerlink" href="05.Pi0.7_Architecture.html#42-评估机器人平台论文-sec-viii" title="Permanent link">#</a></h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>平台</th>
+<th>控制频率</th>
+<th>训练数据量</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Bimanual mobile manipulator (2×6 DoF + lift + holonomic base)</td>
+<td>50 Hz</td>
+<td>多</td>
+</tr>
+<tr>
+<td>Static bimanual ("BiPi", 2×6 DoF + 1 DoF lift)</td>
+<td>50 Hz</td>
+<td>多</td>
+</tr>
+<tr>
+<td>Bimanual UR5e (Robotiq)</td>
+<td>20 Hz</td>
+<td><strong>零</strong>（用于 cross-embodiment 测试）</td>
+</tr>
+<tr>
+<td>Single-arm (BiPi-like single)</td>
+<td>50 Hz</td>
+<td>中</td>
+</tr>
+</tbody>
+</table></div>
+<p>UR5e 是<strong>故意留作 zero-shot cross-embodiment 测试</strong>——没有任何 UR5e 上的折衣数据，但 π₀.₇ 仍能完成。</p>
+<hr />
+<h2 id="5-任务与报告结果">5. 任务与报告结果<a class="headerlink" href="05.Pi0.7_Architecture.html#5-任务与报告结果" title="Permanent link">#</a></h2>
+<h3 id="51-out-of-the-box-dexterity论文-sec-ix-a-fig-6">5.1 Out-of-the-box dexterity（论文 Sec. IX-A, Fig. 6）<a class="headerlink" href="05.Pi0.7_Architecture.html#51-out-of-the-box-dexterity论文-sec-ix-a-fig-6" title="Permanent link">#</a></h3>
+<p>直接拿单个 π₀.₇ 模型测，对比 π*₀.₆ 的任务专用 RL specialist：</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>任务</th>
+<th>π*₀.₆ specialist</th>
+<th>π₀.₇ (no finetune)</th>
+<th>备注</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Laundry (T-shirts/shorts)</td>
+<td>高</td>
+<td><strong>≈ specialist</strong></td>
+<td></td>
+</tr>
+<tr>
+<td>Laundry (diverse, hardest item)</td>
+<td>高</td>
+<td><strong>超过 specialist throughput</strong></td>
+<td></td>
+</tr>
+<tr>
+<td>Espresso</td>
+<td>高</td>
+<td><strong>≈ specialist</strong></td>
+<td>单杯成功率匹敌</td>
+</tr>
+<tr>
+<td>Box building</td>
+<td>高</td>
+<td><strong>超过 specialist throughput</strong></td>
+<td></td>
+</tr>
+<tr>
+<td>PB sandwich, shirt inside-out, drive through door, slice zucchini, peel veg, take out trash</td>
+<td>(SFT specialist)</td>
+<td><strong>匹敌 SFT specialist</strong></td>
+<td>bottom row Fig. 6</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="52-instruction-followingsec-ix-b">5.2 Instruction following（Sec. IX-B）<a class="headerlink" href="05.Pi0.7_Architecture.html#52-instruction-followingsec-ix-b" title="Permanent link">#</a></h3>
+<ul>
+<li><strong>14 个 instruction-following 场景</strong>，跨 4 个未见过的厨房 + 2 个未见过的卧室，每场景 3-6 步指令链 → π₀.₇ 显著超越 π₀.₅ / π₀.₆</li>
+<li><strong>Complex referential 指令</strong>（"pick up the object I would use to eat soup"、"pick up the fruit on the largest plate"）→ π₀.₇ 比 π₀.₅/₀.₆ 强；加上 subgoal images (π₀.₇ (GC)) 再涨</li>
+<li><strong>Reverse bias tasks</strong>（"Reverse Bussing"、"Reverse Fridge to Microwave"）— 反训练集偏置的指令；π₀.₇ 能跟，GC 版（带 subgoal）在 "Reverse Fridge to Microwave" 上是 critical</li>
+</ul>
+<h3 id="53-cross-embodimentsec-ix-c">5.3 Cross-embodiment（Sec. IX-C）<a class="headerlink" href="05.Pi0.7_Architecture.html#53-cross-embodimentsec-ix-c" title="Permanent link">#</a></h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Source → Target</th>
+<th>π₀.₅</th>
+<th>π₀.₆</th>
+<th><strong>π₀.₇</strong></th>
+<th>π₀.₇ (GC)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Mixed → static bimanual (Table Setting)</td>
+<td>强</td>
+<td>强</td>
+<td>强</td>
+<td>—</td>
+</tr>
+<tr>
+<td>UR5e → static bimanual (Bag in Backpack, Tupperware)</td>
+<td>弱</td>
+<td>强</td>
+<td>强</td>
+<td>—</td>
+</tr>
+<tr>
+<td>Static bimanual → UR5e (Shirt Bagging)</td>
+<td>弱</td>
+<td>中</td>
+<td><strong>强</strong></td>
+<td>—</td>
+</tr>
+<tr>
+<td>Static bimanual → UR5e (Laundry folding)</td>
+<td>—</td>
+<td>—</td>
+<td><strong>强</strong></td>
+<td><strong>匹敌人类首次遥操</strong></td>
+</tr>
+</tbody>
+</table></div>
+<p>最关键的实验：折衣数据完全没有 UR5e 上的，但 π₀.₇ 能完成，<strong>task progress 匹敌经验丰富的人类操作员首次遥操 UR5e 的水平</strong>。</p>
+<h3 id="54-memory-taskssec-ix-a">5.4 Memory tasks（Sec. IX-A）<a class="headerlink" href="05.Pi0.7_Architecture.html#54-memory-taskssec-ix-a" title="Permanent link">#</a></h3>
+<p>不需要 finetune，π₀.₇ 在 MEM 论文里的 4 个 memory 任务上匹敌或超过专门 finetune 过的 π₀.₆-MEM specialist（Swap 3 Mugs / Find Object / Scoop Coffee / Window Cleaning）。</p>
+<h3 id="55-compositional-generalizationemergent">5.5 Compositional generalization（emergent）<a class="headerlink" href="05.Pi0.7_Architecture.html#55-compositional-generalizationemergent" title="Permanent link">#</a></h3>
+<p>通过 language coaching + subgoal images，π₀.₇ 能完成训练集里<strong>完全没有</strong>的任务，例如：</p>
+<ul>
+<li>加载红薯进 air fryer（训练集无 air fryer 任务）</li>
+<li>操作完全未见过的 kitchen appliance</li>
+</ul>
+<p>这是 blog 上着重强调的 "compositional generalization" emergent ability。</p>
+<h3 id="56-ablationsec-ix-a-fig-7">5.6 Ablation（Sec. IX-A, Fig. 7）<a class="headerlink" href="05.Pi0.7_Architecture.html#56-ablationsec-ix-a-fig-7" title="Permanent link">#</a></h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Ablation</th>
+<th>影响</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>π₀.₇ (no metadata)</td>
+<td>全任务下降，差距主要在 throughput</td>
+</tr>
+<tr>
+<td>π₀.₇ (no eval data)</td>
+<td>全任务下降，无法 distill π*₀.₆ RL specialist 的能力</td>
+</tr>
+<tr>
+<td>完整 π₀.₇</td>
+<td>最佳</td>
+</tr>
+</tbody>
+</table></div>
+<p>结论：<strong>multimodal context conditioning 是必要的</strong>——它让模型能区分异构数据中的"好"与"坏"段，从而吃下 evaluation data（含 failure）而不被拖垮。</p>
+<hr />
+<h2 id="6-与-pi-系列前作的差异">6. 与 Pi 系列前作的差异<a class="headerlink" href="05.Pi0.7_Architecture.html#6-与-pi-系列前作的差异" title="Permanent link">#</a></h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>项目</th>
+<th>π₀.₅</th>
+<th>π₀.₆</th>
+<th>π*₀.₆</th>
+<th><strong>π₀.₇</strong></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>VLM backbone</strong></td>
+<td>PaliGemma 风</td>
+<td>Gemma3 4B</td>
+<td>Gemma3 4B</td>
+<td>Gemma3 4B (含 400M vision)</td>
+</tr>
+<tr>
+<td><strong>Action expert</strong></td>
+<td>300M</td>
+<td>860M</td>
+<td>860M</td>
+<td>860M</td>
+</tr>
+<tr>
+<td><strong>总参数</strong></td>
+<td>&lt;3B</td>
+<td>~5B</td>
+<td>~5B</td>
+<td><strong>5B + 14B BAGEL world model</strong>（推理时 14B 单独跑）</td>
+</tr>
+<tr>
+<td><strong>训练方式</strong></td>
+<td>BC + KI</td>
+<td>BC + KI + FAST</td>
+<td>+ offline RL (advantage cond.)</td>
+<td>BC + KI + <strong>multimodal context</strong></td>
+</tr>
+<tr>
+<td><strong>历史压缩</strong></td>
+<td>—</td>
+<td>—</td>
+<td>—</td>
+<td><strong>MEM 视频历史编码器</strong></td>
+</tr>
+<tr>
+<td><strong>State 输入</strong></td>
+<td>离散 token</td>
+<td>离散 token</td>
+<td>离散 token</td>
+<td><strong>linear projection</strong></td>
+</tr>
+<tr>
+<td><strong>prompt 内容</strong></td>
+<td>任务 + subtask</td>
+<td>+ metadata s</td>
+<td>+ "Advantage: ±"</td>
+<td><strong>+ metadata {speed, quality, mistake} + control mode + subgoal images</strong></td>
+</tr>
+<tr>
+<td><strong>subgoal image</strong></td>
+<td>—</td>
+<td>—</td>
+<td>—</td>
+<td><strong>多视角 + BAGEL 生成</strong></td>
+</tr>
+<tr>
+<td><strong>数据组成</strong></td>
+<td>示范 + web VL</td>
+<td>+ 多平台扩量</td>
+<td>+ RECAP rollouts + 干预</td>
+<td><strong>+ 大量 eval rollouts + 非机器人 video + egocentric 人类</strong></td>
+</tr>
+<tr>
+<td><strong>CFG</strong></td>
+<td>否</td>
+<td>否</td>
+<td>是（advantage）</td>
+<td><strong>是（metadata, β=1.3/1.7/2.2）</strong></td>
+</tr>
+<tr>
+<td><strong>flow matching steps</strong></td>
+<td>(10)</td>
+<td>(未公开)</td>
+<td>(未公开)</td>
+<td><strong>5</strong></td>
+</tr>
+<tr>
+<td><strong>action chunk</strong></td>
+<td>50</td>
+<td>50</td>
+<td>50</td>
+<td><strong>50 (执行 15-25 步)</strong></td>
+</tr>
+<tr>
+<td><strong>RTC（real-time chunking）</strong></td>
+<td>否</td>
+<td>否</td>
+<td>否</td>
+<td><strong>是（训练时模拟 0-12 步延迟）</strong></td>
+</tr>
+<tr>
+<td><strong>跨形态泛化能力</strong></td>
+<td>弱</td>
+<td>中</td>
+<td>中</td>
+<td><strong>强（含 UR5e zero-shot 折衣）</strong></td>
+</tr>
+<tr>
+<td><strong>指令鲁棒性</strong></td>
+<td>中</td>
+<td>中</td>
+<td>中</td>
+<td><strong>强（含 reverse-bias 任务）</strong></td>
+</tr>
+</tbody>
+</table></div>
+<hr />
+<h2 id="7-关键事实点的来源标注">7. 关键事实点的来源标注<a class="headerlink" href="05.Pi0.7_Architecture.html#7-关键事实点的来源标注" title="Permanent link">#</a></h2>
+<blockquote>
+<p>π₀.₇ 未公开代码，所有架构数字均来自论文文本 / 官方 blog。</p>
+</blockquote>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>事实点</th>
+<th>来源</th>
+<th>备注</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Prompt 5 组件结构（task / subtask / metadata / control / subgoal）</td>
+<td>✅ 论文 Sec. V</td>
+<td>明确</td>
+</tr>
+<tr>
+<td>Episode metadata 3 字段（speed / quality / mistake）+ 推理设值</td>
+<td>✅ 论文 Sec. V-C + Sec. VII</td>
+<td>明确</td>
+</tr>
+<tr>
+<td>dropout 率（subgoal 25%、metadata 15%、各分量 5%、history 30%）</td>
+<td>✅ 论文 Sec. V-E + Sec. VI-B</td>
+<td>明确</td>
+</tr>
+<tr>
+<td>VLM = Gemma3 4B、action expert = 860M、总 5B</td>
+<td>✅ 论文 Sec. VI-B</td>
+<td>明确</td>
+</tr>
+<tr>
+<td>BAGEL 14B Mixture-of-Transformers 作世界模型</td>
+<td>✅ 论文 Sec. V-B + ref [105]</td>
+<td>明确</td>
+</tr>
+<tr>
+<td>MEM 历史编码器（时空压缩，单帧 token 数）</td>
+<td>✅ 论文 Sec. VI-B + ref [37]</td>
+<td>明确（细节见 MEM 论文）</td>
+</tr>
+<tr>
+<td>4 路相机 / 6 帧 history / 448×448 / stride 1s</td>
+<td>✅ 论文 Sec. VI-B</td>
+<td>明确</td>
+</tr>
+<tr>
+<td>50 action token / 5 denoising steps / 执行 15 或 25 步</td>
+<td>✅ 论文 Sec. VI-B + VII</td>
+<td>明确</td>
+</tr>
+<tr>
+<td>AdaRMSNorm 注入 flow matching t</td>
+<td>✅ 论文 Sec. VI-B</td>
+<td>明确</td>
+</tr>
+<tr>
+<td>State 改用 linear projection（vs π₀.₆ 的离散 token）</td>
+<td>✅ 论文 Sec. VI-B</td>
+<td>明确</td>
+</tr>
+<tr>
+<td>Block-causal attention mask</td>
+<td>✅ 论文 Sec. VI-B + appendix</td>
+<td>明确</td>
+</tr>
+<tr>
+<td>RTC（Real-Time Chunking）模拟 0-12 步延迟</td>
+<td>✅ 论文 Sec. VI-B + refs [107, 108]</td>
+<td>明确</td>
+</tr>
+<tr>
+<td>CFG on metadata, β ∈ {1.3, 1.7, 2.2}</td>
+<td>✅ 论文 Sec. VI-B</td>
+<td>明确</td>
+</tr>
+<tr>
+<td>Subgoal 训练混合（0.25 末尾真实帧 + 0.75 未来 0-4s 真实帧 + 合成）</td>
+<td>✅ 论文 Sec. VI-C</td>
+<td>明确</td>
+</tr>
+<tr>
+<td>Subgoal 推理刷新（ℓ̂ 变化或 ≥4s 间隔，异步线程）</td>
+<td>✅ 论文 Sec. VII Algorithm 1</td>
+<td>明确</td>
+</tr>
+<tr>
+<td>50 Hz（多数）vs 20 Hz (UR5e)</td>
+<td>✅ 论文 Sec. VIII</td>
+<td>明确</td>
+</tr>
+<tr>
+<td>包含 π*₀.₆ RL rollouts 作为训练数据</td>
+<td>✅ 论文 Sec. VI-A</td>
+<td>明确（distillation）</td>
+</tr>
+<tr>
+<td>Out-of-the-box 在 espresso / box / laundry 匹敌或超过 π*₀.₆ specialist</td>
+<td>✅ 论文 Fig. 6</td>
+<td>明确</td>
+</tr>
+<tr>
+<td>UR5e zero-shot 折衣匹敌人类首次遥操</td>
+<td>✅ 论文 Sec. IX-C + Fig. 12</td>
+<td>明确</td>
+</tr>
+<tr>
+<td>⚠️ Action expert 内部 layer 数 / hidden_dim / cross-attn 周期</td>
+<td>⚠️ <strong>论文未公开</strong></td>
+<td>推测沿用 π₀.₆</td>
+</tr>
+<tr>
+<td>⚠️ MEM 视觉编码器具体压缩比 / temporal pooling 方式</td>
+<td>⚠️ <strong>本论文未细化</strong>，需查 MEM 论文 [37]</td>
+<td></td>
+</tr>
+<tr>
+<td>⚠️ BAGEL 是否 fine-tune 还是只调 adapter</td>
+<td>⚠️ <strong>论文未明确</strong>（说 "augmenting world model training with..." 暗示有训练，但是否 full FT 未说）</td>
+<td>推测：至少 LoRA / adapter</td>
+</tr>
+<tr>
+<td>⚠️ 训练数据总小时数 / 各数据源占比</td>
+<td>⚠️ 论文仅文字描述</td>
+<td>未给具体小时数</td>
+</tr>
+<tr>
+<td>⚠️ 各 ablation 的 % 损失数字</td>
+<td>⚠️ 论文 Fig. 7 仅给柱状图，未列绝对数字</td>
+<td>见 paper PDF</td>
+</tr>
+</tbody>
+</table></div>
+<hr />
+<h2 id="8-参考资料">8. 参考资料<a class="headerlink" href="05.Pi0.7_Architecture.html#8-参考资料" title="Permanent link">#</a></h2>
+<ul>
+<li>论文：<a href="https://arxiv.org/abs/2604.15483">arXiv:2604.15483 — π₀.₇: a Steerable Generalist Robotic Foundation Model</a></li>
+<li>官方 blog：<a href="https://www.pi.website/blog/pi07">pi.website/blog/pi07</a> ／ <a href="https://pi.website/pi07">pi.website/pi07</a></li>
+<li>前作架构详解：<a href="01.Pi0_Architecture.html">Pi0_Architecture</a> / <a href="02.Pi0.5_Architecture.html">Pi0.5_Architecture</a> / <a href="03.Pi0-FAST_Architecture.html">Pi0-FAST_Architecture</a> / <a href="04.Pi-Star-0.6_Architecture.html">Pi-Star-0.6_Architecture</a></li>
+<li>MEM 视频历史：论文 ref [37]（π₀.₆-MEM）</li>
+<li>BAGEL 世界模型：论文 ref [105]</li>
+<li>KI training recipe：论文 ref [103]，最早见于 π₀.₅</li>
+<li>FAST tokenizer：<a href="https://arxiv.org/abs/2501.09747">Pertsch et al. 2025</a></li>
+<li>RTC (Real-Time Chunking)：论文 refs [107, 108]</li>
+</ul>
+      </div>
+    </main>
+        <aside class="toc">
+            <div class="toc-title">本页目录</div>
+            <ul>
+                <li><a href="05.Pi0.7_Architecture.html#1-整体定位与论文出处" class="toc-h2">1. 整体定位与论文出处</a></li>
+                <li><a href="05.Pi0.7_Architecture.html#2-网络架构简短一节" class="toc-h2">2. 网络架构（简短一节）</a></li>
+                <li><a href="05.Pi0.7_Architecture.html#3-训练范式diverse-context-conditioning核心" class="toc-h2">3. 训练范式：diverse context conditioning（核心）</a></li>
+                <li><a href="05.Pi0.7_Architecture.html#31-prompt-结构" class="toc-h3">3.1 prompt 结构</a></li>
+                <li><a href="05.Pi0.7_Architecture.html#32-metadata-的具体定义" class="toc-h3">3.2 metadata 的具体定义</a></li>
+                <li><a href="05.Pi0.7_Architecture.html#33-subgoal-image-训练方式" class="toc-h3">3.3 Subgoal image 训练方式</a></li>
+                <li><a href="05.Pi0.7_Architecture.html#34-cfgclassifier-free-guidance于-metadata" class="toc-h3">3.4 CFG（classifier-free guidance）于 metadata</a></li>
+                <li><a href="05.Pi0.7_Architecture.html#35-知识隔离-ki-沿用" class="toc-h3">3.5 知识隔离 (KI) 沿用</a></li>
+                <li><a href="05.Pi0.7_Architecture.html#4-数据组成" class="toc-h2">4. 数据组成</a></li>
+                <li><a href="05.Pi0.7_Architecture.html#41-数据源清单论文-sec-vi-a" class="toc-h3">4.1 数据源清单（论文 Sec. VI-A）</a></li>
+                <li><a href="05.Pi0.7_Architecture.html#42-评估机器人平台论文-sec-viii" class="toc-h3">4.2 评估机器人平台（论文 Sec. VIII）</a></li>
+                <li><a href="05.Pi0.7_Architecture.html#5-任务与报告结果" class="toc-h2">5. 任务与报告结果</a></li>
+                <li><a href="05.Pi0.7_Architecture.html#51-out-of-the-box-dexterity论文-sec-ix-a-fig-6" class="toc-h3">5.1 Out-of-the-box dexterity（论文 Sec. IX-A, Fig. 6）</a></li>
+                <li><a href="05.Pi0.7_Architecture.html#52-instruction-followingsec-ix-b" class="toc-h3">5.2 Instruction following（Sec. IX-B）</a></li>
+                <li><a href="05.Pi0.7_Architecture.html#53-cross-embodimentsec-ix-c" class="toc-h3">5.3 Cross-embodiment（Sec. IX-C）</a></li>
+                <li><a href="05.Pi0.7_Architecture.html#54-memory-taskssec-ix-a" class="toc-h3">5.4 Memory tasks（Sec. IX-A）</a></li>
+                <li><a href="05.Pi0.7_Architecture.html#55-compositional-generalizationemergent" class="toc-h3">5.5 Compositional generalization（emergent）</a></li>
+                <li><a href="05.Pi0.7_Architecture.html#56-ablationsec-ix-a-fig-7" class="toc-h3">5.6 Ablation（Sec. IX-A, Fig. 7）</a></li>
+                <li><a href="05.Pi0.7_Architecture.html#6-与-pi-系列前作的差异" class="toc-h2">6. 与 Pi 系列前作的差异</a></li>
+                <li><a href="05.Pi0.7_Architecture.html#7-关键事实点的来源标注" class="toc-h2">7. 关键事实点的来源标注</a></li>
+                <li><a href="05.Pi0.7_Architecture.html#8-参考资料" class="toc-h2">8. 参考资料</a></li>
+            </ul>
+        </aside>
+
+    <button class="back-to-top" onclick="window.scrollTo({top:0,behavior:'smooth'})">&#8593;</button>
+
+    <script src="assets/vendor/mermaid/mermaid.min.js"></script>
+    <script defer src="assets/vendor/katex/katex.min.js"></script>
+    <script defer src="assets/vendor/katex/auto-render.min.js"
+            onload="renderMathInElement(document.querySelector('.content-inner'), {
+                delimiters: [
+                    { left: '$$', right: '$$', display: true },
+                    { left: '$', right: '$', display: false }
+                ],
+                ignoredTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code', 'option'],
+                ignoredClasses: ['mermaid', 'diagram'],
+                throwOnError: false
+            });"></script>
+    <script>
+        // Mermaid destroys the source text when it renders, so keep a copy in
+        // order to re-render on theme change.
+        document.querySelectorAll('.mermaid').forEach(el => {
+            el.dataset.src = el.textContent;
+        });
+
+        const prefersDark = window.matchMedia('(prefers-color-scheme: dark)');
+        function currentTheme() {
+            const forced = document.documentElement.getAttribute('data-theme');
+            if (forced) return forced;
+            return prefersDark.matches ? 'dark' : 'light';
+        }
+
+        function initMermaid() {
+            mermaid.initialize({
+                startOnLoad: false,
+                theme: currentTheme() === 'dark' ? 'dark' : 'default',
+                flowchart: { useMaxWidth: true, htmlLabels: true },
+                securityLevel: 'loose'
+            });
+        }
+
+        function renderMermaid() {
+            const nodes = document.querySelectorAll('.mermaid');
+            nodes.forEach(el => {
+                el.removeAttribute('data-processed');
+                el.textContent = el.dataset.src;
+            });
+            // mermaid.run rejects on its internal font probe in some browsers;
+            // the diagrams still render, so swallow it rather than surfacing an
+            // unhandled rejection.
+            if (!nodes.length) return;
+            Promise.resolve(mermaid.run({ nodes: nodes }))
+                .catch(() => {})
+                .then(() => nodes.forEach(applyZoom));
+        }
+
+        /* ---------- Diagram zoom ----------
+           Scale is tracked as a factor of the diagram's NATURAL size (its
+           viewBox), so 100% means 1:1 and one font size looks identical in
+           every diagram on the site. Left to itself mermaid's useMaxWidth
+           stretches each svg to the container, which blows a 3-node diagram
+           up to 3.4x and shrinks a wide one to 0.34x — a 10x spread in
+           apparent font size. FIT_MAX caps the auto-fit at 1:1 (never
+           upscale) and FIT_MIN stops wide diagrams from shrinking to
+           unreadable; anything past that overflows and scrolls/pans. */
+        const MIN_Z = 0.3, MAX_Z = 6, STEP = 1.25;
+        const FIT_MIN = 0.55, FIT_MAX = 1;
+        const PAD = 40;               // .mermaid horizontal padding (20px each side)
+        const zoom = new WeakMap();   // .mermaid -> explicit scale; absent = auto-fit
+
+        function naturalSize(svg) {
+            const vb = svg.viewBox && svg.viewBox.baseVal;
+            if (vb && vb.width) return { w: vb.width, h: vb.height };
+            const r = svg.getBoundingClientRect();
+            return { w: r.width, h: r.height };
+        }
+
+        function fitScale(el, nat) {
+            const avail = el.clientWidth - PAD;
+            if (!nat.w || avail <= 0) return 1;
+            return Math.min(FIT_MAX, Math.max(FIT_MIN, avail / nat.w));
+        }
+
+        function scaleOf(el, nat) {
+            const k = zoom.get(el);
+            return k === undefined ? fitScale(el, nat) : k;
+        }
+
+        function applyZoom(el) {
+            const svg = el.querySelector('svg');
+            if (!svg) return;
+            const nat = naturalSize(svg);
+            if (!nat.w) return;
+            const k = scaleOf(el, nat);
+
+            const label = el.closest('.diagram')?.querySelector('.diagram-zoom');
+            if (label) label.textContent = Math.round(k * 100) + '%';
+
+            // Size the svg explicitly instead of leaving it to useMaxWidth,
+            // so the container gets real scrollbars when the diagram overflows.
+            svg.style.maxWidth = 'none';
+            svg.style.width = (nat.w * k) + 'px';
+            svg.style.height = (nat.h * k) + 'px';
+
+            const overflows = nat.w * k > el.clientWidth - PAD + 1;
+            el.classList.toggle('is-zoomed', overflows);
+            if (!overflows) el.scrollLeft = el.scrollTop = 0;
+        }
+
+        function setZoom(el, k, anchor) {
+            const svg = el.querySelector('svg');
+            if (!svg) return;
+            const nat = naturalSize(svg);
+            const prev = scaleOf(el, nat);
+            if (k !== null) k = Math.min(MAX_Z, Math.max(MIN_Z, k));
+            const next = k === null ? fitScale(el, nat) : k;
+            if (next === prev) return;
+            // Keep the point under the cursor (or the viewport centre) put.
+            const ax = anchor ? anchor.x : el.clientWidth / 2;
+            const ay = anchor ? anchor.y : el.clientHeight / 2;
+            const rx = (el.scrollLeft + ax) / prev;
+            const ry = (el.scrollTop + ay) / prev;
+            if (k === null) zoom.delete(el); else zoom.set(el, k);
+            applyZoom(el);
+            el.scrollLeft = rx * next - ax;
+            el.scrollTop = ry * next - ay;
+        }
+
+        function currentScale(el) {
+            const svg = el.querySelector('svg');
+            return svg ? scaleOf(el, naturalSize(svg)) : 1;
+        }
+
+        function setupDiagrams() {
+            document.querySelectorAll('.mermaid').forEach(el => {
+                const wrap = document.createElement('div');
+                wrap.className = 'diagram';
+                el.parentNode.insertBefore(wrap, el);
+                wrap.appendChild(el);
+
+                const tools = document.createElement('div');
+                tools.className = 'diagram-tools';
+                tools.innerHTML =
+                    '<button type="button" data-act="out" title="缩小">&minus;</button>' +
+                    '<span class="diagram-zoom">100%</span>' +
+                    '<button type="button" data-act="in" title="放大">+</button>' +
+                    '<button type="button" data-act="reset" title="适应宽度">&#9633;</button>' +
+                    '<button type="button" data-act="full" title="全屏">&#10530;</button>';
+                wrap.appendChild(tools);
+
+                tools.addEventListener('click', e => {
+                    const act = e.target.closest('button')?.dataset.act;
+                    if (!act) return;
+                    const k = currentScale(el);
+                    if (act === 'in') setZoom(el, k * STEP);
+                    else if (act === 'out') setZoom(el, k / STEP);
+                    else if (act === 'reset') setZoom(el, null);
+                    else if (act === 'full') {
+                        if (document.fullscreenElement === wrap) document.exitFullscreen();
+                        else wrap.requestFullscreen?.();
+                    }
+                });
+
+                // Ctrl/⌘ + wheel zooms; a plain wheel keeps scrolling the page.
+                el.addEventListener('wheel', e => {
+                    if (!e.ctrlKey && !e.metaKey) return;
+                    e.preventDefault();
+                    const r = el.getBoundingClientRect();
+                    setZoom(el, currentScale(el) * (e.deltaY < 0 ? STEP : 1 / STEP),
+                            { x: e.clientX - r.left, y: e.clientY - r.top });
+                }, { passive: false });
+
+                // Drag to pan once zoomed in.
+                let drag = null;
+                el.addEventListener('pointerdown', e => {
+                    // Pan only matters once the diagram actually overflows.
+                    if (e.button !== 0 || !el.classList.contains('is-zoomed')) return;
+                    drag = { x: e.clientX, y: e.clientY, l: el.scrollLeft, t: el.scrollTop };
+                    el.setPointerCapture(e.pointerId);
+                    el.classList.add('is-panning');
+                });
+                el.addEventListener('pointermove', e => {
+                    if (!drag) return;
+                    el.scrollLeft = drag.l - (e.clientX - drag.x);
+                    el.scrollTop = drag.t - (e.clientY - drag.y);
+                });
+                const endDrag = () => { drag = null; el.classList.remove('is-panning'); };
+                el.addEventListener('pointerup', endDrag);
+                el.addEventListener('pointercancel', endDrag);
+
+                // Double click toggles between auto-fit and true 1:1.
+                el.addEventListener('dblclick', () => setZoom(el, zoom.has(el) ? null : 1));
+            });
+        }
+
+        setupDiagrams();
+        initMermaid();
+        renderMermaid();
+
+        const remeasure = () => document.querySelectorAll('.mermaid').forEach(applyZoom);
+        document.addEventListener('fullscreenchange', remeasure);
+        window.addEventListener('resize', remeasure);
+
+        // Theme toggle
+        const toggle = document.getElementById('theme-toggle');
+        toggle.addEventListener('click', () => {
+            const next = currentTheme() === 'dark' ? 'light' : 'dark';
+            document.documentElement.setAttribute('data-theme', next);
+            try { localStorage.setItem('theme', next); } catch (e) {}
+            initMermaid();
+            renderMermaid();
+        });
+
+        // Follow the OS while the user hasn't made an explicit choice
+        prefersDark.addEventListener('change', () => {
+            if (!document.documentElement.getAttribute('data-theme')) {
+                initMermaid();
+                renderMermaid();
+            }
+        });
+
+        // Back to top button
+        const btn = document.querySelector('.back-to-top');
+        window.addEventListener('scroll', () => {
+            btn.classList.toggle('visible', window.scrollY > 300);
+        });
+
+        // Close sidebar on mobile when clicking a link
+        document.querySelectorAll('.sidebar nav a').forEach(a => {
+            a.addEventListener('click', () => {
+                document.querySelector('.sidebar').classList.remove('open');
+            });
+        });
+
+        // Highlight the TOC entry for the heading currently in view
+        const tocLinks = Array.from(document.querySelectorAll('.toc a'));
+        if (tocLinks.length) {
+            const targets = tocLinks
+                .map(a => document.getElementById(decodeURIComponent(a.hash.slice(1))))
+                .filter(Boolean);
+            const setActive = () => {
+                let current = targets[0];
+                for (const t of targets) {
+                    if (t.getBoundingClientRect().top <= 120) current = t;
+                    else break;
+                }
+                tocLinks.forEach(a => a.classList.toggle(
+                    'active',
+                    current && decodeURIComponent(a.hash.slice(1)) === current.id
+                ));
+            };
+            setActive();
+            let queued = false;
+            window.addEventListener('scroll', () => {
+                if (queued) return;
+                queued = true;
+                requestAnimationFrame(() => { setActive(); queued = false; });
+            });
+        }
+    </script>
+</body>
+</html>

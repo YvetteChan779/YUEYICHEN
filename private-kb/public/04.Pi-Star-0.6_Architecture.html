@@ -1,0 +1,864 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>π*₀.₆ (Pi-Star-0.6) - Robotics Knowledge Base</title>
+    <link rel="icon" href="favicon.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="assets/vendor/katex/katex.min.css">
+    <script>
+        // Applied before first paint so the saved theme doesn't flash.
+        (function () {
+            try {
+                var t = localStorage.getItem('theme');
+                if (t === 'dark' || t === 'light') {
+                    document.documentElement.setAttribute('data-theme', t);
+                }
+            } catch (e) {}
+        })();
+    </script>
+</head>
+<body>
+    <button class="menu-toggle" onclick="document.querySelector('.sidebar').classList.toggle('open')">&#9776;</button>
+    <button class="theme-toggle" id="theme-toggle" title="切换日夜模式" aria-label="切换日夜模式">
+        <span class="icon-light">&#9790;</span><span class="icon-dark">&#9728;</span>
+    </button>
+
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <h2>Robotics Knowledge Base</h2>
+            <p>机器人模型架构知识库</p>
+        </div>
+        <nav>
+            <a href="index.html">Overview</a>
+            <div class="nav-group">VLA 模型</div>
+            <a href="01.Pi0_Architecture.html">Pi0</a>
+            <a href="02.Pi0.5_Architecture.html">Pi0.5</a>
+            <a href="03.Pi0-FAST_Architecture.html">Pi0-FAST</a>
+            <a href="04.Pi-Star-0.6_Architecture.html" class="active">π*₀.₆ (Pi-Star-0.6)</a>
+            <a href="05.Pi0.7_Architecture.html">π₀.₇ (Pi-0.7)</a>
+            <a href="06.Isaac-GR00T-N1.6_Architecture.html">Isaac-GR00T N1.6</a>
+            <a href="07.Isaac-GR00T-N1.5_Architecture.html">Isaac-GR00T N1.5</a>
+            <a href="08.ACT_Architecture.html">ACT</a>
+            <a href="09.SmolVLA_Architecture.html">SmolVLA</a>
+            <a href="10.WALL-OSS_Architecture.html">WALL-OSS / WALL-X</a>
+            <a href="11.X-VLA_Architecture.html">X-VLA</a>
+            <a href="12.Psi0_Architecture.html">Psi0 (ψ₀)</a>
+            <a href="13.DreamZero_Architecture.html">DreamZero</a>
+            <a href="14.FastWAM_Architecture.html">Fast-WAM</a>
+            <div class="nav-group">全身控制 (WBC)</div>
+            <a href="15.GR00T-WBC_Overview.html">GR00T-WBC 总览</a>
+            <a href="16.Decoupled-WBC_Architecture.html" class="nav-child">Decoupled WBC</a>
+            <a href="17.GEAR-SONIC_Architecture.html" class="nav-child">GEAR-SONIC</a>
+            <a href="18.MotionBricks_Architecture.html" class="nav-child">MotionBricks</a>
+            <div class="nav-group">3D 视觉与 VLM</div>
+            <a href="19.VLM3_Architecture.html">VLM³</a>
+        </nav>
+    </aside>
+
+    <main class="content">
+      <div class="content-inner">
+        <h1 id="π06-pi-star-06-训练范式与数据">π*₀.₆ (Pi-Star-0.6) 训练范式与数据<a class="headerlink" href="04.Pi-Star-0.6_Architecture.html#π06-pi-star-06-训练范式与数据" title="Permanent link">#</a></h1>
+<p>π*₀.₆ 是 Physical Intelligence 2025 年 11 月发布的 VLA（arXiv:2511.14759），核心不是新的网络主干，而是一种让 VLA 通过真实世界部署反复改进的训练方法 —— <strong>RECAP</strong>（<strong>R</strong>L with <strong>E</strong>xperience and <strong>C</strong>orrections via <strong>A</strong>dvantage-conditioned <strong>P</strong>olicies）。论文报告：在折叠衣物、纸箱装配、专业咖啡机操作这类长程灵巧任务上，RECAP 让吞吐量翻倍、失败率减半，在最难的任务上甚至能连续运行 13 小时不间断（咖啡机）或 2 小时（新住宅折衣）。</p>
+<p>本文档因此把重心放在 <strong>训练范式 + 数据组成</strong>，架构部分只用一节带过（仍以 π₀.₆ 的 VLM + flow matching action expert 为底）。</p>
+<hr />
+<h2 id="1-整体定位与论文出处">1. 整体定位与论文出处<a class="headerlink" href="04.Pi-Star-0.6_Architecture.html#1-整体定位与论文出处" title="Permanent link">#</a></h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>项目</th>
+<th>内容</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>论文</td>
+<td>"π*₀.₆: a VLA That Learns From Experience"</td>
+</tr>
+<tr>
+<td>arXiv</td>
+<td><a href="https://arxiv.org/abs/2511.14759">2511.14759</a>（2025-11-18）</td>
+</tr>
+<tr>
+<td>作者</td>
+<td>Physical Intelligence (~50 人)</td>
+</tr>
+<tr>
+<td>官方 blog</td>
+<td><a href="https://pi.website/blog/pistar06">pi.website/blog/pistar06</a></td>
+</tr>
+<tr>
+<td>模型 card</td>
+<td>π₀.₆ Model Card（论文 ref [6]，未公开网址）</td>
+</tr>
+<tr>
+<td>代码</td>
+<td><strong>未公开</strong>（OpenPI 中 π₀ / π₀.₅ / π₀-FAST 系列已开源，但 π₀.₆ 与 π*₀.₆ 截至本文撰写时尚未发布）</td>
+</tr>
+<tr>
+<td>在 Pi 系列中的位置</td>
+<td>π₀ → π₀.₅ → <strong>π₀.₆</strong>（同期发布，下文称"base π₀.₆"）→ <strong>π*₀.₆</strong>（RECAP 改造版）</td>
+</tr>
+</tbody>
+</table></div>
+<p>注意区分两个名字：</p>
+<ul>
+<li><strong>π₀.₆</strong>：base 模型，是 π₀.₅ 的常规升级（数据扩量 + 更大 backbone + 更大 action expert），用监督学习训练。</li>
+<li><strong>π*₀.₆</strong>：在 π₀.₆ 基础上<strong>增加了"advantage 条件化"输入</strong>，使其能被 RECAP 用 offline RL 训练。星号代表"加了 advantage 输入的那一版"。</li>
+</ul>
+<hr />
+<h2 id="2-网络架构简短一节">2. 网络架构（简短一节）<a class="headerlink" href="04.Pi-Star-0.6_Architecture.html#2-网络架构简短一节" title="Permanent link">#</a></h2>
+<blockquote>
+<p>⚠️ <strong>基于公开材料推测 + 论文有限披露</strong>：底层架构沿用 π₀.₆ 的双流 Transformer + flow matching action expert，详见 <a href="01.Pi0_Architecture.html">Pi0_Architecture.md</a> 与 <a href="02.Pi0.5_Architecture.html">Pi0.5_Architecture.md</a>。π*₀.₆ 相对 π₀.₆ 的唯一结构性改动是 <strong>多一个 text 输入字段 "Advantage: positive/negative"</strong>，不引入新的网络模块。</p>
+</blockquote>
+<div class="mermaid">
+graph TB
+    subgraph Inputs["输入 (π*₀.₆)"]
+        IMG["多视角相机图像"]
+        STATE["关节配置 qt"]
+        TASK["语言指令 ℓ&lt;br/&gt;(任务 + metadata s)"]
+        ADV["&lt;b&gt;Advantage: positive/negative&lt;/b&gt;&lt;br/&gt;(π*₀.₆ 新增, 文本形式)"]
+    end
+
+    subgraph Backbone["VLM Backbone (Gemma 3 4B)"]
+        VLM["Knowledge Insulation (KI) 训练&lt;br/&gt;VLM 主体用 next-token / FAST tokens 监督&lt;br/&gt;(stop-grad: action expert 不影响 VLM)"]
+    end
+
+    subgraph SubtaskHead["高层 subtask 预测"]
+        SUB["产生 ℓ̂&lt;br/&gt;(如 'pick up the coffee cup')&lt;br/&gt;较低频率运行"]
+    end
+
+    subgraph ActionExpert["Action Expert (860M, Flow Matching)"]
+        AE["独立权重, 50 Hz&lt;br/&gt;cross-attend 到 VLM 激活&lt;br/&gt;输出关节角 + 夹爪命令"]
+    end
+
+    subgraph Output["输出"]
+        ACT["动作 chunk at:t+H"]
+        FAST["FAST 离散化动作 (训练辅助)"]
+    end
+
+    IMG --&gt; VLM
+    STATE --&gt; VLM
+    TASK --&gt; VLM
+    ADV --&gt; VLM
+
+    VLM --&gt; SUB
+    VLM --&gt; AE
+    SUB --&gt; AE
+
+    AE --&gt; ACT
+    VLM --&gt; FAST
+
+    style Inputs fill:#e8f4fd,stroke:#2196F3
+    style Backbone fill:#fff3e0,stroke:#FF9800
+    style SubtaskHead fill:#f3e5f5,stroke:#9C27B0
+    style ActionExpert fill:#e8f5e9,stroke:#4CAF50
+    style Output fill:#fce4ec,stroke:#E91E63
+</div>
+<p>论文明确披露的架构数字：</p>
+<ul>
+<li><strong>VLM backbone</strong>：Gemma 3 4B 模型（取代 π₀.₅ 中的更小 VLM）</li>
+<li><strong>Action expert</strong>：860M 参数（π₀.₅ 中为 300M）</li>
+<li><strong>训练策略</strong>：KI（Knowledge Insulation [73]）— action expert 通过 cross-attention 读取 VLM 激活，但梯度被 stop 阻断，VLM 仅靠离散 token 预测（含 FAST [77]）监督，避免 flow matching 噪声污染 VLM 表征</li>
+<li><strong>动作输出</strong>：50 Hz 关节角 + 夹爪开合，chunk 长度 H</li>
+<li><strong>辅助输出</strong>：每个 chunk 同时预测 (i) 下一个 subtask 文本 ℓ̂，(ii) FAST tokenized 动作（仅用于训练，推理不需要）</li>
+</ul>
+<blockquote>
+<p>⚠️ <strong>未在论文中明确</strong>：action expert 的层数、hidden_dim、cross-attn 周期等细节。论文与 model card 用文字描述，未公布详细超参表。</p>
+</blockquote>
+<p>advantage 输入位置（论文明确）：</p>
+<blockquote>
+<p>"Advantage" 字段以普通文本插入到 prompt 中，<strong>位置在 subtask 文本 ℓ̂ 之后、动作之前</strong>。这意味着只有动作 log-likelihood 受 advantage 影响。训练时随机 dropout 这个字段，使得同一模型既可在 "无 advantage" 模式下采样（β=1 等价），也可在 "advantage=positive" 模式下采样（推理时几乎总用 positive）。</p>
+</blockquote>
+<hr />
+<h2 id="3-训练范式recap核心">3. 训练范式：RECAP（核心）<a class="headerlink" href="04.Pi-Star-0.6_Architecture.html#3-训练范式recap核心" title="Permanent link">#</a></h2>
+<p>RECAP 的核心思想：<strong>不用 PPO / REINFORCE 直接调 policy；改用 "advantage conditioning" — 训练时给 VLA 多一个文本输入告诉它"这条动作算好还是算坏"，部署时永远要它输出 positive 那种，policy 自然向高 advantage 倾斜</strong>。</p>
+<p>这避免了 flow matching 模型不可导 log-likelihood 的痛点，等价于 classifier-free guidance 的离散变体。</p>
+<h3 id="31-三个子过程">3.1 三个子过程<a class="headerlink" href="04.Pi-Star-0.6_Architecture.html#31-三个子过程" title="Permanent link">#</a></h3>
+<div class="mermaid">
+graph TB
+    subgraph Demo["示范数据 D_demo"]
+        DD["人类遥操数据&lt;br/&gt;tens of thousands of hours&lt;br/&gt;多任务 + 多机器人"]
+    end
+
+    subgraph PT["Pre-training"]
+        PV["训练 value function V_pre&lt;br/&gt;(670M VLM backbone, 同架构但更小)"]
+        PP["训练 policy π_pre&lt;br/&gt;(4B VLM + 860M expert, advantage conditioned)"]
+        DD --&gt; PV --&gt; PP
+    end
+
+    subgraph Spec["每个下游任务 ℓ 的迭代改进"]
+        D0["初始化 Dℓ = 示范数据"]
+        V0["从 V_pre finetune 得到 Vℓ⁰"]
+        P0["从 π_pre finetune 得到 πℓ⁰&lt;br/&gt;(SFT 阶段, It 强制为 True)"]
+
+        D0 --&gt; V0 --&gt; P0
+
+        LOOP["迭代 k=1..K"]
+
+        P0 --&gt; LOOP
+
+        L1["1. 用 πℓ^(k-1) 部署收集数据"]
+        L2["2. 自主轨迹 + (可选) 专家干预&lt;br/&gt;每条标 success/failure"]
+        L3["3. 把新数据并入 Dℓ"]
+        L4["4. 从 V_pre 重新 finetune Vℓ^k&lt;br/&gt;(用全部当前 Dℓ)"]
+        L5["5. 从 π_pre 重新 finetune πℓ^k&lt;br/&gt;(用全部当前 Dℓ + 新 advantage)"]
+
+        LOOP --&gt; L1 --&gt; L2 --&gt; L3 --&gt; L4 --&gt; L5
+        L5 -.-&gt;|下一轮| LOOP
+    end
+
+    style Demo fill:#e8f4fd,stroke:#2196F3
+    style PT fill:#fff3e0,stroke:#FF9800
+    style Spec fill:#e8f5e9,stroke:#4CAF50
+</div>
+<p>注意 <strong>每轮都从 π_pre / V_pre finetune，而不是从上一轮模型</strong>，论文说这样能避免多轮迭代的 drift。</p>
+<h3 id="32-value-functiondistributional-time-to-success-reward">3.2 Value function：distributional + time-to-success reward<a class="headerlink" href="04.Pi-Star-0.6_Architecture.html#32-value-functiondistributional-time-to-success-reward" title="Permanent link">#</a></h3>
+<p>reward 设计极简（论文 Eq. 5）：</p>
+<div class="highlight"><pre><span></span><code>r_t =  0         if t = T and success
+       -C_fail   if t = T and failure
+       -1        otherwise
+</code></pre></div>
+
+<p>也就是说 value 等于"到 success 还差几步"（成功），或一大负数（失败）。Value function 用 cross-entropy 在 <strong>B=201 个离散 value bin</strong> 上预测分布（distributional value function [72]）。</p>
+<p>值函数本身是个独立的 VLM 模型：</p>
+<ul>
+<li><strong>VLM backbone</strong>：Gemma 3 的更小版本，<strong>670M 参数</strong>（policy 用 4B）</li>
+<li>与 policy 共享语言输入，但不带动作 expert</li>
+<li>还用一小部分多模态 web 数据 co-train 防止 overfit</li>
+<li>在 VLA 训练时 <strong>on-the-fly</strong> 推理 V，逐条 example 算 advantage，因此 6.7B 主模型训练时的额外开销可控</li>
+</ul>
+<p>每个任务 ℓ 有自己的 <strong>improvement threshold ϵℓ</strong>：取 V 在该任务训练样本上的 30 百分位作为门槛。<code>It = 1[A(ot, at, ℓ) &gt; ϵℓ]</code>，二值化的 advantage 就以 "Advantage: positive" / "Advantage: negative" 进入 prompt。</p>
+<h3 id="33-policy-训练目标">3.3 Policy 训练目标<a class="headerlink" href="04.Pi-Star-0.6_Architecture.html#33-policy-训练目标" title="Permanent link">#</a></h3>
+<p>end-to-end 训练同一个 policy 同时建模 πθ(a|o,ℓ) 和 πθ(a|I,o,ℓ)，靠在训练时随机 dropout 那个 advantage token：</p>
+<div class="highlight"><pre><span></span><code>min_θ E[ −log πθ(at | ot, ℓ) − α·log πθ(at | It, ot, ℓ) ]
+</code></pre></div>
+
+<p>这是 advantage-conditioned 版的 CFGRL [4]：</p>
+<ul>
+<li>训练时一半样本带 advantage 标签、另一半不带 → 同一组权重既学到 unconditional 又学到 conditional</li>
+<li>推理时把 advantage=positive 喂进去（β=1），policy 自然 sample 出高 advantage 动作</li>
+<li>如果想更激进，可以做 CFG（β&gt;1），用 conditional vs unconditional 的差值 guidance</li>
+</ul>
+<p>实现上是离散 token 部分（subtask、FAST 动作）的 cross-entropy + 连续部分（flow matching）的 MSE 联合优化（论文 Eq. 4 给出一个 ELBO-style 下界）。</p>
+<h3 id="34-异构数据如何统一">3.4 异构数据如何统一<a class="headerlink" href="04.Pi-Star-0.6_Architecture.html#34-异构数据如何统一" title="Permanent link">#</a></h3>
+<p>RECAP 的另一个关键卖点：<strong>示范、自主轨迹、专家干预这三类异构数据可以用同一目标函数训</strong>，只是 advantage 标签来源不同：</p>
+<ul>
+<li><strong>示范</strong>：所有动作强制 <code>It = True</code>（视作高 advantage）</li>
+<li><strong>自主轨迹</strong>：每条动作的 <code>It</code> 由 value function 算出</li>
+<li><strong>专家干预</strong>：所有动作强制 <code>It = True</code>（假设专家总是给出好的纠错动作）</li>
+</ul>
+<p>整个 trajectory（不管是不是被干预过）都进入数据集 Dℓ，不区分对待。这相当于一个统一的 offline RL 框架，能同时吃 DAgger 风格的人类纠错和 BC 风格的示范。</p>
+<hr />
+<h2 id="4-数据组成">4. 数据组成<a class="headerlink" href="04.Pi-Star-0.6_Architecture.html#4-数据组成" title="Permanent link">#</a></h2>
+<h3 id="41-预训练数据">4.1 预训练数据<a class="headerlink" href="04.Pi-Star-0.6_Architecture.html#41-预训练数据" title="Permanent link">#</a></h3>
+<p>继承 π₀.₅ 的 recipe（<a href="02.Pi0.5_Architecture.html">Pi0.5_Architecture.md</a>）：</p>
+<ul>
+<li><strong>机器人示范数据</strong>：来自数十种机器人平台 的"tens of thousands of hours"动作轨迹</li>
+<li><strong>视觉-语言 co-training 数据</strong>：来自 web 的图文对，用于保持 VLM 的语言能力</li>
+<li><strong>subtask 标签</strong>：每个动作 chunk 同时标注下一个高层 subtask 文本（如 "pick up the coffee cup"），供 KI recipe 训 VLM</li>
+</ul>
+<p>π₀.₆ 相对 π₀.₅ 的数据增益：<strong>多机器人平台数据更丰富</strong>（论文未给具体小时数 / 平台清单）。</p>
+<h3 id="42-recap-阶段的异构数据">4.2 RECAP 阶段的异构数据<a class="headerlink" href="04.Pi-Star-0.6_Architecture.html#42-recap-阶段的异构数据" title="Permanent link">#</a></h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>数据源</th>
+<th>用途</th>
+<th>advantage 标签来源</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>示范 (demonstrations)</td>
+<td>提供初始策略 + SFT phase</td>
+<td>强制 <code>It = True</code></td>
+</tr>
+<tr>
+<td>自主轨迹 (on-policy rollouts)</td>
+<td>RL 改进信号</td>
+<td>value function 算 A，再二值化</td>
+</tr>
+<tr>
+<td>专家干预 (human interventions)</td>
+<td>修复 catastrophic failure</td>
+<td>干预段强制 <code>It = True</code></td>
+</tr>
+</tbody>
+</table></div>
+<p>具体数量级（论文 Sec. VI 报告）：</p>
+<ul>
+<li><strong>T-shirt/shorts 折衣任务</strong>：每轮 4 个机器人收集 300 条自主轨迹，跑 2 轮</li>
+<li><strong>纸箱装配任务</strong>：每轮 600 条自主 + 360 条带干预 = 960 条/轮，跑 2 轮</li>
+<li><strong>目标失败模式移除（strict T-shirt）</strong>：2 轮，每轮 600 条</li>
+</ul>
+<h3 id="43-机器人平台">4.3 机器人平台<a class="headerlink" href="04.Pi-Star-0.6_Architecture.html#43-机器人平台" title="Permanent link">#</a></h3>
+<ul>
+<li>预训练：多种机器人（论文 Fig. 5 标注 "many different robots"，未列清单）</li>
+<li>评估改进：<strong>静态双臂系统</strong>，两个 6-DoF 手臂 + 平行夹爪，50 Hz 关节控制，三相机（base 一个 + 两腕一个）</li>
+</ul>
+<hr />
+<h2 id="5-任务与报告结果">5. 任务与报告结果<a class="headerlink" href="04.Pi-Star-0.6_Architecture.html#5-任务与报告结果" title="Permanent link">#</a></h2>
+<h3 id="51-评估任务">5.1 评估任务<a class="headerlink" href="04.Pi-Star-0.6_Architecture.html#51-评估任务" title="Permanent link">#</a></h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>任务</th>
+<th>时长上限</th>
+<th>关键挑战</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Laundry (T-shirts/shorts)</td>
+<td>200 s</td>
+<td>从篮中取衣 → 抚平 → 折叠 → 摞到右上角</td>
+</tr>
+<tr>
+<td>Laundry (diverse, 11 类)</td>
+<td>500 s</td>
+<td>含毛巾、衬衫、毛衣、牛仔、polo、袜、内衣等；统计最难的 button-up 衬衫</td>
+</tr>
+<tr>
+<td>Laundry (strict target)</td>
+<td>200 s</td>
+<td>单件 T-shirt + 严格 success（领口必须朝上居中）</td>
+</tr>
+<tr>
+<td>Cafe (double espresso)</td>
+<td>200 s</td>
+<td>拿粉碗 → 磨豆 → 压实 → 装机 → 取杯 → 出杯 → 上桌</td>
+</tr>
+<tr>
+<td>Box assembly</td>
+<td>600 s</td>
+<td>从平板纸 → 折成箱 → 贴标 → 放入指定 crate 位置</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="52-主要数字论文-fig-7-8">5.2 主要数字（论文 Fig. 7-8）<a class="headerlink" href="04.Pi-Star-0.6_Architecture.html#52-主要数字论文-fig-7-8" title="Permanent link">#</a></h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>指标</th>
+<th>base π₀.₅</th>
+<th>base π₀.₆</th>
+<th>RL-pretrain π*₀.₆</th>
+<th>offline RL + SFT</th>
+<th><strong>π*₀.₆ + RECAP (final)</strong></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Diverse laundry throughput</td>
+<td>低</td>
+<td>中</td>
+<td>中</td>
+<td>中</td>
+<td><strong>≈2× SFT baseline</strong></td>
+</tr>
+<tr>
+<td>Espresso throughput</td>
+<td>低</td>
+<td>中</td>
+<td>中</td>
+<td>中</td>
+<td><strong>≈2× SFT baseline</strong></td>
+</tr>
+<tr>
+<td>Box assembly throughput</td>
+<td>低</td>
+<td>中</td>
+<td>中</td>
+<td>中</td>
+<td><strong>≈2× SFT baseline (after 2 iters)</strong></td>
+</tr>
+<tr>
+<td>Final success rate（多数任务）</td>
+<td>&lt; 90%</td>
+<td>&lt; 90%</td>
+<td>&lt; 90%</td>
+<td>&lt; 90%</td>
+<td><strong>≥ 90%</strong></td>
+</tr>
+<tr>
+<td>Strict T-shirt 严格 success</td>
+<td>—</td>
+<td>—</td>
+<td>—</td>
+<td>—</td>
+<td><strong>97%</strong>（2 轮迭代 + 600 条/轮，无人干预）</td>
+</tr>
+</tbody>
+</table></div>
+<p>实际部署强度：</p>
+<ul>
+<li><strong>咖啡机</strong>：连续运行 13 小时不停机</li>
+<li><strong>新住宅折衣</strong>：2 小时 + 无干预</li>
+<li><strong>纸箱装配</strong>：用于真实工厂打包流程</li>
+</ul>
+<h3 id="53-方法对比论文-fig-11">5.3 方法对比（论文 Fig. 11）<a class="headerlink" href="04.Pi-Star-0.6_Architecture.html#53-方法对比论文-fig-11" title="Permanent link">#</a></h3>
+<p>在 T-shirts/shorts 任务上，用同样的 RECAP-collected 数据，对比三种 policy extraction：</p>
+<ul>
+<li><strong>PPO（small trust region η=0.01）</strong>：训得稳但提升微弱，论文认为是 flow matching 模型 PPO 难以稳定</li>
+<li><strong>AWR</strong>：能涨 success rate，但 policy 速度变慢、throughput 反而下降</li>
+<li><strong>RECAP（advantage conditioning）</strong>：throughput 最高，明显优于另两者</li>
+</ul>
+<hr />
+<h2 id="6-与-pi-系列前作的差异">6. 与 Pi 系列前作的差异<a class="headerlink" href="04.Pi-Star-0.6_Architecture.html#6-与-pi-系列前作的差异" title="Permanent link">#</a></h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>项目</th>
+<th>π₀</th>
+<th>π₀.₅</th>
+<th>π₀.₆ (base)</th>
+<th>π*₀.₆ (RECAP)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>VLM backbone</strong></td>
+<td>PaliGemma (Gemma 2B)</td>
+<td>PaliGemma-ish</td>
+<td><strong>Gemma 3 4B</strong></td>
+<td>Gemma 3 4B</td>
+</tr>
+<tr>
+<td><strong>Action expert</strong></td>
+<td>300M</td>
+<td>300M</td>
+<td><strong>860M</strong></td>
+<td>860M</td>
+</tr>
+<tr>
+<td><strong>训练方式</strong></td>
+<td>监督 (BC)</td>
+<td>监督 + KI</td>
+<td>监督 (含 KI / FAST)</td>
+<td><strong>+ offline RL via advantage conditioning</strong></td>
+</tr>
+<tr>
+<td><strong>数据组成</strong></td>
+<td>示范</td>
+<td>示范 + web VL</td>
+<td>示范 (扩量) + web VL</td>
+<td>+ on-policy + 干预</td>
+</tr>
+<tr>
+<td><strong>conditioning 输入</strong></td>
+<td>任务文本</td>
+<td>任务 + subtask ℓ̂</td>
+<td>+ metadata s</td>
+<td><strong>+ "Advantage: positive/neg"</strong></td>
+</tr>
+<tr>
+<td><strong>value function</strong></td>
+<td>—</td>
+<td>—</td>
+<td>—</td>
+<td><strong>distributional, 670M VLM, 201 bins, 多任务</strong></td>
+</tr>
+<tr>
+<td><strong>改进机制</strong></td>
+<td>无</td>
+<td>无</td>
+<td>无</td>
+<td>iterated offline RL（外加 SFT 启动）</td>
+</tr>
+<tr>
+<td><strong>复杂任务上限</strong></td>
+<td>短程灵巧</td>
+<td>中长程</td>
+<td>中长程</td>
+<td><strong>长程实战级</strong>（13h espresso, 2h 折衣）</td>
+</tr>
+</tbody>
+</table></div>
+<hr />
+<h2 id="7-关键事实点的来源标注">7. 关键事实点的来源标注<a class="headerlink" href="04.Pi-Star-0.6_Architecture.html#7-关键事实点的来源标注" title="Permanent link">#</a></h2>
+<blockquote>
+<p>这一节用于区分"代码或论文直接陈述的事实" vs "由论文文本推测、由架构延续性外推的事实"。π*₀.₆ 与 π₀.₆ 均未公开代码，所有架构数字均来自论文 / blog 描述。</p>
+</blockquote>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>事实点</th>
+<th>来源</th>
+<th>备注</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>RECAP 三步循环（数据收集 → V 训练 → π 训练 + advantage cond.）</td>
+<td>✅ 论文 Sec. IV / Algorithm 1</td>
+<td>明确</td>
+</tr>
+<tr>
+<td>Advantage 二值化 + 文本 "positive/negative" 注入 prompt</td>
+<td>✅ 论文 Sec. V-B</td>
+<td>明确</td>
+</tr>
+<tr>
+<td>ϵℓ = 30 percentile of V on task ℓ</td>
+<td>✅ 论文 Sec. V-D</td>
+<td>明确</td>
+</tr>
+<tr>
+<td>Value function = distributional, 201 bins, 670M VLM</td>
+<td>✅ 论文 Sec. V-C</td>
+<td>明确</td>
+</tr>
+<tr>
+<td>Policy backbone = Gemma 3 4B, action expert = 860M</td>
+<td>✅ 论文 Sec. V-A + π₀.₆ model card</td>
+<td>明确</td>
+</tr>
+<tr>
+<td>KI 训练范式 + stop-grad + FAST tokens</td>
+<td>✅ 论文 Sec. V-A（refs [73, 77]）</td>
+<td>明确</td>
+</tr>
+<tr>
+<td>50 Hz 关节控制 + 双 6-DoF 臂 + 三相机</td>
+<td>✅ 论文 Fig. 5</td>
+<td>明确（评估系统）</td>
+</tr>
+<tr>
+<td>13 小时 espresso、2 小时 folding 实测</td>
+<td>✅ 论文 Sec. I</td>
+<td>明确</td>
+</tr>
+<tr>
+<td>Throughput ≈2×、failure rate ≈½</td>
+<td>✅ 论文 Sec. VI-C / Fig. 7-8</td>
+<td>明确</td>
+</tr>
+<tr>
+<td>Pre-train 数据规模 "tens of thousands of hours"</td>
+<td>✅ 论文 Sec. IV-C</td>
+<td>数值描述</td>
+</tr>
+<tr>
+<td>⚠️ Action expert 的层数 / hidden_dim / cross-attn 周期</td>
+<td>⚠️ <strong>论文未公开</strong></td>
+<td>推测沿用 π₀.₅ 设计</td>
+</tr>
+<tr>
+<td>⚠️ flow matching 步数 / Beta 采样分布</td>
+<td>⚠️ <strong>论文未公开</strong></td>
+<td>推测沿用 π₀ 系列（10 步 + Beta-shaped）</td>
+</tr>
+<tr>
+<td>⚠️ VLM 是否完全 frozen vs 顶层 finetune</td>
+<td>⚠️ <strong>论文未明确</strong>（"KI"只是说梯度从 action expert 不流回 VLM；VLM 自身用 token-pred loss 是否更新需看 model card）</td>
+<td>model card 未公开</td>
+</tr>
+<tr>
+<td>⚠️ value function 是否 share weights with policy VLM</td>
+<td>⚠️ 论文 Sec. V-C 说"same architecture design, smaller backbone, initialized from Gemma 3"</td>
+<td>独立模型而非共享</td>
+</tr>
+<tr>
+<td>⚠️ pre-train 中"more robot platforms"具体清单</td>
+<td>⚠️ 论文仅文字描述</td>
+<td>未给清单</td>
+</tr>
+</tbody>
+</table></div>
+<hr />
+<h2 id="8-参考资料">8. 参考资料<a class="headerlink" href="04.Pi-Star-0.6_Architecture.html#8-参考资料" title="Permanent link">#</a></h2>
+<ul>
+<li>论文：<a href="https://arxiv.org/abs/2511.14759">arXiv:2511.14759 — π*₀.₆: a VLA That Learns From Experience</a></li>
+<li>官方 blog：<a href="https://pi.website/blog/pistar06">pi.website/blog/pistar06</a></li>
+<li>前作 π₀ / π₀.₅ / π₀-FAST 的架构详解：<a href="01.Pi0_Architecture.html">Pi0_Architecture</a> / <a href="02.Pi0.5_Architecture.html">Pi0.5_Architecture</a> / <a href="03.Pi0-FAST_Architecture.html">Pi0-FAST_Architecture</a></li>
+<li>后续 π₀.₇：<a href="05.Pi0.7_Architecture.html">Pi0.7_Architecture</a>（同期 blog <a href="https://pi.website/pi07">pi.website/pi07</a>）</li>
+<li>相关方法 CFGRL：<a href="https://arxiv.org/abs/2505.23458">Frans et al. 2025, arXiv:2505.23458</a></li>
+<li>KI 训练范式：π₀.₅ 论文 / Knowledge Insulation [73]</li>
+<li>FAST 离散化：<a href="https://arxiv.org/abs/2501.09747">Pertsch et al. 2025</a></li>
+</ul>
+      </div>
+    </main>
+        <aside class="toc">
+            <div class="toc-title">本页目录</div>
+            <ul>
+                <li><a href="04.Pi-Star-0.6_Architecture.html#1-整体定位与论文出处" class="toc-h2">1. 整体定位与论文出处</a></li>
+                <li><a href="04.Pi-Star-0.6_Architecture.html#2-网络架构简短一节" class="toc-h2">2. 网络架构（简短一节）</a></li>
+                <li><a href="04.Pi-Star-0.6_Architecture.html#3-训练范式recap核心" class="toc-h2">3. 训练范式：RECAP（核心）</a></li>
+                <li><a href="04.Pi-Star-0.6_Architecture.html#31-三个子过程" class="toc-h3">3.1 三个子过程</a></li>
+                <li><a href="04.Pi-Star-0.6_Architecture.html#32-value-functiondistributional-time-to-success-reward" class="toc-h3">3.2 Value function：distributional + time-to-success reward</a></li>
+                <li><a href="04.Pi-Star-0.6_Architecture.html#33-policy-训练目标" class="toc-h3">3.3 Policy 训练目标</a></li>
+                <li><a href="04.Pi-Star-0.6_Architecture.html#34-异构数据如何统一" class="toc-h3">3.4 异构数据如何统一</a></li>
+                <li><a href="04.Pi-Star-0.6_Architecture.html#4-数据组成" class="toc-h2">4. 数据组成</a></li>
+                <li><a href="04.Pi-Star-0.6_Architecture.html#41-预训练数据" class="toc-h3">4.1 预训练数据</a></li>
+                <li><a href="04.Pi-Star-0.6_Architecture.html#42-recap-阶段的异构数据" class="toc-h3">4.2 RECAP 阶段的异构数据</a></li>
+                <li><a href="04.Pi-Star-0.6_Architecture.html#43-机器人平台" class="toc-h3">4.3 机器人平台</a></li>
+                <li><a href="04.Pi-Star-0.6_Architecture.html#5-任务与报告结果" class="toc-h2">5. 任务与报告结果</a></li>
+                <li><a href="04.Pi-Star-0.6_Architecture.html#51-评估任务" class="toc-h3">5.1 评估任务</a></li>
+                <li><a href="04.Pi-Star-0.6_Architecture.html#52-主要数字论文-fig-7-8" class="toc-h3">5.2 主要数字（论文 Fig. 7-8）</a></li>
+                <li><a href="04.Pi-Star-0.6_Architecture.html#53-方法对比论文-fig-11" class="toc-h3">5.3 方法对比（论文 Fig. 11）</a></li>
+                <li><a href="04.Pi-Star-0.6_Architecture.html#6-与-pi-系列前作的差异" class="toc-h2">6. 与 Pi 系列前作的差异</a></li>
+                <li><a href="04.Pi-Star-0.6_Architecture.html#7-关键事实点的来源标注" class="toc-h2">7. 关键事实点的来源标注</a></li>
+                <li><a href="04.Pi-Star-0.6_Architecture.html#8-参考资料" class="toc-h2">8. 参考资料</a></li>
+            </ul>
+        </aside>
+
+    <button class="back-to-top" onclick="window.scrollTo({top:0,behavior:'smooth'})">&#8593;</button>
+
+    <script src="assets/vendor/mermaid/mermaid.min.js"></script>
+    <script defer src="assets/vendor/katex/katex.min.js"></script>
+    <script defer src="assets/vendor/katex/auto-render.min.js"
+            onload="renderMathInElement(document.querySelector('.content-inner'), {
+                delimiters: [
+                    { left: '$$', right: '$$', display: true },
+                    { left: '$', right: '$', display: false }
+                ],
+                ignoredTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code', 'option'],
+                ignoredClasses: ['mermaid', 'diagram'],
+                throwOnError: false
+            });"></script>
+    <script>
+        // Mermaid destroys the source text when it renders, so keep a copy in
+        // order to re-render on theme change.
+        document.querySelectorAll('.mermaid').forEach(el => {
+            el.dataset.src = el.textContent;
+        });
+
+        const prefersDark = window.matchMedia('(prefers-color-scheme: dark)');
+        function currentTheme() {
+            const forced = document.documentElement.getAttribute('data-theme');
+            if (forced) return forced;
+            return prefersDark.matches ? 'dark' : 'light';
+        }
+
+        function initMermaid() {
+            mermaid.initialize({
+                startOnLoad: false,
+                theme: currentTheme() === 'dark' ? 'dark' : 'default',
+                flowchart: { useMaxWidth: true, htmlLabels: true },
+                securityLevel: 'loose'
+            });
+        }
+
+        function renderMermaid() {
+            const nodes = document.querySelectorAll('.mermaid');
+            nodes.forEach(el => {
+                el.removeAttribute('data-processed');
+                el.textContent = el.dataset.src;
+            });
+            // mermaid.run rejects on its internal font probe in some browsers;
+            // the diagrams still render, so swallow it rather than surfacing an
+            // unhandled rejection.
+            if (!nodes.length) return;
+            Promise.resolve(mermaid.run({ nodes: nodes }))
+                .catch(() => {})
+                .then(() => nodes.forEach(applyZoom));
+        }
+
+        /* ---------- Diagram zoom ----------
+           Scale is tracked as a factor of the diagram's NATURAL size (its
+           viewBox), so 100% means 1:1 and one font size looks identical in
+           every diagram on the site. Left to itself mermaid's useMaxWidth
+           stretches each svg to the container, which blows a 3-node diagram
+           up to 3.4x and shrinks a wide one to 0.34x — a 10x spread in
+           apparent font size. FIT_MAX caps the auto-fit at 1:1 (never
+           upscale) and FIT_MIN stops wide diagrams from shrinking to
+           unreadable; anything past that overflows and scrolls/pans. */
+        const MIN_Z = 0.3, MAX_Z = 6, STEP = 1.25;
+        const FIT_MIN = 0.55, FIT_MAX = 1;
+        const PAD = 40;               // .mermaid horizontal padding (20px each side)
+        const zoom = new WeakMap();   // .mermaid -> explicit scale; absent = auto-fit
+
+        function naturalSize(svg) {
+            const vb = svg.viewBox && svg.viewBox.baseVal;
+            if (vb && vb.width) return { w: vb.width, h: vb.height };
+            const r = svg.getBoundingClientRect();
+            return { w: r.width, h: r.height };
+        }
+
+        function fitScale(el, nat) {
+            const avail = el.clientWidth - PAD;
+            if (!nat.w || avail <= 0) return 1;
+            return Math.min(FIT_MAX, Math.max(FIT_MIN, avail / nat.w));
+        }
+
+        function scaleOf(el, nat) {
+            const k = zoom.get(el);
+            return k === undefined ? fitScale(el, nat) : k;
+        }
+
+        function applyZoom(el) {
+            const svg = el.querySelector('svg');
+            if (!svg) return;
+            const nat = naturalSize(svg);
+            if (!nat.w) return;
+            const k = scaleOf(el, nat);
+
+            const label = el.closest('.diagram')?.querySelector('.diagram-zoom');
+            if (label) label.textContent = Math.round(k * 100) + '%';
+
+            // Size the svg explicitly instead of leaving it to useMaxWidth,
+            // so the container gets real scrollbars when the diagram overflows.
+            svg.style.maxWidth = 'none';
+            svg.style.width = (nat.w * k) + 'px';
+            svg.style.height = (nat.h * k) + 'px';
+
+            const overflows = nat.w * k > el.clientWidth - PAD + 1;
+            el.classList.toggle('is-zoomed', overflows);
+            if (!overflows) el.scrollLeft = el.scrollTop = 0;
+        }
+
+        function setZoom(el, k, anchor) {
+            const svg = el.querySelector('svg');
+            if (!svg) return;
+            const nat = naturalSize(svg);
+            const prev = scaleOf(el, nat);
+            if (k !== null) k = Math.min(MAX_Z, Math.max(MIN_Z, k));
+            const next = k === null ? fitScale(el, nat) : k;
+            if (next === prev) return;
+            // Keep the point under the cursor (or the viewport centre) put.
+            const ax = anchor ? anchor.x : el.clientWidth / 2;
+            const ay = anchor ? anchor.y : el.clientHeight / 2;
+            const rx = (el.scrollLeft + ax) / prev;
+            const ry = (el.scrollTop + ay) / prev;
+            if (k === null) zoom.delete(el); else zoom.set(el, k);
+            applyZoom(el);
+            el.scrollLeft = rx * next - ax;
+            el.scrollTop = ry * next - ay;
+        }
+
+        function currentScale(el) {
+            const svg = el.querySelector('svg');
+            return svg ? scaleOf(el, naturalSize(svg)) : 1;
+        }
+
+        function setupDiagrams() {
+            document.querySelectorAll('.mermaid').forEach(el => {
+                const wrap = document.createElement('div');
+                wrap.className = 'diagram';
+                el.parentNode.insertBefore(wrap, el);
+                wrap.appendChild(el);
+
+                const tools = document.createElement('div');
+                tools.className = 'diagram-tools';
+                tools.innerHTML =
+                    '<button type="button" data-act="out" title="缩小">&minus;</button>' +
+                    '<span class="diagram-zoom">100%</span>' +
+                    '<button type="button" data-act="in" title="放大">+</button>' +
+                    '<button type="button" data-act="reset" title="适应宽度">&#9633;</button>' +
+                    '<button type="button" data-act="full" title="全屏">&#10530;</button>';
+                wrap.appendChild(tools);
+
+                tools.addEventListener('click', e => {
+                    const act = e.target.closest('button')?.dataset.act;
+                    if (!act) return;
+                    const k = currentScale(el);
+                    if (act === 'in') setZoom(el, k * STEP);
+                    else if (act === 'out') setZoom(el, k / STEP);
+                    else if (act === 'reset') setZoom(el, null);
+                    else if (act === 'full') {
+                        if (document.fullscreenElement === wrap) document.exitFullscreen();
+                        else wrap.requestFullscreen?.();
+                    }
+                });
+
+                // Ctrl/⌘ + wheel zooms; a plain wheel keeps scrolling the page.
+                el.addEventListener('wheel', e => {
+                    if (!e.ctrlKey && !e.metaKey) return;
+                    e.preventDefault();
+                    const r = el.getBoundingClientRect();
+                    setZoom(el, currentScale(el) * (e.deltaY < 0 ? STEP : 1 / STEP),
+                            { x: e.clientX - r.left, y: e.clientY - r.top });
+                }, { passive: false });
+
+                // Drag to pan once zoomed in.
+                let drag = null;
+                el.addEventListener('pointerdown', e => {
+                    // Pan only matters once the diagram actually overflows.
+                    if (e.button !== 0 || !el.classList.contains('is-zoomed')) return;
+                    drag = { x: e.clientX, y: e.clientY, l: el.scrollLeft, t: el.scrollTop };
+                    el.setPointerCapture(e.pointerId);
+                    el.classList.add('is-panning');
+                });
+                el.addEventListener('pointermove', e => {
+                    if (!drag) return;
+                    el.scrollLeft = drag.l - (e.clientX - drag.x);
+                    el.scrollTop = drag.t - (e.clientY - drag.y);
+                });
+                const endDrag = () => { drag = null; el.classList.remove('is-panning'); };
+                el.addEventListener('pointerup', endDrag);
+                el.addEventListener('pointercancel', endDrag);
+
+                // Double click toggles between auto-fit and true 1:1.
+                el.addEventListener('dblclick', () => setZoom(el, zoom.has(el) ? null : 1));
+            });
+        }
+
+        setupDiagrams();
+        initMermaid();
+        renderMermaid();
+
+        const remeasure = () => document.querySelectorAll('.mermaid').forEach(applyZoom);
+        document.addEventListener('fullscreenchange', remeasure);
+        window.addEventListener('resize', remeasure);
+
+        // Theme toggle
+        const toggle = document.getElementById('theme-toggle');
+        toggle.addEventListener('click', () => {
+            const next = currentTheme() === 'dark' ? 'light' : 'dark';
+            document.documentElement.setAttribute('data-theme', next);
+            try { localStorage.setItem('theme', next); } catch (e) {}
+            initMermaid();
+            renderMermaid();
+        });
+
+        // Follow the OS while the user hasn't made an explicit choice
+        prefersDark.addEventListener('change', () => {
+            if (!document.documentElement.getAttribute('data-theme')) {
+                initMermaid();
+                renderMermaid();
+            }
+        });
+
+        // Back to top button
+        const btn = document.querySelector('.back-to-top');
+        window.addEventListener('scroll', () => {
+            btn.classList.toggle('visible', window.scrollY > 300);
+        });
+
+        // Close sidebar on mobile when clicking a link
+        document.querySelectorAll('.sidebar nav a').forEach(a => {
+            a.addEventListener('click', () => {
+                document.querySelector('.sidebar').classList.remove('open');
+            });
+        });
+
+        // Highlight the TOC entry for the heading currently in view
+        const tocLinks = Array.from(document.querySelectorAll('.toc a'));
+        if (tocLinks.length) {
+            const targets = tocLinks
+                .map(a => document.getElementById(decodeURIComponent(a.hash.slice(1))))
+                .filter(Boolean);
+            const setActive = () => {
+                let current = targets[0];
+                for (const t of targets) {
+                    if (t.getBoundingClientRect().top <= 120) current = t;
+                    else break;
+                }
+                tocLinks.forEach(a => a.classList.toggle(
+                    'active',
+                    current && decodeURIComponent(a.hash.slice(1)) === current.id
+                ));
+            };
+            setActive();
+            let queued = false;
+            window.addEventListener('scroll', () => {
+                if (queued) return;
+                queued = true;
+                requestAnimationFrame(() => { setActive(); queued = false; });
+            });
+        }
+    </script>
+</body>
+</html>

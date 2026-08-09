@@ -1,0 +1,1451 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Psi0 (ψ₀) - Robotics Knowledge Base</title>
+    <link rel="icon" href="favicon.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="assets/vendor/katex/katex.min.css">
+    <script>
+        // Applied before first paint so the saved theme doesn't flash.
+        (function () {
+            try {
+                var t = localStorage.getItem('theme');
+                if (t === 'dark' || t === 'light') {
+                    document.documentElement.setAttribute('data-theme', t);
+                }
+            } catch (e) {}
+        })();
+    </script>
+</head>
+<body>
+    <button class="menu-toggle" onclick="document.querySelector('.sidebar').classList.toggle('open')">&#9776;</button>
+    <button class="theme-toggle" id="theme-toggle" title="切换日夜模式" aria-label="切换日夜模式">
+        <span class="icon-light">&#9790;</span><span class="icon-dark">&#9728;</span>
+    </button>
+
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <h2>Robotics Knowledge Base</h2>
+            <p>机器人模型架构知识库</p>
+        </div>
+        <nav>
+            <a href="index.html">Overview</a>
+            <div class="nav-group">VLA 模型</div>
+            <a href="01.Pi0_Architecture.html">Pi0</a>
+            <a href="02.Pi0.5_Architecture.html">Pi0.5</a>
+            <a href="03.Pi0-FAST_Architecture.html">Pi0-FAST</a>
+            <a href="04.Pi-Star-0.6_Architecture.html">π*₀.₆ (Pi-Star-0.6)</a>
+            <a href="05.Pi0.7_Architecture.html">π₀.₇ (Pi-0.7)</a>
+            <a href="06.Isaac-GR00T-N1.6_Architecture.html">Isaac-GR00T N1.6</a>
+            <a href="07.Isaac-GR00T-N1.5_Architecture.html">Isaac-GR00T N1.5</a>
+            <a href="08.ACT_Architecture.html">ACT</a>
+            <a href="09.SmolVLA_Architecture.html">SmolVLA</a>
+            <a href="10.WALL-OSS_Architecture.html">WALL-OSS / WALL-X</a>
+            <a href="11.X-VLA_Architecture.html">X-VLA</a>
+            <a href="12.Psi0_Architecture.html" class="active">Psi0 (ψ₀)</a>
+            <a href="13.DreamZero_Architecture.html">DreamZero</a>
+            <a href="14.FastWAM_Architecture.html">Fast-WAM</a>
+            <div class="nav-group">全身控制 (WBC)</div>
+            <a href="15.GR00T-WBC_Overview.html">GR00T-WBC 总览</a>
+            <a href="16.Decoupled-WBC_Architecture.html" class="nav-child">Decoupled WBC</a>
+            <a href="17.GEAR-SONIC_Architecture.html" class="nav-child">GEAR-SONIC</a>
+            <a href="18.MotionBricks_Architecture.html" class="nav-child">MotionBricks</a>
+            <div class="nav-group">3D 视觉与 VLM</div>
+            <a href="19.VLM3_Architecture.html">VLM³</a>
+        </nav>
+    </aside>
+
+    <main class="content">
+      <div class="content-inner">
+        <h1 id="ψ0-psi-0-模型架构">Ψ₀ (Psi-0) 模型架构<a class="headerlink" href="12.Psi0_Architecture.html#ψ0-psi-0-模型架构" title="Permanent link">#</a></h1>
+<h2 id="1-整体架构概览">1. 整体架构概览<a class="headerlink" href="12.Psi0_Architecture.html#1-整体架构概览" title="Permanent link">#</a></h2>
+<p>Ψ₀ 是 USC PSI Lab 面向<strong>人形机器人全身 loco-manipulation</strong> 的开源基础模型(RSS 2026,arXiv:2603.12263,CVPR 2026 第二届 3D-LLM/VLA Workshop 最佳论文)。它的核心主张不是某个新模块,而是一条<strong>数据配方</strong>:<em>"scaling the right data in the right way"</em> —— 先用大规模<strong>人类第一视角视频</strong>(EgoDex)让 VLM 学会任务语义和视觉表征,再用少量<strong>真机遥操作数据</strong>让动作专家学会本体动力学。声称 80 条轨迹即可微调出新的长程灵巧技能。</p>
+<p>架构上是一个明确的<strong>三层系统</strong>分工:</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>层</th>
+<th>名称</th>
+<th>组件</th>
+<th>参数量</th>
+<th>训练方式</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>System-2</td>
+<td>视觉语言主干</td>
+<td>Qwen3-VL-2B-Instruct</td>
+<td>~2B</td>
+<td>FAST 离散 token 自回归预训练</td>
+</tr>
+<tr>
+<td>System-1</td>
+<td>动作专家</td>
+<td>Flow-matching MMDiT(SD3 风格)</td>
+<td>~500M</td>
+<td>Flow matching 后训练 / 微调</td>
+</tr>
+<tr>
+<td>System-0</td>
+<td>底层控制器</td>
+<td>SONIC(GR00T-WholeBodyControl)RL 跟踪控制器</td>
+<td>—</td>
+<td>外部预训练,不参与 VLA 训练</td>
+</tr>
+</tbody>
+</table></div>
+<div class="mermaid">
+graph TB
+    subgraph Sys2["System-2:视觉语言主干(推理时冻结)"]
+        IMG["多视角图像&lt;br/&gt;PIL Image list"]
+        TXT["语言指令"]
+        QWEN["Qwen3-VL-2B-Instruct&lt;br/&gt;取最后一层 hidden_states[-1]&lt;br/&gt;(B, L, 2048)"]
+        IMG --&gt; QWEN
+        TXT --&gt; QWEN
+    end
+
+    subgraph Sys1["System-1:动作专家 MMDiT (~500M)"]
+        OBSP["ObservationProjection&lt;br/&gt;views_proj: Linear(2048→1536)&lt;br/&gt;+ proprio token: Linear(odim→1536)&lt;br/&gt;+ 正弦位置编码"]
+        AIN["ActionProjectionIn&lt;br/&gt;Linear→GELU→Linear(Da→1536)&lt;br/&gt;+ 可学习 dec_pos"]
+        BLK["6 × VLATransformerBlock&lt;br/&gt;双流 joint attention&lt;br/&gt;24 heads × 64 = 1536"]
+        AOUT["ActionProjectionOut&lt;br/&gt;adaLN(temb) → Linear(1536→Da)"]
+        OBSP --&gt; BLK
+        AIN --&gt; BLK
+        BLK --&gt; AOUT
+    end
+
+    subgraph Sys0["System-0:全身控制器"]
+        SONIC["SONIC RL 跟踪控制器&lt;br/&gt;(Unitree G1)"]
+    end
+
+    STATE["本体状态 states&lt;br/&gt;(B, 1, odim)"]
+    NOISE["噪声动作 x_t&lt;br/&gt;(B, Tp, Da)"]
+    T["timestep&lt;br/&gt;(B,) 或 (B, Tp) ← RTC"]
+
+    QWEN --&gt;|"views (B,1,L,2048)"| OBSP
+    STATE --&gt; OBSP
+    NOISE --&gt; AIN
+    T --&gt; BLK
+    AOUT --&gt;|"速度场 v → 欧拉积分"| CHUNK["action chunk&lt;br/&gt;(Tp, Da)"]
+    CHUNK --&gt; SONIC
+
+    style QWEN fill:#e1f5ff
+    style BLK fill:#fff4e1
+    style CHUNK fill:#e8f5e9
+</div>
+<p>关键点:VLM 与动作专家的接口<strong>只有一根线</strong> —— VLM 最后一层的 hidden states 被当成"视觉 token 序列"(代码里叫 <code>views</code>)喂给动作专家(<code>psi0.py:1625-1632</code>)。既不做 pooling,也不额外抽 vision tower 特征,更没有中间层 Q-Former(默认路径下)。这让 System-2 和 System-1 可以完全解耦地分阶段训练。</p>
+<hr />
+<h2 id="2-核心组件详解">2. 核心组件详解<a class="headerlink" href="12.Psi0_Architecture.html#2-核心组件详解" title="Permanent link">#</a></h2>
+<h3 id="21-system-2qwen3-vl-2b-instruct-主干">2.1 System-2:Qwen3-VL-2B-Instruct 主干<a class="headerlink" href="12.Psi0_Architecture.html#21-system-2qwen3-vl-2b-instruct-主干" title="Permanent link">#</a></h3>
+<p><code>Psi0Model.__init__</code>(<code>src/psi/models/psi0.py:1482</code>)直接持有一个 <code>Qwen3VLForConditionalGeneration</code>。推理时把图像和指令拼成标准 chat 消息,过 <code>AutoProcessor</code>:</p>
+<div class="highlight"><pre><span></span><code><span class="n">content</span> <span class="o">=</span> <span class="p">[{</span><span class="s2">&quot;type&quot;</span><span class="p">:</span> <span class="s2">&quot;image&quot;</span><span class="p">,</span> <span class="s2">&quot;image&quot;</span><span class="p">:</span> <span class="n">img</span><span class="p">}</span> <span class="k">for</span> <span class="n">img</span> <span class="ow">in</span> <span class="n">observation</span><span class="p">]</span>
+<span class="n">content</span><span class="o">.</span><span class="n">append</span><span class="p">({</span><span class="s2">&quot;type&quot;</span><span class="p">:</span> <span class="s2">&quot;text&quot;</span><span class="p">,</span> <span class="s2">&quot;text&quot;</span><span class="p">:</span> <span class="n">instruction</span><span class="p">})</span>
+<span class="n">messages</span><span class="o">.</span><span class="n">append</span><span class="p">([{</span><span class="s2">&quot;role&quot;</span><span class="p">:</span> <span class="s2">&quot;user&quot;</span><span class="p">,</span> <span class="s2">&quot;content&quot;</span><span class="p">:</span> <span class="n">content</span><span class="p">}])</span>
+<span class="n">texts</span> <span class="o">=</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">vlm_processor</span><span class="o">.</span><span class="n">apply_chat_template</span><span class="p">(</span><span class="n">m</span><span class="p">,</span> <span class="n">tokenize</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">add_generation_prompt</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span> <span class="k">for</span> <span class="n">m</span> <span class="ow">in</span> <span class="n">messages</span><span class="p">]</span>
+<span class="n">image_inputs</span><span class="p">,</span> <span class="n">video_inputs</span> <span class="o">=</span> <span class="n">process_vision_info</span><span class="p">(</span><span class="n">messages</span><span class="p">,</span> <span class="n">image_patch_size</span><span class="o">=</span><span class="mi">16</span><span class="p">)</span>
+</code></pre></div>
+
+<p>然后<strong>只取最后一层</strong>隐状态:</p>
+<div class="highlight"><pre><span></span><code><span class="n">vlm_hidden_states</span> <span class="o">=</span> <span class="n">output</span><span class="o">.</span><span class="n">hidden_states</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>        <span class="c1"># (B, L, 2048)</span>
+<span class="n">vlm_hidden_states</span> <span class="o">=</span> <span class="n">vlm_hidden_states</span><span class="o">.</span><span class="n">unsqueeze</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>  <span class="c1"># (B, 1, L, 2048) → 作为 &quot;views&quot;</span>
+</code></pre></div>
+
+<p>注意 <code>view_feature_dim</code> 在所有 Ψ₀ 训练脚本里都写成 <strong>2048</strong>,正是 Qwen3-VL-2B 的 <code>text_config.hidden_size</code>。默认值 1920 是给外部 ResNet 特征用的历史遗留。</p>
+<p>后训练与微调阶段 VLM <strong>全程冻结</strong>(<code>posttrain.py:126-128</code>):</p>
+<div class="highlight"><pre><span></span><code><span class="k">assert</span> <span class="bp">self</span><span class="o">.</span><span class="n">model_cfg</span><span class="o">.</span><span class="n">tune_vlm</span> <span class="o">==</span> <span class="kc">False</span>
+<span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">vlm_model</span><span class="o">.</span><span class="n">parameters</span><span class="p">():</span>
+    <span class="n">p</span><span class="o">.</span><span class="n">requires_grad</span> <span class="o">=</span> <span class="kc">False</span>
+</code></pre></div>
+
+<p><code>from_pretrained</code>(<code>psi0.py:1518</code>)加载 checkpoint 时也很直接:按 <code>vlm_model.</code> / <code>action_header.</code> 前缀把 safetensors 劈成两半分别 load,并用 <code>embed_tokens.weight</code> 补上 tied 的 <code>lm_head.weight</code>。因为 FAST 预训练扩过词表,这里会按需 <code>resize_token_embeddings(..., pad_to_multiple_of=192)</code>。</p>
+<h3 id="22-system-1vlatransformerblocksd3-风格-mmdit">2.2 System-1:VLATransformerBlock(SD3 风格 MMDiT)<a class="headerlink" href="12.Psi0_Architecture.html#22-system-1vlatransformerblocksd3-风格-mmdit" title="Permanent link">#</a></h3>
+<p><code>VLATransformerBlock</code>(<code>psi0.py:814</code>)是整个动作专家的骨架,结构与 Stable Diffusion 3 的 <code>JointTransformerBlock</code> 同构,但把 SD3 的"图像流 / 文本流"换成了 <strong>动作流 A / 观测流 O</strong>:</p>
+<div class="mermaid">
+sequenceDiagram
+    participant A as 动作流 (B, Tp, 1536)
+    participant O as 观测流 (B, S, 1536)
+    participant J as JointVLAAttnProcessor
+    Note over A,O: 每层 (共 6 层) 重复
+    A-&gt;&gt;A: norm1_act = AdaLayerNormZero(temb)&lt;br/&gt;→ shift/scale/gate ×2
+    O-&gt;&gt;O: norm1_obs = AdaLayerNormZero(temb)&lt;br/&gt;(最后一层改用 AdaLayerNormContinuous)
+    A-&gt;&gt;J: q_a, k_a, v_a
+    O-&gt;&gt;J: q_o, k_o, v_o  (added_kv_proj)
+    J-&gt;&gt;J: concat(dim=2) → 单次 SDPA → 按 residual.shape[1] 切回
+    J-&gt;&gt;A: gate_msa_act ⊙ out → +残差 → norm2_act → ff_act
+    J-&gt;&gt;O: gate_msa_obs ⊙ out → +残差 → norm2_obs → ff_obs
+    Note over O: 最后一层 context_pre_only=True&lt;br/&gt;观测流被丢弃(obs_hidden_states = None)
+</div>
+<p><code>JointVLAAttnProcessor</code>(<code>psi0.py:308</code>)的核心就三行:</p>
+<div class="highlight"><pre><span></span><code><span class="n">query</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">cat</span><span class="p">([</span><span class="n">query</span><span class="p">,</span> <span class="n">encoder_hidden_states_query_proj</span><span class="p">],</span> <span class="n">dim</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+<span class="n">key</span>   <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">cat</span><span class="p">([</span><span class="n">key</span><span class="p">,</span>   <span class="n">encoder_hidden_states_key_proj</span><span class="p">],</span>   <span class="n">dim</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+<span class="n">value</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">cat</span><span class="p">([</span><span class="n">value</span><span class="p">,</span> <span class="n">encoder_hidden_states_value_proj</span><span class="p">],</span> <span class="n">dim</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+<span class="n">hidden_states</span> <span class="o">=</span> <span class="n">F</span><span class="o">.</span><span class="n">scaled_dot_product_attention</span><span class="p">(</span><span class="n">query</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span><span class="p">,</span> <span class="n">is_causal</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">attn_mask</span><span class="o">=</span><span class="n">attn_mask</span><span class="p">)</span>
+<span class="n">hidden_states</span><span class="p">,</span> <span class="n">encoder_hidden_states</span> <span class="o">=</span> <span class="n">hidden_states</span><span class="p">[:,</span> <span class="p">:</span><span class="n">residual</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]],</span> <span class="n">hidden_states</span><span class="p">[:,</span> <span class="n">residual</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]:]</span>
+</code></pre></div>
+
+<p>即<strong>两条流各有独立的 q/k/v 投影和独立的 FFN,但共享同一次 attention</strong>。这与 π₀ 系列的"动作专家 cross-attend 到 VLM KV"不同 —— 这里观测流也会被动作流反过来更新,是真正的双向融合。<code>attn_mask</code> 由 VLM 的 <code>attention_mask</code> 扩展而来(padding token 被屏蔽),在 <code>tokenize_obs</code> 里追加 proprio token 时同步补 1(<code>psi0.py:683</code>)。</p>
+<p>层数与维度:<code>action_num_blocks=6</code>,<code>action_hidden_dim=1536</code>,<code>action_nheads=24</code>,<code>attention_head_dim=64</code>(24 × 64 = 1536,严格整除)。</p>
+<h3 id="23-观测投影observationprojection">2.3 观测投影:ObservationProjection<a class="headerlink" href="12.Psi0_Architecture.html#23-观测投影observationprojection" title="Permanent link">#</a></h3>
+<p><code>psi0.py:423</code>。默认配置(<code>n_conditions=0</code>、<code>token_fusion="concat"</code>、<code>use_film=False</code>)下路径其实很短:</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>步骤</th>
+<th>操作</th>
+<th>形状</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td><code>views_proj = Linear(2048 → 1536)</code></td>
+<td>(B, 1, L, 2048) → (B, 1, L, 1536)</td>
+</tr>
+<tr>
+<td>2</td>
+<td>reshape 展平视角维</td>
+<td>→ (B, L, 1536)</td>
+</tr>
+<tr>
+<td>3</td>
+<td><code>_obs_proc = Dropout(0.2) → Linear(odim → 1536)</code>,拼成 1 个额外 token</td>
+<td>→ (B, L+1, 1536)</td>
+</tr>
+<tr>
+<td>4</td>
+<td><code>enc_pos</code> 正弦位置编码相加</td>
+<td>(B, L+1, 1536)</td>
+</tr>
+</tbody>
+</table></div>
+<p><code>_obs_strat = "add_token"</code> 是硬编码的(<code>psi0.py:589</code>)—— 本体状态永远作为<strong>一个独立 token 拼在观测序列末尾</strong>,而不是逐 token 广播拼接。</p>
+<p>代码里还留着三条未启用的分支,值得知道它们存在但默认不走:<code>n_conditions &gt; 0</code> 时会用 ResNet-18 编码 2D 轨迹条件图(<code>traj2ds</code>),<code>token_fusion</code> 可选 <code>cross</code>(轨迹 token cross-attend 视觉)或 <code>perceiver</code>(256 个 latent query 分别聚合视觉/轨迹),<code>use_film</code> 会插一层 FiLM 调制。所有 Ψ₀ 训练脚本都设 <code>--model.n_conditions=0 --model.no-use_film</code>。</p>
+<h3 id="24-动作投影与时间条件">2.4 动作投影与时间条件<a class="headerlink" href="12.Psi0_Architecture.html#24-动作投影与时间条件" title="Permanent link">#</a></h3>
+<p><strong>入口</strong> <code>ActionProjectionIn</code>(<code>psi0.py:746</code>):</p>
+<div class="highlight"><pre><span></span><code><span class="bp">self</span><span class="o">.</span><span class="n">ac_proj</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Sequential</span><span class="p">(</span><span class="n">nn</span><span class="o">.</span><span class="n">Linear</span><span class="p">(</span><span class="n">action_dim</span><span class="p">,</span> <span class="n">action_dim</span><span class="p">),</span> <span class="n">nn</span><span class="o">.</span><span class="n">GELU</span><span class="p">(</span><span class="s2">&quot;tanh&quot;</span><span class="p">),</span> <span class="n">nn</span><span class="o">.</span><span class="n">Linear</span><span class="p">(</span><span class="n">action_dim</span><span class="p">,</span> <span class="n">output_dim</span><span class="p">))</span>
+<span class="bp">self</span><span class="o">.</span><span class="n">dec_pos</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Parameter</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">empty</span><span class="p">(</span><span class="n">action_pred_horizon</span><span class="p">,</span> <span class="n">output_dim</span><span class="p">))</span>  <span class="c1"># xavier_uniform 初始化</span>
+<span class="o">...</span>
+<span class="n">action_hidden_states</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ac_proj</span><span class="p">(</span><span class="n">noise_acs</span><span class="p">)</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">dec_pos</span><span class="o">.</span><span class="n">unsqueeze</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+</code></pre></div>
+
+<p>动作位置编码是<strong>可学习</strong>的(不是正弦),而观测侧是固定正弦 —— 一个小但明确的不对称设计。</p>
+<p><strong>出口</strong> <code>ActionProjectionOut</code>(<code>psi0.py:784</code>)是 DiT 的 final layer,用 temb 做 adaLN 调制后线性投到 <code>action_dim</code>。注意实现里写的是 <code>x = x * scale + shift</code>(没有先过 <code>norm_final</code>,代码注释 <code># TODO be careful!</code> 保留在原地)。</p>
+<p><strong>时间嵌入</strong> <code>_TimeNetwork(time_dim=256, out_dim=1536)</code>(<code>psi0.py:60</code>)是经典的对数频率正弦嵌入 + 两层 MLP。它有一处专门为 RTC 做的改造:</p>
+<div class="highlight"><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">):</span>
+    <span class="c1"># RTC: support 2D timesteps (B,Tp)</span>
+    <span class="n">x</span> <span class="o">=</span> <span class="n">x</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="kc">None</span><span class="p">]</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">w</span>
+    <span class="n">x</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">cat</span><span class="p">((</span><span class="n">torch</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">x</span><span class="p">),</span> <span class="n">torch</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">x</span><span class="p">)),</span> <span class="n">dim</span><span class="o">=-</span><span class="mi">1</span><span class="p">)</span>
+    <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">out_net</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+</code></pre></div>
+
+<p>输入可以是 <code>(B,)</code> 也可以是 <code>(B, Tp)</code>。配套地,<code>AdaLayerNormZero.forward</code>(<code>psi0.py:217</code>)同时接受 <code>(B, D)</code> 和 <code>(B, T, D)</code> 的 emb;<code>VLATransformerBlock</code> 在给观测流做调制时用 <code>temb[:,-1] if len(temb.shape) &gt; 2 else temb</code>(<code>psi0.py:940/947</code>)—— 因为观测流没有"每个动作步的噪声等级"这个概念,只能取最后一个。<strong>这三处改动合起来,就是 RTC 的全部模型侧支持</strong>。</p>
+<h3 id="25-备选动作头ditactiontransformermodel">2.5 备选动作头:DiTActionTransformerModel<a class="headerlink" href="12.Psi0_Architecture.html#25-备选动作头ditactiontransformermodel" title="Permanent link">#</a></h3>
+<p><code>psi0.py:1211</code>,由 <code>--model.use-dit</code> 开启,默认关闭。它把观测 token 先过一个 <strong>Q-Former</strong>(256 个可学习 query + <code>CrossAttentionBlock</code>)压成定长,再送进一个标准 <strong>DiT</strong>(depth 24,16 heads,<code>learn_sigma=False</code>):</p>
+<div class="highlight"><pre><span></span><code><span class="n">query</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">query_tokens</span><span class="o">.</span><span class="n">unsqueeze</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">expand</span><span class="p">(</span><span class="n">B</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>   <span class="c1"># (B, 256, D)</span>
+<span class="n">queried</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">cross_attention</span><span class="p">(</span><span class="n">query</span><span class="p">,</span> <span class="n">condition_tokens</span><span class="p">)</span>     <span class="c1"># (B, 256, D)</span>
+<span class="n">action_output</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">DiT</span><span class="p">(</span><span class="n">noisy_action</span><span class="p">,</span> <span class="n">timestep</span><span class="p">,</span> <span class="n">queried</span><span class="p">)</span>
+</code></pre></div>
+
+<p>代价是<strong>丢掉了 per-token timestep 能力</strong>(DiT 只接受标量 timestep),所以这条路径与 RTC 不兼容。</p>
+<hr />
+<h2 id="3-三阶段训练流水线">3. 三阶段训练流水线<a class="headerlink" href="12.Psi0_Architecture.html#3-三阶段训练流水线" title="Permanent link">#</a></h2>
+<div class="mermaid">
+graph LR
+    subgraph S1["阶段 1:预训练 VLM"]
+        D1["EgoDex 人类第一视角&lt;br/&gt;48-DoF, 200K steps"]
+        D2["Humanoid-Everyday&lt;br/&gt;30K steps"]
+        FAST["FAST tokenizer&lt;br/&gt;2048 bins"]
+        LM["Qwen3-VL 全量微调&lt;br/&gt;next-token prediction"]
+        D1 --&gt; FAST --&gt; LM
+        D2 --&gt; FAST
+    end
+    subgraph S2["阶段 2:后训练动作专家"]
+        FREEZE["冻结 VLM"]
+        FM["Flow matching&lt;br/&gt;chunk=16, Da=36"]
+        FREEZE --&gt; FM
+    end
+    subgraph S3["阶段 3:任务微调"]
+        FT["真机 G1 / SIMPLE&lt;br/&gt;chunk=30, RTC on"]
+    end
+    LM --&gt;|"pre.fast.…ego200k.he30k"| FREEZE
+    FM --&gt;|"postpre.…pad36.…he30k"| FT
+</div>
+<h3 id="31-阶段-1fast-离散动作预训练pretraintrainer">3.1 阶段 1:FAST 离散动作预训练(<code>PretrainTrainer</code>)<a class="headerlink" href="12.Psi0_Architecture.html#31-阶段-1fast-离散动作预训练pretraintrainer" title="Permanent link">#</a></h3>
+<p><code>src/psi/trainers/pretrain.py</code>。这一阶段<strong>没有扩散、没有动作专家</strong> —— 动作被 <code>FastActionTokenizer</code>(DCT + BPE,<code>physical-intelligence/fast</code> 系)离散成 2048 个 bin,追加到 Qwen 的词表里,然后当作普通语言 token 做<strong>自回归下一 token 预测</strong>:</p>
+<div class="highlight"><pre><span></span><code><span class="bp">self</span><span class="o">.</span><span class="n">vlm</span><span class="o">.</span><span class="n">resize_token_embeddings</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">tokenizer</span><span class="p">)</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">model_cfg</span><span class="o">.</span><span class="n">action_tokenizer</span><span class="o">.</span><span class="n">bins</span><span class="p">,</span> <span class="o">...</span><span class="p">)</span>
+<span class="o">...</span>
+<span class="n">loss</span> <span class="o">=</span> <span class="n">output</span><span class="o">.</span><span class="n">loss</span>    <span class="c1"># 标准 CE</span>
+</code></pre></div>
+
+<p>监控指标 <code>action_l1_loss</code> 会把预测 token 解码回连续动作再算 L1(<code>pretrain.py:224-254</code>),只用于观察,不回传。</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>项</th>
+<th>EgoDex 预训练</th>
+<th>HE 预训练</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>脚本</td>
+<td><code>pretrain-egodex-psi0-fast.sh</code></td>
+<td><code>pretrain-he-psi0-fast.sh</code></td>
+</tr>
+<tr>
+<td>并行</td>
+<td>DeepSpeed <strong>ZeRO-3</strong></td>
+<td>同</td>
+</tr>
+<tr>
+<td>batch / GPU</td>
+<td>16</td>
+<td>16</td>
+</tr>
+<tr>
+<td>lr</td>
+<td>1e-4,constant,warmup 0</td>
+<td>同</td>
+</tr>
+<tr>
+<td><code>tune_mm_llm/vision/mlp</code></td>
+<td>全部 True</td>
+<td>同</td>
+</tr>
+<tr>
+<td><code>mm_projector_lr</code> / <code>vision_tower_lr</code></td>
+<td>1e-5 / 1e-5</td>
+<td>同</td>
+</tr>
+<tr>
+<td><code>chunk_size</code></td>
+<td>1</td>
+<td>—</td>
+</tr>
+<tr>
+<td><code>upsample_rate</code></td>
+<td>3</td>
+<td>—</td>
+</tr>
+<tr>
+<td>归一化</td>
+<td><code>bounds_q99</code> + delta actions</td>
+<td>同</td>
+</tr>
+<tr>
+<td>图像 resize</td>
+<td>270 × 480</td>
+<td>—</td>
+</tr>
+<tr>
+<td>FAST checkpoint</td>
+<td><code>src/fast/egodex-rel-50w-1x48-v2048-s100</code></td>
+<td>同</td>
+</tr>
+</tbody>
+</table></div>
+<p>发布的主干 checkpoint 是二者串联的结果:<code>psi0/pre.fast.1by1.2601091803.ckpt.ego200k.he30k</code>。</p>
+<h3 id="32-阶段-2flow-matching-后训练动作专家posttraintrainer">3.2 阶段 2:Flow Matching 后训练动作专家(<code>PostTrainTrainer</code>)<a class="headerlink" href="12.Psi0_Architecture.html#32-阶段-2flow-matching-后训练动作专家posttraintrainer" title="Permanent link">#</a></h3>
+<p><code>src/psi/trainers/posttrain.py:525</code>。VLM 冻结,只训 ~500M 的动作头。用的是标准 rectified flow:</p>
+<div class="highlight"><pre><span></span><code><span class="n">sigmas</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">rand</span><span class="p">((</span><span class="n">bsz</span><span class="p">,),</span> <span class="n">device</span><span class="o">=...</span><span class="p">)</span>                       <span class="c1"># σ ~ U(0,1)</span>
+<span class="n">timesteps</span> <span class="o">=</span> <span class="n">sigmas</span> <span class="o">*</span> <span class="mi">1000</span>
+<span class="n">noisy_actions</span> <span class="o">=</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">σ</span><span class="p">)</span> <span class="o">*</span> <span class="n">actions</span> <span class="o">+</span> <span class="n">σ</span> <span class="o">*</span> <span class="n">noise</span>
+<span class="n">target_action</span> <span class="o">=</span> <span class="n">noise</span> <span class="o">-</span> <span class="n">actions</span>                                <span class="c1"># 速度场</span>
+<span class="n">loss_action</span> <span class="o">=</span> <span class="n">F</span><span class="o">.</span><span class="n">mse_loss</span><span class="p">(</span><span class="n">pred</span><span class="p">,</span> <span class="n">target</span><span class="p">,</span> <span class="n">reduction</span><span class="o">=</span><span class="s2">&quot;none&quot;</span><span class="p">)</span>
+<span class="n">loss_action</span> <span class="o">=</span> <span class="p">(</span><span class="n">loss_action</span> <span class="o">*</span> <span class="n">actions_mask</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>              <span class="c1"># 沿 horizon 求和(不是平均)</span>
+<span class="n">loss_action</span> <span class="o">=</span> <span class="p">(</span><span class="n">loss_action</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">loss_w</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>        <span class="c1"># 按维度加权</span>
+</code></pre></div>
+
+<p>两个细节值得注意:</p>
+<p><strong>沿 horizon <code>sum(1)</code> 而非 <code>mean(1)</code>。</strong> 代码注释写明理由:<em>"to keep gradient consistent when training with different action chunks"</em> —— 这样从 chunk=16 换到 chunk=30 时,单步梯度尺度不会因分母变化而漂移。</p>
+<p><strong>逐维度损失权重 <code>loss_w</code>。</strong> 默认 <code>[0.1, 0.2, 0.1]</code> 对应 xyz / rpy / gripper,展开后强制校验 <code>sum == 1.0</code>(<code>posttrain.py:64</code>)。当 <code>action_dim != 7</code> 时退化为均匀的 <code>1/Da</code>。</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>项</th>
+<th>值(<code>posttrain-he-psi0.sh</code>)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>数据</td>
+<td>Humanoid-Everyday(<code>HE_RAW</code>)</td>
+</tr>
+<tr>
+<td><code>action_chunk_size</code> / <code>action_dim</code> / <code>odim</code></td>
+<td>16 / 36 / 36</td>
+</tr>
+<tr>
+<td>pad</td>
+<td><code>pad-action-dim=36</code>, <code>pad-state-dim=36</code></td>
+</tr>
+<tr>
+<td>归一化</td>
+<td><code>bounds_q99</code>,delta actions,<strong>状态不归一化</strong></td>
+</tr>
+<tr>
+<td>batch / GPU × 累积</td>
+<td>64 × 1</td>
+</tr>
+<tr>
+<td>lr / 调度</td>
+<td>1e-4 / constant + 1000 warmup</td>
+</tr>
+<tr>
+<td>并行</td>
+<td>DDP + bf16</td>
+</tr>
+<tr>
+<td>图像</td>
+<td>resize 240×320 → center crop 240×320,无增广</td>
+</tr>
+<tr>
+<td><code>noise_scheduler</code></td>
+<td><code>FlowMatchEulerDiscreteScheduler</code>(1000 步)</td>
+</tr>
+</tbody>
+</table></div>
+<p>优化器按前缀分组(<code>posttrain.py:134</code>):<code>action_header.*</code> 用 <code>train.learning_rate</code>,<code>vlm_model.*</code> 用 <code>lang_backbone_lr=1e-5</code>(冻结时该组为空)。</p>
+<h3 id="33-阶段-3任务微调-rtc-训练finetunetrainer-sonictrainer">3.3 阶段 3:任务微调 + RTC 训练(<code>FinetuneTrainer</code> / <code>SonicTrainer</code>)<a class="headerlink" href="12.Psi0_Architecture.html#33-阶段-3任务微调-rtc-训练finetunetrainer-sonictrainer" title="Permanent link">#</a></h3>
+<p><code>src/psi/trainers/finetune.py:539</code>。这一阶段打开 <code>--model.rtc --model.max-delay=8</code>,损失函数多出一段:</p>
+<div class="highlight"><pre><span></span><code><span class="n">delay</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">randint</span><span class="p">(</span><span class="n">low</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">high</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">model_cfg</span><span class="o">.</span><span class="n">max_delay</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="p">(</span><span class="n">bsz</span><span class="p">,))</span>
+<span class="n">prefix_mask</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">Tp</span><span class="p">)[</span><span class="kc">None</span><span class="p">,</span> <span class="p">:]</span> <span class="o">&lt;</span> <span class="n">delay</span><span class="p">[:,</span> <span class="kc">None</span><span class="p">]</span>        <span class="c1"># (B, Tp)</span>
+<span class="n">sigmas</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">prefix_mask</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="n">sigmas</span><span class="p">[:,</span> <span class="kc">None</span><span class="p">])</span>         <span class="c1"># 前 delay 个动作步噪声等级归零</span>
+<span class="n">timesteps</span> <span class="o">=</span> <span class="n">sigmas</span> <span class="o">*</span> <span class="mi">1000</span>                                        <span class="c1"># → (B, Tp) 逐 token timestep</span>
+<span class="o">...</span>
+<span class="n">mask</span> <span class="o">=</span> <span class="n">mask</span> <span class="o">*</span> <span class="p">(</span><span class="o">~</span><span class="n">prefix_mask</span><span class="p">)[:,</span> <span class="p">:,</span> <span class="kc">None</span><span class="p">]</span><span class="o">.</span><span class="n">float</span><span class="p">()</span>                <span class="c1"># prefix 不计入 loss</span>
+</code></pre></div>
+
+<p>含义:每个训练样本随机抽一个延迟 <code>d ∈ [0, max_delay)</code>,把 chunk 的<strong>前 d 步当作已知的干净动作</strong>(σ=0),其余步正常加噪,并且<strong>只在后半段算 loss</strong>。模型因此学会"给定任意长度的干净前缀,补全剩下的动作"。这正是推理时 RTC 需要的能力 —— 上一块动作还在执行,新一块必须与之无缝衔接。</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>项</th>
+<th>真机 G1(<code>finetune-real-psi0.sh</code>)</th>
+<th>SONIC(<code>finetune-real-sonic-psi0.sh</code>)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>action_chunk_size</code></td>
+<td>30</td>
+<td>30</td>
+</tr>
+<tr>
+<td><code>action_dim</code></td>
+<td>36</td>
+<td><strong>78</strong></td>
+</tr>
+<tr>
+<td><code>odim</code></td>
+<td>36</td>
+<td><strong>43</strong></td>
+</tr>
+<tr>
+<td><code>action_exec_horizon</code></td>
+<td>30</td>
+<td>30</td>
+</tr>
+<tr>
+<td><code>rtc</code> / <code>max_delay</code></td>
+<td>on / 8</td>
+<td>on / 8</td>
+</tr>
+<tr>
+<td>batch / GPU</td>
+<td>—</td>
+<td>16 × 8 GPU</td>
+</tr>
+<tr>
+<td>lr / 调度</td>
+<td>1e-4</td>
+<td>1e-4 / cosine,warmup 1000</td>
+</tr>
+<tr>
+<td><code>max_training_steps</code></td>
+<td>—</td>
+<td>40000</td>
+</tr>
+<tr>
+<td>归一化</td>
+<td><code>bounds</code>,状态归一化</td>
+<td>同</td>
+</tr>
+<tr>
+<td>图像增广</td>
+<td>开启</td>
+<td>开启</td>
+</tr>
+<tr>
+<td>起点</td>
+<td>VLM <code>pre.fast.…ego200k.he30k</code> + 动作头 <code>postpre.…he30k</code></td>
+<td>同</td>
+</tr>
+</tbody>
+</table></div>
+<p>全局 batch size 在所有真机与仿真实验里统一为 <strong>128</strong>(device bs × GPU 数 × 梯度累积)。</p>
+<hr />
+<h2 id="4-推理流水线">4. 推理流水线<a class="headerlink" href="12.Psi0_Architecture.html#4-推理流水线" title="Permanent link">#</a></h2>
+<h3 id="41-基础路径predict_action">4.1 基础路径:<code>predict_action</code><a class="headerlink" href="12.Psi0_Architecture.html#41-基础路径predict_action" title="Permanent link">#</a></h3>
+<p><code>psi0.py:1650</code>。一次 VLM 前向 + N 步动作去噪(<code>eval_diffusion_steps</code> 默认 10):</p>
+<div class="highlight"><pre><span></span><code><span class="n">action_samples</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="n">bsz</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">action_horizon</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">action_dim</span><span class="p">)</span>
+<span class="bp">self</span><span class="o">.</span><span class="n">noise_scheduler</span><span class="o">.</span><span class="n">set_timesteps</span><span class="p">(</span><span class="n">num_inference_steps</span><span class="p">)</span>
+<span class="k">for</span> <span class="n">timestep</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">noise_scheduler</span><span class="o">.</span><span class="n">timesteps</span><span class="p">:</span>
+    <span class="n">model_pred</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">action_header</span><span class="p">(</span><span class="n">timestep</span><span class="o">=</span><span class="n">timestep</span><span class="o">.</span><span class="n">expand</span><span class="p">(</span><span class="n">bsz</span><span class="p">),</span> <span class="n">joint_attention_kwargs</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span>
+        <span class="n">action_hidden_embeds</span><span class="o">=</span><span class="n">action_samples</span><span class="p">,</span> <span class="n">views</span><span class="o">=</span><span class="n">vlm_hidden_states</span><span class="p">,</span> <span class="n">obs</span><span class="o">=</span><span class="n">states</span><span class="p">,</span> <span class="n">traj2ds</span><span class="o">=</span><span class="n">traj2ds</span><span class="p">))</span>
+    <span class="n">action_samples</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">noise_scheduler</span><span class="o">.</span><span class="n">step</span><span class="p">(</span><span class="n">model_pred</span><span class="p">,</span> <span class="n">timestep</span><span class="p">,</span> <span class="n">action_samples</span><span class="p">)</span><span class="o">.</span><span class="n">prev_sample</span>
+</code></pre></div>
+
+<p>VLM 只跑一次,循环里只有动作头 —— 6 层 × 1536 维,推理开销可以忽略。</p>
+<h3 id="42-rtc四个变体">4.2 RTC:四个变体<a class="headerlink" href="12.Psi0_Architecture.html#42-rtc四个变体" title="Permanent link">#</a></h3>
+<p>Real-Time Chunking 要解决的是<strong>推理延迟导致的动作断裂</strong>:上一 chunk 已经执行了 d 步,新 chunk 必须在前 d 步与旧的对齐。仓库里实现了四条路线:</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>方法</th>
+<th>行号</th>
+<th>机制</th>
+<th>需要 RTC 训练?</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>predict_action</code></td>
+<td>1650</td>
+<td>无 RTC,直接换 chunk</td>
+<td>否</td>
+</tr>
+<tr>
+<td><code>predict_action_with_training_rtc_flow</code></td>
+<td>1744</td>
+<td><strong>逐 token timestep + 硬替换前缀</strong>,与训练完全一致</td>
+<td><strong>是</strong></td>
+</tr>
+<tr>
+<td><code>predict_action_with_rtc_flow</code></td>
+<td>1870</td>
+<td>伪逆引导(RTC 论文 Eq.5 软掩码)</td>
+<td>否</td>
+</tr>
+<tr>
+<td><code>predict_action_with_rtc_flow_naive_inpaint</code></td>
+<td>2052</td>
+<td>朴素 inpainting 基线</td>
+<td>否</td>
+</tr>
+<tr>
+<td><code>predict_action_with_rtc_flow_based_gradient</code></td>
+<td>2197</td>
+<td>梯度引导变体</td>
+<td>否</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>训练一致的 RTC</strong>(部署实际使用的路径,<code>psi0.py:1770-1846</code>):</p>
+<div class="highlight"><pre><span></span><code><span class="n">prefix_mask</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">H</span><span class="p">)[</span><span class="kc">None</span><span class="p">,</span> <span class="p">:]</span> <span class="o">&lt;</span> <span class="n">d</span>
+<span class="k">for</span> <span class="n">timestep</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">noise_scheduler</span><span class="o">.</span><span class="n">timesteps</span><span class="p">:</span>
+    <span class="n">batched_timestep_masked</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">prefix_mask</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">timestep</span><span class="p">)</span>          <span class="c1"># 前缀 timestep 恒为 0</span>
+    <span class="n">action_samples</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">prefix_mask</span><span class="p">[:,</span> <span class="p">:,</span> <span class="kc">None</span><span class="p">],</span> <span class="n">prev_actions</span><span class="p">,</span> <span class="n">action_samples</span><span class="p">)</span>  <span class="c1"># 前缀替换为真实旧动作</span>
+    <span class="n">model_pred</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">action_header</span><span class="p">(</span><span class="n">timestep</span><span class="o">=</span><span class="n">batched_timestep_masked</span><span class="p">,</span> <span class="o">...</span><span class="p">)</span>
+    <span class="n">action_samples</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">noise_scheduler</span><span class="o">.</span><span class="n">step</span><span class="p">(</span><span class="n">model_pred</span><span class="p">,</span> <span class="n">timestep</span><span class="p">,</span> <span class="n">action_samples</span><span class="p">)</span><span class="o">.</span><span class="n">prev_sample</span>
+</code></pre></div>
+
+<p>因为训练时见过完全相同的分布,这里不需要任何引导项 —— 直接钉住前缀即可。</p>
+<p><strong>伪逆引导 RTC</strong>(<code>psi0.py:1978-2043</code>)则是训练无关的方案,把"前缀要贴近 <code>prev_actions</code>"写成一个引导项加到速度场上:</p>
+<div class="highlight"><pre><span></span><code><span class="n">pred_x0</span> <span class="o">=</span> <span class="n">x_t</span> <span class="o">-</span> <span class="n">τ</span> <span class="o">*</span> <span class="n">v</span>                                   <span class="c1"># 外推干净动作</span>
+<span class="n">error</span> <span class="o">=</span> <span class="p">(</span><span class="n">prev_actions</span> <span class="o">-</span> <span class="n">pred_x0</span><span class="o">.</span><span class="n">detach</span><span class="p">())</span> <span class="o">*</span> <span class="n">W</span>           <span class="c1"># W 为软掩码</span>
+<span class="n">pinv_correction</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">autograd</span><span class="o">.</span><span class="n">grad</span><span class="p">(</span><span class="n">pred_x0</span><span class="p">,</span> <span class="n">x_t</span><span class="p">,</span> <span class="n">grad_outputs</span><span class="o">=</span><span class="n">error</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>   <span class="c1"># VJP</span>
+<span class="n">inv_r2</span> <span class="o">=</span> <span class="p">(</span><span class="n">τ</span><span class="o">**</span><span class="mi">2</span> <span class="o">+</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">τ</span><span class="p">)</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span> <span class="o">/</span> <span class="n">τ</span><span class="o">**</span><span class="mi">2</span>
+<span class="n">c</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">nan_to_num</span><span class="p">(</span><span class="n">τ</span> <span class="o">/</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">τ</span><span class="p">),</span> <span class="n">posinf</span><span class="o">=</span><span class="n">guidance_weight</span><span class="p">)</span>
+<span class="n">g</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">clamp</span><span class="p">(</span><span class="n">c</span> <span class="o">*</span> <span class="n">inv_r2</span><span class="p">,</span> <span class="nb">max</span><span class="o">=</span><span class="n">guidance_weight</span><span class="p">)</span>        <span class="c1"># guidance_weight 默认 5.0</span>
+<span class="n">v</span> <span class="o">=</span> <span class="n">v</span> <span class="o">-</span> <span class="n">g</span> <span class="o">*</span> <span class="n">pinv_correction</span>
+</code></pre></div>
+
+<p>软掩码 <code>W</code> 由 <code>_create_soft_mask</code>(<code>psi0.py:2377</code>)按 RTC 论文 Eq.5 生成,三段式:</p>
+<p>$$
+W_i = \begin{cases}
+1 &amp; i &lt; d \quad\text{(冻结区,已执行)}\\[2pt]
+c_i \cdot \dfrac{e^{c_i}-1}{e-1},\ \ c_i = \dfrac{H-s-i}{H-s-d+1} &amp; d \le i &lt; H-s \quad\text{(过渡区)}\\[2pt]
+0 &amp; i \ge H-s \quad\text{(自由区)}
+\end{cases}
+$$</p>
+<p>可选 <code>exponential</code>(默认)/ <code>linear</code> / <code>hard</code> / <code>simple</code> 四种调度。约束 <code>d ≤ s ≤ H - d</code> 在入口处强校验(<code>psi0.py:1897</code>)。</p>
+<h3 id="43-部署约束">4.3 部署约束<a class="headerlink" href="12.Psi0_Architecture.html#43-部署约束" title="Permanent link">#</a></h3>
+<p><code>src/psi/deploy/psi0_serve_real_sonic.py:72-81</code>:</p>
+<div class="highlight"><pre><span></span><code><span class="bp">self</span><span class="o">.</span><span class="n">Ta</span> <span class="o">=</span> <span class="n">action_exec_horizon</span> <span class="ow">or</span> <span class="n">launch_config</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">action_exec_horizon</span>
+<span class="k">assert</span> <span class="bp">self</span><span class="o">.</span><span class="n">Ta</span> <span class="o">&lt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">Tp</span><span class="p">,</span> <span class="s2">&quot;action_exec_horizon is too big&quot;</span>
+<span class="k">if</span> <span class="n">enable_rtc</span><span class="p">:</span>
+    <span class="k">assert</span> <span class="n">launch_config</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">rtc</span><span class="p">,</span> <span class="s2">&quot;rtc is not supported for this model&quot;</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">rtc_max_delay</span> <span class="o">=</span> <span class="n">launch_config</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">max_delay</span>
+    <span class="k">assert</span> <span class="bp">self</span><span class="o">.</span><span class="n">Tp</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">Ta</span> <span class="o">&lt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">rtc_max_delay</span>
+</code></pre></div>
+
+<p>即推理延迟被定义为 <code>d = Tp - Ta</code>(预测长度减执行长度),必须落在训练时见过的 <code>[0, max_delay)</code> 区间内。服务端把上一次预测的剩余部分拼成 <code>prev_actions</code> 传给模型,形成滚动衔接。</p>
+<p>服务与客户端脚本:</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>场景</th>
+<th>服务端</th>
+<th>机器人端</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>真机 G1(RTC)</td>
+<td><code>scripts/deploy/serve_psi0-rtc.sh</code></td>
+<td><code>real/scripts/deploy_psi0-rtc.sh</code></td>
+</tr>
+<tr>
+<td>G1 + SONIC(RTC)</td>
+<td><code>scripts/deploy/serve_psi0-rtc-sonic.sh</code></td>
+<td><code>real/scripts/deploy_psi0-sonic-rtc-robot.sh</code> + <code>..-client.sh</code></td>
+</tr>
+<tr>
+<td>SIMPLE 仿真</td>
+<td><code>serve_psi0 --rtc --action-exec-horizon=24</code></td>
+<td><code>src/simple/cli/eval_decoupled_wbc.py</code> 或 <code>eval.py</code></td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="44-system-0sonic-全身控制器">4.4 System-0:SONIC 全身控制器<a class="headerlink" href="12.Psi0_Architecture.html#44-system-0sonic-全身控制器" title="Permanent link">#</a></h3>
+<p>Ψ₀ 输出的是<strong>全身动作指令</strong>,下肢部分由 <a href="https://github.com/NVlabs/GR00T-WholeBodyControl">SONIC</a>(NVlabs GR00T-WholeBodyControl)的 RL 跟踪控制器执行。接入 SONIC 后动作维度从 36 涨到 <strong>78</strong>、状态维度从 36 到 <strong>43</strong>,数据经 <code>scripts/data/raw_sonic_to_psi_lerobot.py</code> 转成 Ψ₀ 的 LeRobot 格式,训练走 <code>SonicTrainer</code>(<code>src/psi/trainers/sonic.py</code>)。SONIC 侧细节见 <a href="15.GR00T-WBC_Overview.html">GR00T-WholeBodyControl 总览</a>。</p>
+<p>SIMPLE 仿真评测按数据来源分两个入口:遥操作采的任务(<code>*Teleop</code>)用 <code>eval_decoupled_wbc.py</code> + <code>psi0_decoupled_wbc</code> agent,CuRobo 运动规划生成的任务(<code>*MP</code>)用 <code>eval.py</code> + <code>psi0</code> agent。</p>
+<hr />
+<h2 id="5-关键超参数表">5. 关键超参数表<a class="headerlink" href="12.Psi0_Architecture.html#5-关键超参数表" title="Permanent link">#</a></h2>
+<h3 id="模型结构psi0modelconfigsrcpsiconfigmodel_psi0py">模型结构(<code>Psi0ModelConfig</code>,<code>src/psi/config/model_psi0.py</code>)<a class="headerlink" href="12.Psi0_Architecture.html#模型结构psi0modelconfigsrcpsiconfigmodel_psi0py" title="Permanent link">#</a></h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>项</th>
+<th>默认值</th>
+<th>训练脚本实际值</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>model_name_or_path</code></td>
+<td><code>Qwen/Qwen3-VL-2B-Instruct</code></td>
+<td>预训练产出的 checkpoint 目录</td>
+</tr>
+<tr>
+<td><code>hidden_dim</code>(动作专家)</td>
+<td>1536</td>
+<td>1536</td>
+</tr>
+<tr>
+<td><code>num_blocks</code></td>
+<td>6</td>
+<td>6</td>
+</tr>
+<tr>
+<td><code>nhead</code></td>
+<td>24</td>
+<td>24(head_dim = 64)</td>
+</tr>
+<tr>
+<td><code>dim_feedforward</code></td>
+<td>2048</td>
+<td>—</td>
+</tr>
+<tr>
+<td><code>time_dim</code></td>
+<td>256</td>
+<td>256</td>
+</tr>
+<tr>
+<td><code>view_feature_dim</code></td>
+<td>1920</td>
+<td><strong>2048</strong>(Qwen3-VL-2B 隐维)</td>
+</tr>
+<tr>
+<td><code>action_dim</code></td>
+<td>7</td>
+<td>36(G1)/ 78(SONIC)/ 48(EgoDex)</td>
+</tr>
+<tr>
+<td><code>action_chunk_size</code></td>
+<td>6</td>
+<td>16(后训练)/ 30(微调)</td>
+</tr>
+<tr>
+<td><code>action_exec_horizon</code></td>
+<td>6</td>
+<td>16 / 30 / 24(SIMPLE 服务)</td>
+</tr>
+<tr>
+<td><code>observation_horizon</code></td>
+<td>1</td>
+<td>1</td>
+</tr>
+<tr>
+<td><code>odim</code></td>
+<td>15</td>
+<td>36(G1)/ 43(SONIC)</td>
+</tr>
+<tr>
+<td><code>n_conditions</code></td>
+<td>1</td>
+<td><strong>0</strong></td>
+</tr>
+<tr>
+<td><code>token_fusion</code></td>
+<td><code>concat</code></td>
+<td><code>concat</code></td>
+</tr>
+<tr>
+<td><code>use_film</code> / <code>combined_temb</code> / <code>use_dit</code></td>
+<td>False</td>
+<td>False</td>
+</tr>
+<tr>
+<td><code>tune_vlm</code></td>
+<td>False</td>
+<td>False(强制)</td>
+</tr>
+<tr>
+<td><code>loss_w</code></td>
+<td><code>[0.1, 0.2, 0.1]</code></td>
+<td>同(Da≠7 时退化为均匀)</td>
+</tr>
+<tr>
+<td><code>dropout</code></td>
+<td>0.1</td>
+<td>—</td>
+</tr>
+<tr>
+<td><code>model_max_length</code></td>
+<td>4096</td>
+<td>—</td>
+</tr>
+<tr>
+<td><code>max_pixels</code> / <code>min_pixels</code></td>
+<td>576·28² / 16·28²</td>
+<td>—</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="flow-matching">Flow Matching<a class="headerlink" href="12.Psi0_Architecture.html#flow-matching" title="Permanent link">#</a></h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>项</th>
+<th>值</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>调度器</td>
+<td><code>FlowMatchEulerDiscreteScheduler</code>(diffusers)</td>
+</tr>
+<tr>
+<td><code>train_diffusion_steps</code></td>
+<td>1000(与 SD3 预训练对齐,注释标注 MUST)</td>
+</tr>
+<tr>
+<td><code>eval_diffusion_steps</code></td>
+<td>10</td>
+</tr>
+<tr>
+<td>σ 采样</td>
+<td><code>U(0, 1)</code></td>
+</tr>
+<tr>
+<td>加噪</td>
+<td><code>x_t = (1-σ)·a + σ·ε</code></td>
+</tr>
+<tr>
+<td>目标</td>
+<td><code>v = ε - a</code></td>
+</tr>
+<tr>
+<td>损失</td>
+<td>逐维加权 MSE,horizon 维求和、batch 维平均</td>
+</tr>
+<tr>
+<td>备选调度器</td>
+<td><code>DDIMScheduler</code>(<code>noise_scheduler=ddpm</code>,ε-prediction,<code>squaredcos_cap_v2</code>)</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="rtc">RTC<a class="headerlink" href="12.Psi0_Architecture.html#rtc" title="Permanent link">#</a></h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>项</th>
+<th>值</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>rtc</code></td>
+<td>微调阶段 True</td>
+</tr>
+<tr>
+<td><code>max_delay</code></td>
+<td>8</td>
+</tr>
+<tr>
+<td>训练时延迟采样</td>
+<td><code>d ~ Uniform{0, …, max_delay-1}</code></td>
+</tr>
+<tr>
+<td>推理延迟</td>
+<td><code>d = Tp - Ta</code></td>
+</tr>
+<tr>
+<td>约束</td>
+<td><code>d ≤ s ≤ H - d</code>(伪逆引导路径)</td>
+</tr>
+<tr>
+<td><code>guidance_weight</code></td>
+<td>5.0</td>
+</tr>
+<tr>
+<td><code>mask_schedule</code></td>
+<td><code>exponential</code></td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="学习率与优化">学习率与优化<a class="headerlink" href="12.Psi0_Architecture.html#学习率与优化" title="Permanent link">#</a></h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>项</th>
+<th>预训练</th>
+<th>后训练</th>
+<th>微调(SONIC)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>优化器</td>
+<td>AdamW</td>
+<td>AdamW</td>
+<td>AdamW</td>
+</tr>
+<tr>
+<td>并行</td>
+<td>DeepSpeed ZeRO-3</td>
+<td>DDP</td>
+<td>DDP</td>
+</tr>
+<tr>
+<td>精度</td>
+<td>bf16</td>
+<td>bf16</td>
+<td>bf16</td>
+</tr>
+<tr>
+<td>lr</td>
+<td>1e-4</td>
+<td>1e-4</td>
+<td>1e-4</td>
+</tr>
+<tr>
+<td>调度</td>
+<td>constant</td>
+<td>constant</td>
+<td>cosine</td>
+</tr>
+<tr>
+<td>warmup</td>
+<td>0</td>
+<td>1000</td>
+<td>1000</td>
+</tr>
+<tr>
+<td>betas</td>
+<td>(0.9, 0.999)</td>
+<td>(0.9, 0.999)</td>
+<td>(0.95, 0.999)</td>
+</tr>
+<tr>
+<td>weight_decay</td>
+<td>0.0</td>
+<td>0.0</td>
+<td>1e-6</td>
+</tr>
+<tr>
+<td><code>max_grad_norm</code></td>
+<td>1.0</td>
+<td>1.0</td>
+<td>1.0</td>
+</tr>
+<tr>
+<td>batch / GPU</td>
+<td>16</td>
+<td>64</td>
+<td>16</td>
+</tr>
+</tbody>
+</table></div>
+<hr />
+<h2 id="6-关键源文件表">6. 关键源文件表<a class="headerlink" href="12.Psi0_Architecture.html#6-关键源文件表" title="Permanent link">#</a></h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>文件</th>
+<th>作用</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>src/psi/models/psi0.py</code></td>
+<td>全部模型定义:<code>Psi0Model</code>、<code>ActionTransformerModel</code>、<code>VLATransformerBlock</code>、<code>JointVLAAttnProcessor</code>、5 个 <code>predict_action*</code> 推理路径、<code>_create_soft_mask</code></td>
+</tr>
+<tr>
+<td><code>src/psi/config/model_psi0.py</code></td>
+<td><code>Psi0ModelConfig</code> 全部超参</td>
+</tr>
+<tr>
+<td><code>src/psi/config/config.py</code></td>
+<td><code>LaunchConfig</code> / <code>TrainConfig</code> 顶层配置</td>
+</tr>
+<tr>
+<td><code>src/psi/config/train/*.py</code></td>
+<td>9 个训练入口配置(pretrain / posttrain / finetune × egodex / he / mix / real / simple)</td>
+</tr>
+<tr>
+<td><code>src/psi/trainers/pretrain.py</code></td>
+<td>阶段 1:FAST 离散 token 自回归预训练</td>
+</tr>
+<tr>
+<td><code>src/psi/trainers/posttrain.py</code></td>
+<td>阶段 2:动作专家 flow matching 后训练</td>
+</tr>
+<tr>
+<td><code>src/psi/trainers/finetune.py</code></td>
+<td>阶段 3:任务微调 + RTC 训练损失</td>
+</tr>
+<tr>
+<td><code>src/psi/trainers/sonic.py</code></td>
+<td>SONIC 全身控制器版本的微调 trainer</td>
+</tr>
+<tr>
+<td><code>src/psi/trainers/qwen3vl_mixin.py</code></td>
+<td>Qwen3-VL 数据整理与 collate</td>
+</tr>
+<tr>
+<td><code>src/psi/tokenizer/fast_action_tokenizer.py</code></td>
+<td>FAST 动作 tokenizer 封装</td>
+</tr>
+<tr>
+<td><code>src/psi/deploy/psi0_serve_real_sonic.py</code></td>
+<td>SONIC 真机策略服务(RTC 约束校验在此)</td>
+</tr>
+<tr>
+<td><code>src/psi/deploy/psi0_serve_simple.py</code></td>
+<td>SIMPLE 仿真策略服务</td>
+</tr>
+<tr>
+<td><code>src/psi/data/egodex/egodex_dataset.py</code></td>
+<td>EgoDex 人类视频数据集</td>
+</tr>
+<tr>
+<td><code>src/psi/data/humanoid/he_raw_dataset.py</code></td>
+<td>Humanoid-Everyday 数据集</td>
+</tr>
+<tr>
+<td><code>src/psi/data/lerobot/lerobot_ext.py</code></td>
+<td>LeRobot 数据集扩展</td>
+</tr>
+<tr>
+<td><code>scripts/train/psi0/*.sh</code></td>
+<td>9 个训练启动脚本(超参的真实来源)</td>
+</tr>
+<tr>
+<td><code>scripts/data/raw_to_lerobot.py</code> / <code>raw_sonic_to_psi_lerobot.py</code></td>
+<td>原始遥操作数据 → LeRobot 格式</td>
+</tr>
+<tr>
+<td><code>scripts/save_pretrain_qwen3vl_backbone.py</code> / <code>save_posttrain_action_expert.py</code></td>
+<td>阶段间 checkpoint 导出</td>
+</tr>
+</tbody>
+</table></div>
+<hr />
+<h2 id="7-数据与评测">7. 数据与评测<a class="headerlink" href="12.Psi0_Architecture.html#7-数据与评测" title="Permanent link">#</a></h2>
+<h3 id="数据集">数据集<a class="headerlink" href="12.Psi0_Architecture.html#数据集" title="Permanent link">#</a></h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>数据集</th>
+<th>用途</th>
+<th>规模 / 配置</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="https://github.com/apple/ml-egodex">EgoDex</a></td>
+<td>阶段 1 预训练</td>
+<td>人类第一视角,48-DoF 动作,200K steps,<code>upsample_rate=3</code></td>
+</tr>
+<tr>
+<td><a href="https://huggingface.co/datasets/USC-GVL/humanoid-everyday">Humanoid-Everyday</a></td>
+<td>阶段 1 + 阶段 2</td>
+<td>30K steps 预训练 + 全量后训练</td>
+</tr>
+<tr>
+<td>真机 G1 遥操作</td>
+<td>阶段 3</td>
+<td><strong>9 个任务全部开源</strong>(<code>USC-PSI-Lab/psi-data</code>)</td>
+</tr>
+<tr>
+<td>SIMPLE 仿真</td>
+<td>阶段 3 + 评测</td>
+<td>6 个全身 loco-manipulation 任务</td>
+</tr>
+</tbody>
+</table></div>
+<p>EgoDex 的动作预处理复用了 H-RDT 的流程(<code>src/h_rdt/datasets/pretrain/</code>)。</p>
+<h3 id="评测环境simple">评测环境:SIMPLE<a class="headerlink" href="12.Psi0_Architecture.html#评测环境simple" title="Permanent link">#</a></h3>
+<p><a href="https://github.com/physical-superintelligence-lab/SIMPLE">SIMPLE</a> 是本项目配套的人形基准仿真器,<strong>MuJoCo 负责物理、Isaac Sim 负责渲染</strong>。提供 <code>level-0/1/2</code> 三档域随机化。因为 IsaacSim 用同步渲染 API,单个 episode 评测需要 6~10 分钟。</p>
+<h3 id="仓库内基线">仓库内基线<a class="headerlink" href="12.Psi0_Architecture.html#仓库内基线" title="Permanent link">#</a></h3>
+<p>Ψ₀ 仓库把 8 个对比方法都收进来共享同一套 <code>src/</code>(通过 <code>uv</code> 分组管理独立虚拟环境):</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>基线</th>
+<th>位置</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>GR00T N1.6</td>
+<td><code>baselines/gr00t-n1.6/</code>,详见 <a href="06.Isaac-GR00T-N1.6_Architecture.html">Isaac GR00T N1.6 架构</a></td>
+</tr>
+<tr>
+<td>OpenPI π₀.₅</td>
+<td><code>baselines/pi05/</code>,详见 <a href="02.Pi0.5_Architecture.html">π₀.₅ 架构</a></td>
+</tr>
+<tr>
+<td>DreamZero</td>
+<td><code>baselines/dreamzero/</code>,详见 <a href="13.DreamZero_Architecture.html">DreamZero 架构</a></td>
+</tr>
+<tr>
+<td>InternVLA-M1</td>
+<td><code>src/InternVLA-M1/</code></td>
+</tr>
+<tr>
+<td>H-RDT</td>
+<td><code>src/h_rdt/</code></td>
+</tr>
+<tr>
+<td>EgoVLA</td>
+<td><code>real/deploy/egovla_inference.py</code></td>
+</tr>
+<tr>
+<td>Diffusion Policy</td>
+<td><code>baselines/dp/</code></td>
+</tr>
+<tr>
+<td>ACT</td>
+<td><code>baselines/act/</code>,详见 <a href="08.ACT_Architecture.html">ACT 架构</a></td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="发布的-checkpoint">发布的 Checkpoint<a class="headerlink" href="12.Psi0_Architecture.html#发布的-checkpoint" title="Permanent link">#</a></h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Checkpoint</th>
+<th>说明</th>
+<th>远程目录</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Ψ₀ VLM(主)</td>
+<td>EgoDex 200K + HE 30K</td>
+<td><code>psi0/pre.fast.1by1.2601091803.ckpt.ego200k.he30k</code></td>
+</tr>
+<tr>
+<td>Ψ₀ 动作专家(主)</td>
+<td>在 HE 上后训练</td>
+<td><code>psi0/postpre.1by1.pad36.2601131206.ckpt.he30k</code></td>
+</tr>
+<tr>
+<td>Ψ₀ VLM(消融)</td>
+<td>仅 EgoDex 200K</td>
+<td><code>psi0/pre.fast.egodex.2512241941.ckpt200k</code></td>
+</tr>
+<tr>
+<td>Ψ₀ VLM(消融)</td>
+<td>仅 HE 48K</td>
+<td><code>psi0/pre.abl.only.he.2512311516.48k</code></td>
+</tr>
+<tr>
+<td>Ψ₀ VLM(消融)</td>
+<td>仅 10% EgoDex</td>
+<td><code>psi0/pre.abl.ego.10per.2602021632.46k</code></td>
+</tr>
+</tbody>
+</table></div>
+<p>消融组的命名本身就说明了论文的核心实验:<strong>拆开验证"人类视频预训练"这一步到底贡献了多少</strong>。</p>
+<hr />
+<h2 id="8-与其他-vla-的对照">8. 与其他 VLA 的对照<a class="headerlink" href="12.Psi0_Architecture.html#8-与其他-vla-的对照" title="Permanent link">#</a></h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>维度</th>
+<th>Ψ₀</th>
+<th>π₀.₅</th>
+<th>GR00T N1.6</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>VLM 主干</td>
+<td>Qwen3-VL-2B-Instruct</td>
+<td>PaliGemma-3B</td>
+<td>Eagle 2.5 / Cosmos-Reason</td>
+</tr>
+<tr>
+<td>动作专家结构</td>
+<td>SD3 风格 MMDiT,<strong>动作/观测双流共享 attention</strong></td>
+<td>混合专家,动作专家 cross-attend VLM KV</td>
+<td>DiT + Flow matching</td>
+</tr>
+<tr>
+<td>VLM 与专家的接口</td>
+<td>最后一层 hidden states 当视觉 token</td>
+<td>逐层 KV</td>
+<td>逐层特征</td>
+</tr>
+<tr>
+<td>预训练动作表示</td>
+<td><strong>FAST 离散 token</strong>(自回归)</td>
+<td>FAST(π₀-FAST)/ 连续</td>
+<td>连续</td>
+</tr>
+<tr>
+<td>后训练动作表示</td>
+<td>Flow matching 连续</td>
+<td>Flow matching 连续</td>
+<td>Flow matching 连续</td>
+</tr>
+<tr>
+<td>跨形态</td>
+<td>单一形态(G1),靠维度 padding 对齐</td>
+<td>多形态</td>
+<td>多形态 projector</td>
+</tr>
+<tr>
+<td>实时衔接</td>
+<td><strong>RTC 内建到训练</strong>(逐 token timestep)</td>
+<td>RTC 后处理</td>
+<td>—</td>
+</tr>
+<tr>
+<td>下肢控制</td>
+<td>外接 SONIC RL 控制器(System-0)</td>
+<td>—</td>
+<td>内建 WBC</td>
+</tr>
+<tr>
+<td>目标场景</td>
+<td>人形全身 loco-manipulation</td>
+<td>通用桌面操作</td>
+<td>通用人形</td>
+</tr>
+</tbody>
+</table></div>
+<p>Ψ₀ 最有辨识度的两点:一是把 <strong>FAST 离散预训练 + flow matching 后训练</strong>拆成两个完全独立的阶段(而不是像 π₀-FAST 那样二选一),二是把 <strong>RTC 从推理技巧变成训练目标</strong> —— 逐 token timestep 这个改动只有三处几行代码,但让实时衔接从"引导近似"变成了"分布内推理"。</p>
+      </div>
+    </main>
+        <aside class="toc">
+            <div class="toc-title">本页目录</div>
+            <ul>
+                <li><a href="12.Psi0_Architecture.html#1-整体架构概览" class="toc-h2">1. 整体架构概览</a></li>
+                <li><a href="12.Psi0_Architecture.html#2-核心组件详解" class="toc-h2">2. 核心组件详解</a></li>
+                <li><a href="12.Psi0_Architecture.html#21-system-2qwen3-vl-2b-instruct-主干" class="toc-h3">2.1 System-2:Qwen3-VL-2B-Instruct 主干</a></li>
+                <li><a href="12.Psi0_Architecture.html#22-system-1vlatransformerblocksd3-风格-mmdit" class="toc-h3">2.2 System-1:VLATransformerBlock(SD3 风格 MMDiT)</a></li>
+                <li><a href="12.Psi0_Architecture.html#23-观测投影observationprojection" class="toc-h3">2.3 观测投影:ObservationProjection</a></li>
+                <li><a href="12.Psi0_Architecture.html#24-动作投影与时间条件" class="toc-h3">2.4 动作投影与时间条件</a></li>
+                <li><a href="12.Psi0_Architecture.html#25-备选动作头ditactiontransformermodel" class="toc-h3">2.5 备选动作头:DiTActionTransformerModel</a></li>
+                <li><a href="12.Psi0_Architecture.html#3-三阶段训练流水线" class="toc-h2">3. 三阶段训练流水线</a></li>
+                <li><a href="12.Psi0_Architecture.html#31-阶段-1fast-离散动作预训练pretraintrainer" class="toc-h3">3.1 阶段 1:FAST 离散动作预训练(PretrainTrainer)</a></li>
+                <li><a href="12.Psi0_Architecture.html#32-阶段-2flow-matching-后训练动作专家posttraintrainer" class="toc-h3">3.2 阶段 2:Flow Matching 后训练动作专家(PostTrainTrainer)</a></li>
+                <li><a href="12.Psi0_Architecture.html#33-阶段-3任务微调-rtc-训练finetunetrainer-sonictrainer" class="toc-h3">3.3 阶段 3:任务微调 + RTC 训练(FinetuneTrainer / SonicTrainer)</a></li>
+                <li><a href="12.Psi0_Architecture.html#4-推理流水线" class="toc-h2">4. 推理流水线</a></li>
+                <li><a href="12.Psi0_Architecture.html#41-基础路径predict_action" class="toc-h3">4.1 基础路径:predict_action</a></li>
+                <li><a href="12.Psi0_Architecture.html#42-rtc四个变体" class="toc-h3">4.2 RTC:四个变体</a></li>
+                <li><a href="12.Psi0_Architecture.html#43-部署约束" class="toc-h3">4.3 部署约束</a></li>
+                <li><a href="12.Psi0_Architecture.html#44-system-0sonic-全身控制器" class="toc-h3">4.4 System-0:SONIC 全身控制器</a></li>
+                <li><a href="12.Psi0_Architecture.html#5-关键超参数表" class="toc-h2">5. 关键超参数表</a></li>
+                <li><a href="12.Psi0_Architecture.html#模型结构psi0modelconfigsrcpsiconfigmodel_psi0py" class="toc-h3">模型结构(Psi0ModelConfig,src/psi/config/model_psi0.py)</a></li>
+                <li><a href="12.Psi0_Architecture.html#flow-matching" class="toc-h3">Flow Matching</a></li>
+                <li><a href="12.Psi0_Architecture.html#rtc" class="toc-h3">RTC</a></li>
+                <li><a href="12.Psi0_Architecture.html#学习率与优化" class="toc-h3">学习率与优化</a></li>
+                <li><a href="12.Psi0_Architecture.html#6-关键源文件表" class="toc-h2">6. 关键源文件表</a></li>
+                <li><a href="12.Psi0_Architecture.html#7-数据与评测" class="toc-h2">7. 数据与评测</a></li>
+                <li><a href="12.Psi0_Architecture.html#数据集" class="toc-h3">数据集</a></li>
+                <li><a href="12.Psi0_Architecture.html#评测环境simple" class="toc-h3">评测环境:SIMPLE</a></li>
+                <li><a href="12.Psi0_Architecture.html#仓库内基线" class="toc-h3">仓库内基线</a></li>
+                <li><a href="12.Psi0_Architecture.html#发布的-checkpoint" class="toc-h3">发布的 Checkpoint</a></li>
+                <li><a href="12.Psi0_Architecture.html#8-与其他-vla-的对照" class="toc-h2">8. 与其他 VLA 的对照</a></li>
+            </ul>
+        </aside>
+
+    <button class="back-to-top" onclick="window.scrollTo({top:0,behavior:'smooth'})">&#8593;</button>
+
+    <script src="assets/vendor/mermaid/mermaid.min.js"></script>
+    <script defer src="assets/vendor/katex/katex.min.js"></script>
+    <script defer src="assets/vendor/katex/auto-render.min.js"
+            onload="renderMathInElement(document.querySelector('.content-inner'), {
+                delimiters: [
+                    { left: '$$', right: '$$', display: true },
+                    { left: '$', right: '$', display: false }
+                ],
+                ignoredTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code', 'option'],
+                ignoredClasses: ['mermaid', 'diagram'],
+                throwOnError: false
+            });"></script>
+    <script>
+        // Mermaid destroys the source text when it renders, so keep a copy in
+        // order to re-render on theme change.
+        document.querySelectorAll('.mermaid').forEach(el => {
+            el.dataset.src = el.textContent;
+        });
+
+        const prefersDark = window.matchMedia('(prefers-color-scheme: dark)');
+        function currentTheme() {
+            const forced = document.documentElement.getAttribute('data-theme');
+            if (forced) return forced;
+            return prefersDark.matches ? 'dark' : 'light';
+        }
+
+        function initMermaid() {
+            mermaid.initialize({
+                startOnLoad: false,
+                theme: currentTheme() === 'dark' ? 'dark' : 'default',
+                flowchart: { useMaxWidth: true, htmlLabels: true },
+                securityLevel: 'loose'
+            });
+        }
+
+        function renderMermaid() {
+            const nodes = document.querySelectorAll('.mermaid');
+            nodes.forEach(el => {
+                el.removeAttribute('data-processed');
+                el.textContent = el.dataset.src;
+            });
+            // mermaid.run rejects on its internal font probe in some browsers;
+            // the diagrams still render, so swallow it rather than surfacing an
+            // unhandled rejection.
+            if (!nodes.length) return;
+            Promise.resolve(mermaid.run({ nodes: nodes }))
+                .catch(() => {})
+                .then(() => nodes.forEach(applyZoom));
+        }
+
+        /* ---------- Diagram zoom ----------
+           Scale is tracked as a factor of the diagram's NATURAL size (its
+           viewBox), so 100% means 1:1 and one font size looks identical in
+           every diagram on the site. Left to itself mermaid's useMaxWidth
+           stretches each svg to the container, which blows a 3-node diagram
+           up to 3.4x and shrinks a wide one to 0.34x — a 10x spread in
+           apparent font size. FIT_MAX caps the auto-fit at 1:1 (never
+           upscale) and FIT_MIN stops wide diagrams from shrinking to
+           unreadable; anything past that overflows and scrolls/pans. */
+        const MIN_Z = 0.3, MAX_Z = 6, STEP = 1.25;
+        const FIT_MIN = 0.55, FIT_MAX = 1;
+        const PAD = 40;               // .mermaid horizontal padding (20px each side)
+        const zoom = new WeakMap();   // .mermaid -> explicit scale; absent = auto-fit
+
+        function naturalSize(svg) {
+            const vb = svg.viewBox && svg.viewBox.baseVal;
+            if (vb && vb.width) return { w: vb.width, h: vb.height };
+            const r = svg.getBoundingClientRect();
+            return { w: r.width, h: r.height };
+        }
+
+        function fitScale(el, nat) {
+            const avail = el.clientWidth - PAD;
+            if (!nat.w || avail <= 0) return 1;
+            return Math.min(FIT_MAX, Math.max(FIT_MIN, avail / nat.w));
+        }
+
+        function scaleOf(el, nat) {
+            const k = zoom.get(el);
+            return k === undefined ? fitScale(el, nat) : k;
+        }
+
+        function applyZoom(el) {
+            const svg = el.querySelector('svg');
+            if (!svg) return;
+            const nat = naturalSize(svg);
+            if (!nat.w) return;
+            const k = scaleOf(el, nat);
+
+            const label = el.closest('.diagram')?.querySelector('.diagram-zoom');
+            if (label) label.textContent = Math.round(k * 100) + '%';
+
+            // Size the svg explicitly instead of leaving it to useMaxWidth,
+            // so the container gets real scrollbars when the diagram overflows.
+            svg.style.maxWidth = 'none';
+            svg.style.width = (nat.w * k) + 'px';
+            svg.style.height = (nat.h * k) + 'px';
+
+            const overflows = nat.w * k > el.clientWidth - PAD + 1;
+            el.classList.toggle('is-zoomed', overflows);
+            if (!overflows) el.scrollLeft = el.scrollTop = 0;
+        }
+
+        function setZoom(el, k, anchor) {
+            const svg = el.querySelector('svg');
+            if (!svg) return;
+            const nat = naturalSize(svg);
+            const prev = scaleOf(el, nat);
+            if (k !== null) k = Math.min(MAX_Z, Math.max(MIN_Z, k));
+            const next = k === null ? fitScale(el, nat) : k;
+            if (next === prev) return;
+            // Keep the point under the cursor (or the viewport centre) put.
+            const ax = anchor ? anchor.x : el.clientWidth / 2;
+            const ay = anchor ? anchor.y : el.clientHeight / 2;
+            const rx = (el.scrollLeft + ax) / prev;
+            const ry = (el.scrollTop + ay) / prev;
+            if (k === null) zoom.delete(el); else zoom.set(el, k);
+            applyZoom(el);
+            el.scrollLeft = rx * next - ax;
+            el.scrollTop = ry * next - ay;
+        }
+
+        function currentScale(el) {
+            const svg = el.querySelector('svg');
+            return svg ? scaleOf(el, naturalSize(svg)) : 1;
+        }
+
+        function setupDiagrams() {
+            document.querySelectorAll('.mermaid').forEach(el => {
+                const wrap = document.createElement('div');
+                wrap.className = 'diagram';
+                el.parentNode.insertBefore(wrap, el);
+                wrap.appendChild(el);
+
+                const tools = document.createElement('div');
+                tools.className = 'diagram-tools';
+                tools.innerHTML =
+                    '<button type="button" data-act="out" title="缩小">&minus;</button>' +
+                    '<span class="diagram-zoom">100%</span>' +
+                    '<button type="button" data-act="in" title="放大">+</button>' +
+                    '<button type="button" data-act="reset" title="适应宽度">&#9633;</button>' +
+                    '<button type="button" data-act="full" title="全屏">&#10530;</button>';
+                wrap.appendChild(tools);
+
+                tools.addEventListener('click', e => {
+                    const act = e.target.closest('button')?.dataset.act;
+                    if (!act) return;
+                    const k = currentScale(el);
+                    if (act === 'in') setZoom(el, k * STEP);
+                    else if (act === 'out') setZoom(el, k / STEP);
+                    else if (act === 'reset') setZoom(el, null);
+                    else if (act === 'full') {
+                        if (document.fullscreenElement === wrap) document.exitFullscreen();
+                        else wrap.requestFullscreen?.();
+                    }
+                });
+
+                // Ctrl/⌘ + wheel zooms; a plain wheel keeps scrolling the page.
+                el.addEventListener('wheel', e => {
+                    if (!e.ctrlKey && !e.metaKey) return;
+                    e.preventDefault();
+                    const r = el.getBoundingClientRect();
+                    setZoom(el, currentScale(el) * (e.deltaY < 0 ? STEP : 1 / STEP),
+                            { x: e.clientX - r.left, y: e.clientY - r.top });
+                }, { passive: false });
+
+                // Drag to pan once zoomed in.
+                let drag = null;
+                el.addEventListener('pointerdown', e => {
+                    // Pan only matters once the diagram actually overflows.
+                    if (e.button !== 0 || !el.classList.contains('is-zoomed')) return;
+                    drag = { x: e.clientX, y: e.clientY, l: el.scrollLeft, t: el.scrollTop };
+                    el.setPointerCapture(e.pointerId);
+                    el.classList.add('is-panning');
+                });
+                el.addEventListener('pointermove', e => {
+                    if (!drag) return;
+                    el.scrollLeft = drag.l - (e.clientX - drag.x);
+                    el.scrollTop = drag.t - (e.clientY - drag.y);
+                });
+                const endDrag = () => { drag = null; el.classList.remove('is-panning'); };
+                el.addEventListener('pointerup', endDrag);
+                el.addEventListener('pointercancel', endDrag);
+
+                // Double click toggles between auto-fit and true 1:1.
+                el.addEventListener('dblclick', () => setZoom(el, zoom.has(el) ? null : 1));
+            });
+        }
+
+        setupDiagrams();
+        initMermaid();
+        renderMermaid();
+
+        const remeasure = () => document.querySelectorAll('.mermaid').forEach(applyZoom);
+        document.addEventListener('fullscreenchange', remeasure);
+        window.addEventListener('resize', remeasure);
+
+        // Theme toggle
+        const toggle = document.getElementById('theme-toggle');
+        toggle.addEventListener('click', () => {
+            const next = currentTheme() === 'dark' ? 'light' : 'dark';
+            document.documentElement.setAttribute('data-theme', next);
+            try { localStorage.setItem('theme', next); } catch (e) {}
+            initMermaid();
+            renderMermaid();
+        });
+
+        // Follow the OS while the user hasn't made an explicit choice
+        prefersDark.addEventListener('change', () => {
+            if (!document.documentElement.getAttribute('data-theme')) {
+                initMermaid();
+                renderMermaid();
+            }
+        });
+
+        // Back to top button
+        const btn = document.querySelector('.back-to-top');
+        window.addEventListener('scroll', () => {
+            btn.classList.toggle('visible', window.scrollY > 300);
+        });
+
+        // Close sidebar on mobile when clicking a link
+        document.querySelectorAll('.sidebar nav a').forEach(a => {
+            a.addEventListener('click', () => {
+                document.querySelector('.sidebar').classList.remove('open');
+            });
+        });
+
+        // Highlight the TOC entry for the heading currently in view
+        const tocLinks = Array.from(document.querySelectorAll('.toc a'));
+        if (tocLinks.length) {
+            const targets = tocLinks
+                .map(a => document.getElementById(decodeURIComponent(a.hash.slice(1))))
+                .filter(Boolean);
+            const setActive = () => {
+                let current = targets[0];
+                for (const t of targets) {
+                    if (t.getBoundingClientRect().top <= 120) current = t;
+                    else break;
+                }
+                tocLinks.forEach(a => a.classList.toggle(
+                    'active',
+                    current && decodeURIComponent(a.hash.slice(1)) === current.id
+                ));
+            };
+            setActive();
+            let queued = false;
+            window.addEventListener('scroll', () => {
+                if (queued) return;
+                queued = true;
+                requestAnimationFrame(() => { setActive(); queued = false; });
+            });
+        }
+    </script>
+</body>
+</html>

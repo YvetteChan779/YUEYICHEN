@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Overview - Robotics Knowledge Base</title>
+    <link rel="icon" href="favicon.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="assets/vendor/katex/katex.min.css">
+    <script>
+        // Applied before first paint so the saved theme doesn't flash.
+        (function () {
+            try {
+                var t = localStorage.getItem('theme');
+                if (t === 'dark' || t === 'light') {
+                    document.documentElement.setAttribute('data-theme', t);
+                }
+            } catch (e) {}
+        })();
+    </script>
+</head>
+<body>
+    <button class="menu-toggle" onclick="document.querySelector('.sidebar').classList.toggle('open')">&#9776;</button>
+    <button class="theme-toggle" id="theme-toggle" title="切换日夜模式" aria-label="切换日夜模式">
+        <span class="icon-light">&#9790;</span><span class="icon-dark">&#9728;</span>
+    </button>
+
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <h2>Robotics Knowledge Base</h2>
+            <p>机器人模型架构知识库</p>
+        </div>
+        <nav>
+            <a href="index.html" class="active">Overview</a>
+            <div class="nav-group">VLA 模型</div>
+            <a href="01.Pi0_Architecture.html">Pi0</a>
+            <a href="02.Pi0.5_Architecture.html">Pi0.5</a>
+            <a href="03.Pi0-FAST_Architecture.html">Pi0-FAST</a>
+            <a href="04.Pi-Star-0.6_Architecture.html">π*₀.₆ (Pi-Star-0.6)</a>
+            <a href="05.Pi0.7_Architecture.html">π₀.₇ (Pi-0.7)</a>
+            <a href="06.Isaac-GR00T-N1.6_Architecture.html">Isaac-GR00T N1.6</a>
+            <a href="07.Isaac-GR00T-N1.5_Architecture.html">Isaac-GR00T N1.5</a>
+            <a href="08.ACT_Architecture.html">ACT</a>
+            <a href="09.SmolVLA_Architecture.html">SmolVLA</a>
+            <a href="10.WALL-OSS_Architecture.html">WALL-OSS / WALL-X</a>
+            <a href="11.X-VLA_Architecture.html">X-VLA</a>
+            <a href="12.Psi0_Architecture.html">Psi0 (ψ₀)</a>
+            <a href="13.DreamZero_Architecture.html">DreamZero</a>
+            <a href="14.FastWAM_Architecture.html">Fast-WAM</a>
+            <div class="nav-group">全身控制 (WBC)</div>
+            <a href="15.GR00T-WBC_Overview.html">GR00T-WBC 总览</a>
+            <a href="16.Decoupled-WBC_Architecture.html" class="nav-child">Decoupled WBC</a>
+            <a href="17.GEAR-SONIC_Architecture.html" class="nav-child">GEAR-SONIC</a>
+            <a href="18.MotionBricks_Architecture.html" class="nav-child">MotionBricks</a>
+            <div class="nav-group">3D 视觉与 VLM</div>
+            <a href="19.VLM3_Architecture.html">VLM³</a>
+        </nav>
+    </aside>
+
+    <main class="content">
+      <div class="content-inner">
+        <h1>Robotics Knowledge Base</h1>
+        <p>机器人模型架构知识库 —— 按主题分类,共 19 篇文档。</p>
+        <section class="cat">
+            <h2 class="cat-title">VLA 模型<span class="cat-count">14</span></h2>
+            <p class="cat-desc">视觉-语言-动作 (Vision-Language-Action) 模型架构</p>
+            <div class="card-grid">
+            <div class="card">
+                <h3><a href="01.Pi0_Architecture.html">Pi0</a></h3>
+                <p>Pi0 是 Physical Intelligence 提出的视觉-语言-动作 (VLA) 模型，采用 PaliGemma (SigLIP + Gemma 2B) 作为视觉语言主干网络，配合独立的 Gemma 300M Action Expert 进行动作生成。其核心创新在于 双流 Transformer 注意力机制——VLM 前缀序列与动作专家后缀序列共享同一组 Tran...</p>
+            </div>
+            <div class="card">
+                <h3><a href="02.Pi0.5_Architecture.html">Pi0.5</a></h3>
+                <p>Pi0.5 (Physical Intelligence 0.5) 是 Physical Intelligence 推出的视觉-语言-动作 (VLA) 模型，在架构上与 Pi0 几乎完全相同，均采用 PaliGemma 视觉语言模型作为感知主干、Gemma 300M 作为动作专家 (Action Expert)，通过双流 Transformer 实现视觉语言特征与动作特征的联合处理，并使用 Flo...</p>
+            </div>
+            <div class="card">
+                <h3><a href="03.Pi0-FAST_Architecture.html">Pi0-FAST</a></h3>
+                <p>Pi0-FAST (Fast Action Sequence Tokenizer) 是 Physical Intelligence 提出的一种高效视觉-语言-动作 (VLA) 模型。与 Pi0 使用 Flow Matching 扩散生成连续动作不同，Pi0-FAST 将连续动作离散化为 token，然后通过 PaliGemma 视觉语言模型进行 自回归 next-token 预测。...</p>
+            </div>
+            <div class="card">
+                <h3><a href="04.Pi-Star-0.6_Architecture.html">π*₀.₆ (Pi-Star-0.6)</a></h3>
+                <p>π*₀.₆ 是 Physical Intelligence 2025 年 11 月发布的 VLA（arXiv:2511.14759），核心不是新的网络主干，而是一种让 VLA 通过真实世界部署反复改进的训练方法 —— RECAP（RL with Experience and Corrections via Advantage-conditioned P...</p>
+            </div>
+            <div class="card">
+                <h3><a href="05.Pi0.7_Architecture.html">π₀.₇ (Pi-0.7)</a></h3>
+                <p>π₀.₇ 是 Physical Intelligence 2026 年 4 月发布的 VLA（arXiv:2604.15483），定位为 "steerable generalist robotic foundation model"。它最大的卖点不在新主干，而是在 prompt 里塞进了多模态 context conditioning：除了语言指令，还给模型喂 episode me...</p>
+            </div>
+            <div class="card">
+                <h3><a href="06.Isaac-GR00T-N1.6_Architecture.html">Isaac-GR00T N1.6</a></h3>
+                <p>Isaac GR00T N1.6 是 NVIDIA 提出的视觉-语言-动作 (VLA) 通用人形机器人基座模型，3B 参数级。其架构由两部分串联：上游 Eagle Vision-Language Backbone（基于 NVIDIA Cosmos-Reason-2B VLM 变体）将图像 + 语言编码成统一的多模态特征序列；下游 Action Head 使用 32 层 Alte...</p>
+            </div>
+            <div class="card">
+                <h3><a href="07.Isaac-GR00T-N1.5_Architecture.html">Isaac-GR00T N1.5</a></h3>
+                <p>Isaac GR00T N1.5 是 NVIDIA 发布的首个公开 VLA 基座模型（3B 参数）。架构由两段组成：Eagle 2 VLM Backbone（冻结）→ 4 层 transformer adapter → 16 层 DiT + Flow Matching 出动作 chunk。多 embodiment 支持通过 CategorySpecificMLP 实现，最多 3...</p>
+            </div>
+            <div class="card">
+                <h3><a href="08.ACT_Architecture.html">ACT</a></h3>
+                <p>ACT (Action Chunking Transformer) 是一种基于 Transformer 编码器-解码器结构的机器人操作策略模型，出自论文 Learning Fine-Grained Bimanual Manipulation with Low-Cost Hardware (Zhao et al., 2023)。其核心思想是 动作分块 (Action Chunking)：...</p>
+            </div>
+            <div class="card">
+                <h3><a href="09.SmolVLA_Architecture.html">SmolVLA</a></h3>
+                <p>SmolVLA (Small Vision-Language-Action) 是由 Hugging Face 设计的轻量级视觉-语言-动作 (VLA) 模型，采用 SmolVLM2-500M-Video-Instruct 作为视觉语言主干网络，并引入独立的 Action Expert 网络通过交叉注意力机制从 VLM 中提取特征来生成机器人动作。SmolVLA 使用 Flow ...</p>
+            </div>
+            <div class="card">
+                <h3><a href="10.WALL-OSS_Architecture.html">WALL-OSS / WALL-X</a></h3>
+                <p>WALL-OSS (WALL-X) 是一个跨具身的 视觉-语言-动作 (VLA) 模型，以 Qwen2.5-VL + 混合专家 (MoE) 作为视觉语言骨干网络，结合 Flow Matching 动作头 进行机器人连续动作预测。与 GR00T N1.5 等模型不同，WALL-X 采用当前最强的 VLM (Qwen2.5-VL) 作为骨干，通过 3D RoPE 位置编码对图像...</p>
+            </div>
+            <div class="card">
+                <h3><a href="11.X-VLA_Architecture.html">X-VLA</a></h3>
+                <p>X-VLA (Extended Vision-Language-Action) 是一个基于扩散的跨具身视觉-语言-动作模型，将 Florence2 视觉语言模型作为感知主干网络，配合软提示 Transformer (SoftPromptedTransformer) 动作头进行机器人动作预测。其核心设计思路为：Florence2 的 Vision Tower 和 BART 编码器提取多模态特征（...</p>
+            </div>
+            <div class="card">
+                <h3><a href="12.Psi0_Architecture.html">Psi0 (ψ₀)</a></h3>
+                <p>Ψ₀ 是 USC PSI Lab 面向人形机器人全身 loco-manipulation 的开源基础模型(RSS 2026,arXiv:2603.12263,CVPR 2026 第二届 3D-LLM/VLA Workshop 最佳论文)。它的核心主张不是某个新模块,而是一条数据配方:"scaling the right data in the right way" —— 先用大...</p>
+            </div>
+            <div class="card">
+                <h3><a href="13.DreamZero_Architecture.html">DreamZero</a></h3>
+                <p>DreamZero 是一个世界动作模型 (World Action Model, WAM)，通过联合预测未来视频帧与机器人动作序列，实现对未见任务的零样本泛化。其核心创新在于：基于 Wan2.1 视频扩散模型构建 Causal WAN DiT，以 Flow Matching 框架在视频 latent 空间和动作空间上同步去噪，配合 Category-specific MLP 构成的...</p>
+            </div>
+            <div class="card">
+                <h3><a href="14.FastWAM_Architecture.html">Fast-WAM</a></h3>
+                <p>Fast-WAM 是一个世界动作模型 (World Action Model, WAM),论文标题本身就是它要回答的问题:"Do World Action Models Need Test-time Future Imagination?"(arXiv:2603.16666)。结论是不需要 —— 现有 WAM(如 DreamZero、IDM 类方法)在推理时要先把未来视频去噪生...</p>
+            </div>
+            </div>
+        </section>
+        <section class="cat">
+            <h2 class="cat-title">全身控制 (WBC)<span class="cat-count">4</span></h2>
+            <p class="cat-desc">人形机器人全身控制与运动生成</p>
+            <div class="card-grid">
+            <div class="card card-lead">
+                <span class="card-badge">总览 · 从这里开始</span>
+                <h3><a href="15.GR00T-WBC_Overview.html">GR00T-WBC 总览</a></h3>
+                <p>GR00T-WholeBodyControl 是 NVIDIA GEAR 团队的人形机器人全身控制代码库,目标平台是 Unitree G1(29 DoF,带灵巧手时 43 DoF)。它不是一个单一模型,而是三条并列的技术路线外加一套共享的部署/遥操作基础设施:</p>
+            </div>
+            <div class="card">
+                <span class="card-badge card-badge-sub">细分</span>
+                <h3><a href="16.Decoupled-WBC_Architecture.html">Decoupled WBC</a></h3>
+                <p>Decoupled WBC 是 GR00T-WholeBodyControl 里最保守也最好调试的一条全身控制路线:它不训练一个端到端的全身策略,而是把机器人从腰部劈成两半 —— 下半身交给强化学习(ONNX 策略,50 Hz 闭环),上半身交给逆运动学(QP-IK + 插值,开环跟随遥操作目标)。</p>
+            </div>
+            <div class="card">
+                <span class="card-badge card-badge-sub">细分</span>
+                <h3><a href="17.GEAR-SONIC_Architecture.html">GEAR-SONIC</a></h3>
+                <p>GEAR-SONIC 要解决的是一个很具体的接口问题:人类动捕、VR 遥操作、机器人参考轨迹这三种运动来源,格式完全不同,能不能压进同一个空间,让同一个控制器都能跟踪?</p>
+            </div>
+            <div class="card">
+                <span class="card-badge card-badge-sub">细分</span>
+                <h3><a href="18.MotionBricks_Architecture.html">MotionBricks</a></h3>
+                <p>MotionBricks(arXiv:2604.24833,Tingwu Wang 等,2026)是 GR00T-WholeBodyControl 里的运动生成层 —— 它不控制机器人,它生产机器人要跟踪的运动。给定几帧上下文和一个方向/风格指令,它在毫秒级内合成一段物理合理的 G1 全身运动,吞吐达到 15,000 FPS 的零样本合成速度。</p>
+            </div>
+            </div>
+        </section>
+        <section class="cat">
+            <h2 class="cat-title">3D 视觉与 VLM<span class="cat-count">1</span></h2>
+            <p class="cat-desc">空间理解、深度、位姿与视觉语言模型</p>
+            <div class="card-grid">
+            <div class="card">
+                <h3><a href="19.VLM3_Architecture.html">VLM³</a></h3>
+                <p>VLM³ 的论点非常直接,也非常反直觉:</p>
+            </div>
+            </div>
+        </section>
+      </div>
+    </main>
+
+
+    <button class="back-to-top" onclick="window.scrollTo({top:0,behavior:'smooth'})">&#8593;</button>
+
+    <script src="assets/vendor/mermaid/mermaid.min.js"></script>
+    <script defer src="assets/vendor/katex/katex.min.js"></script>
+    <script defer src="assets/vendor/katex/auto-render.min.js"
+            onload="renderMathInElement(document.querySelector('.content-inner'), {
+                delimiters: [
+                    { left: '$$', right: '$$', display: true },
+                    { left: '$', right: '$', display: false }
+                ],
+                ignoredTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code', 'option'],
+                ignoredClasses: ['mermaid', 'diagram'],
+                throwOnError: false
+            });"></script>
+    <script>
+        // Mermaid destroys the source text when it renders, so keep a copy in
+        // order to re-render on theme change.
+        document.querySelectorAll('.mermaid').forEach(el => {
+            el.dataset.src = el.textContent;
+        });
+
+        const prefersDark = window.matchMedia('(prefers-color-scheme: dark)');
+        function currentTheme() {
+            const forced = document.documentElement.getAttribute('data-theme');
+            if (forced) return forced;
+            return prefersDark.matches ? 'dark' : 'light';
+        }
+
+        function initMermaid() {
+            mermaid.initialize({
+                startOnLoad: false,
+                theme: currentTheme() === 'dark' ? 'dark' : 'default',
+                flowchart: { useMaxWidth: true, htmlLabels: true },
+                securityLevel: 'loose'
+            });
+        }
+
+        function renderMermaid() {
+            const nodes = document.querySelectorAll('.mermaid');
+            nodes.forEach(el => {
+                el.removeAttribute('data-processed');
+                el.textContent = el.dataset.src;
+            });
+            // mermaid.run rejects on its internal font probe in some browsers;
+            // the diagrams still render, so swallow it rather than surfacing an
+            // unhandled rejection.
+            if (!nodes.length) return;
+            Promise.resolve(mermaid.run({ nodes: nodes }))
+                .catch(() => {})
+                .then(() => nodes.forEach(applyZoom));
+        }
+
+        /* ---------- Diagram zoom ----------
+           Scale is tracked as a factor of the diagram's NATURAL size (its
+           viewBox), so 100% means 1:1 and one font size looks identical in
+           every diagram on the site. Left to itself mermaid's useMaxWidth
+           stretches each svg to the container, which blows a 3-node diagram
+           up to 3.4x and shrinks a wide one to 0.34x — a 10x spread in
+           apparent font size. FIT_MAX caps the auto-fit at 1:1 (never
+           upscale) and FIT_MIN stops wide diagrams from shrinking to
+           unreadable; anything past that overflows and scrolls/pans. */
+        const MIN_Z = 0.3, MAX_Z = 6, STEP = 1.25;
+        const FIT_MIN = 0.55, FIT_MAX = 1;
+        const PAD = 40;               // .mermaid horizontal padding (20px each side)
+        const zoom = new WeakMap();   // .mermaid -> explicit scale; absent = auto-fit
+
+        function naturalSize(svg) {
+            const vb = svg.viewBox && svg.viewBox.baseVal;
+            if (vb && vb.width) return { w: vb.width, h: vb.height };
+            const r = svg.getBoundingClientRect();
+            return { w: r.width, h: r.height };
+        }
+
+        function fitScale(el, nat) {
+            const avail = el.clientWidth - PAD;
+            if (!nat.w || avail <= 0) return 1;
+            return Math.min(FIT_MAX, Math.max(FIT_MIN, avail / nat.w));
+        }
+
+        function scaleOf(el, nat) {
+            const k = zoom.get(el);
+            return k === undefined ? fitScale(el, nat) : k;
+        }
+
+        function applyZoom(el) {
+            const svg = el.querySelector('svg');
+            if (!svg) return;
+            const nat = naturalSize(svg);
+            if (!nat.w) return;
+            const k = scaleOf(el, nat);
+
+            const label = el.closest('.diagram')?.querySelector('.diagram-zoom');
+            if (label) label.textContent = Math.round(k * 100) + '%';
+
+            // Size the svg explicitly instead of leaving it to useMaxWidth,
+            // so the container gets real scrollbars when the diagram overflows.
+            svg.style.maxWidth = 'none';
+            svg.style.width = (nat.w * k) + 'px';
+            svg.style.height = (nat.h * k) + 'px';
+
+            const overflows = nat.w * k > el.clientWidth - PAD + 1;
+            el.classList.toggle('is-zoomed', overflows);
+            if (!overflows) el.scrollLeft = el.scrollTop = 0;
+        }
+
+        function setZoom(el, k, anchor) {
+            const svg = el.querySelector('svg');
+            if (!svg) return;
+            const nat = naturalSize(svg);
+            const prev = scaleOf(el, nat);
+            if (k !== null) k = Math.min(MAX_Z, Math.max(MIN_Z, k));
+            const next = k === null ? fitScale(el, nat) : k;
+            if (next === prev) return;
+            // Keep the point under the cursor (or the viewport centre) put.
+            const ax = anchor ? anchor.x : el.clientWidth / 2;
+            const ay = anchor ? anchor.y : el.clientHeight / 2;
+            const rx = (el.scrollLeft + ax) / prev;
+            const ry = (el.scrollTop + ay) / prev;
+            if (k === null) zoom.delete(el); else zoom.set(el, k);
+            applyZoom(el);
+            el.scrollLeft = rx * next - ax;
+            el.scrollTop = ry * next - ay;
+        }
+
+        function currentScale(el) {
+            const svg = el.querySelector('svg');
+            return svg ? scaleOf(el, naturalSize(svg)) : 1;
+        }
+
+        function setupDiagrams() {
+            document.querySelectorAll('.mermaid').forEach(el => {
+                const wrap = document.createElement('div');
+                wrap.className = 'diagram';
+                el.parentNode.insertBefore(wrap, el);
+                wrap.appendChild(el);
+
+                const tools = document.createElement('div');
+                tools.className = 'diagram-tools';
+                tools.innerHTML =
+                    '<button type="button" data-act="out" title="缩小">&minus;</button>' +
+                    '<span class="diagram-zoom">100%</span>' +
+                    '<button type="button" data-act="in" title="放大">+</button>' +
+                    '<button type="button" data-act="reset" title="适应宽度">&#9633;</button>' +
+                    '<button type="button" data-act="full" title="全屏">&#10530;</button>';
+                wrap.appendChild(tools);
+
+                tools.addEventListener('click', e => {
+                    const act = e.target.closest('button')?.dataset.act;
+                    if (!act) return;
+                    const k = currentScale(el);
+                    if (act === 'in') setZoom(el, k * STEP);
+                    else if (act === 'out') setZoom(el, k / STEP);
+                    else if (act === 'reset') setZoom(el, null);
+                    else if (act === 'full') {
+                        if (document.fullscreenElement === wrap) document.exitFullscreen();
+                        else wrap.requestFullscreen?.();
+                    }
+                });
+
+                // Ctrl/⌘ + wheel zooms; a plain wheel keeps scrolling the page.
+                el.addEventListener('wheel', e => {
+                    if (!e.ctrlKey && !e.metaKey) return;
+                    e.preventDefault();
+                    const r = el.getBoundingClientRect();
+                    setZoom(el, currentScale(el) * (e.deltaY < 0 ? STEP : 1 / STEP),
+                            { x: e.clientX - r.left, y: e.clientY - r.top });
+                }, { passive: false });
+
+                // Drag to pan once zoomed in.
+                let drag = null;
+                el.addEventListener('pointerdown', e => {
+                    // Pan only matters once the diagram actually overflows.
+                    if (e.button !== 0 || !el.classList.contains('is-zoomed')) return;
+                    drag = { x: e.clientX, y: e.clientY, l: el.scrollLeft, t: el.scrollTop };
+                    el.setPointerCapture(e.pointerId);
+                    el.classList.add('is-panning');
+                });
+                el.addEventListener('pointermove', e => {
+                    if (!drag) return;
+                    el.scrollLeft = drag.l - (e.clientX - drag.x);
+                    el.scrollTop = drag.t - (e.clientY - drag.y);
+                });
+                const endDrag = () => { drag = null; el.classList.remove('is-panning'); };
+                el.addEventListener('pointerup', endDrag);
+                el.addEventListener('pointercancel', endDrag);
+
+                // Double click toggles between auto-fit and true 1:1.
+                el.addEventListener('dblclick', () => setZoom(el, zoom.has(el) ? null : 1));
+            });
+        }
+
+        setupDiagrams();
+        initMermaid();
+        renderMermaid();
+
+        const remeasure = () => document.querySelectorAll('.mermaid').forEach(applyZoom);
+        document.addEventListener('fullscreenchange', remeasure);
+        window.addEventListener('resize', remeasure);
+
+        // Theme toggle
+        const toggle = document.getElementById('theme-toggle');
+        toggle.addEventListener('click', () => {
+            const next = currentTheme() === 'dark' ? 'light' : 'dark';
+            document.documentElement.setAttribute('data-theme', next);
+            try { localStorage.setItem('theme', next); } catch (e) {}
+            initMermaid();
+            renderMermaid();
+        });
+
+        // Follow the OS while the user hasn't made an explicit choice
+        prefersDark.addEventListener('change', () => {
+            if (!document.documentElement.getAttribute('data-theme')) {
+                initMermaid();
+                renderMermaid();
+            }
+        });
+
+        // Back to top button
+        const btn = document.querySelector('.back-to-top');
+        window.addEventListener('scroll', () => {
+            btn.classList.toggle('visible', window.scrollY > 300);
+        });
+
+        // Close sidebar on mobile when clicking a link
+        document.querySelectorAll('.sidebar nav a').forEach(a => {
+            a.addEventListener('click', () => {
+                document.querySelector('.sidebar').classList.remove('open');
+            });
+        });
+
+        // Highlight the TOC entry for the heading currently in view
+        const tocLinks = Array.from(document.querySelectorAll('.toc a'));
+        if (tocLinks.length) {
+            const targets = tocLinks
+                .map(a => document.getElementById(decodeURIComponent(a.hash.slice(1))))
+                .filter(Boolean);
+            const setActive = () => {
+                let current = targets[0];
+                for (const t of targets) {
+                    if (t.getBoundingClientRect().top <= 120) current = t;
+                    else break;
+                }
+                tocLinks.forEach(a => a.classList.toggle(
+                    'active',
+                    current && decodeURIComponent(a.hash.slice(1)) === current.id
+                ));
+            };
+            setActive();
+            let queued = false;
+            window.addEventListener('scroll', () => {
+                if (queued) return;
+                queued = true;
+                requestAnimationFrame(() => { setActive(); queued = false; });
+            });
+        }
+    </script>
+</body>
+</html>

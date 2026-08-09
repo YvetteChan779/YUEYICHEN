@@ -1,0 +1,524 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Retrieval-Augmented Manipulation | Yueyi Chen" />
+    <title>Retrieval-Augmented Manipulation | Yueyi Chen</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Lora:wght@400;500;600;700&family=JetBrains+Mono:wght@400&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+    <link rel="stylesheet" href="styles.css" />
+    <style>
+        .page-shell {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 24px 64px;
+        }
+
+        .topbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+            padding: 16px 0 8px;
+            margin-bottom: 8px;
+        }
+
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .back-link:hover {
+            color: var(--accent);
+            text-decoration: none;
+        }
+
+        .top-actions {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .icon-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            width: 38px;
+            height: 38px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            background: var(--bg-alt);
+            color: var(--text);
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .icon-btn:hover {
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+
+        .hero {
+            padding: 40px 0 30px;
+            border-bottom: 1px solid var(--border);
+            margin-bottom: 38px;
+        }
+
+        .hero-kicker {
+            font-size: 13px;
+            font-weight: 600;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+            color: var(--accent);
+            margin-bottom: 10px;
+        }
+
+        .hero h1 {
+            font-family: var(--font-serif);
+            font-size: 34px;
+            line-height: 1.25;
+            margin-bottom: 10px;
+        }
+
+        .hero .subtitle {
+            font-size: 15px;
+            color: var(--text-secondary);
+            margin-bottom: 8px;
+        }
+
+        .hero .tagline {
+            font-size: 15px;
+            color: var(--text-secondary);
+            margin-bottom: 26px;
+            max-width: 980px;
+        }
+
+        .hero-links {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .hero-links a {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 14px;
+            border: 1px solid var(--accent);
+            border-radius: 8px;
+            color: var(--accent);
+            text-decoration: none;
+            font-size: 13px;
+            font-weight: 600;
+            transition: all 0.2s ease;
+        }
+
+        .hero-links a:hover {
+            background: var(--accent);
+            color: #fff;
+        }
+
+        .metrics-strip {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 14px;
+            margin: 0 0 42px;
+        }
+
+        .metric-card {
+            padding: 22px 14px;
+            background: var(--bg-alt);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        .metric-card .number {
+            font-size: 30px;
+            font-weight: 700;
+            color: var(--accent);
+            line-height: 1.1;
+            margin-bottom: 6px;
+        }
+
+        .metric-card .label {
+            font-size: 13px;
+            color: var(--text-secondary);
+            line-height: 1.5;
+        }
+
+        .section-block {
+            margin-bottom: 54px;
+        }
+
+        .section-block h2 {
+            font-family: var(--font-serif);
+            font-size: 22px;
+            font-weight: 600;
+            line-height: 1.3;
+            margin-bottom: 14px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .section-block h2 i {
+            color: var(--accent);
+            margin-right: 8px;
+        }
+
+        .section-block p {
+            font-size: 15px;
+            line-height: 1.8;
+            margin-bottom: 14px;
+        }
+
+        .scope-callout {
+            background: var(--highlight-bg);
+            border-left: 4px solid var(--highlight-border);
+            border-radius: 4px;
+            padding: 14px 18px;
+            margin: 16px 0 22px;
+            font-size: 14px;
+            line-height: 1.7;
+        }
+
+        .scope-callout i {
+            color: var(--highlight-border);
+            margin-right: 8px;
+        }
+
+        .result-block {
+            background: var(--bg-alt);
+            border-left: 4px solid var(--accent);
+            border-radius: 4px;
+            padding: 16px 18px;
+            margin: 16px 0 24px;
+            font-size: 14px;
+            line-height: 1.7;
+        }
+
+        .result-block i {
+            color: var(--accent);
+            margin-right: 8px;
+        }
+
+        .diagram {
+            margin: 18px 0 20px;
+            background: var(--bg-alt);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .diagram img {
+            display: block;
+            width: 100%;
+            height: auto;
+        }
+
+        .diagram figcaption {
+            padding: 10px 14px;
+            border-top: 1px solid var(--border);
+            color: var(--text-secondary);
+            font-size: 13px;
+            line-height: 1.6;
+        }
+
+        .two-col {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 18px;
+            margin-top: 18px;
+        }
+
+        .hl-card {
+            padding: 18px;
+            background: var(--bg-alt);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+        }
+
+        .hl-card h3 {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .hl-card p {
+            font-size: 13px;
+            line-height: 1.7;
+            color: var(--text-secondary);
+            margin: 0;
+        }
+
+        .contrib-list {
+            list-style: none;
+            padding: 0;
+            margin: 14px 0 0;
+        }
+
+        .contrib-list li {
+            position: relative;
+            padding-left: 20px;
+            margin-bottom: 10px;
+            font-size: 15px;
+            line-height: 1.7;
+        }
+
+        .contrib-list li::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 10px;
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background: var(--accent);
+        }
+
+        .table-wrap {
+            overflow-x: auto;
+            margin: 18px 0 0;
+        }
+
+        .info-table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 760px;
+            background: var(--bg-alt);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .info-table th,
+        .info-table td {
+            padding: 12px 14px;
+            border-bottom: 1px solid var(--border);
+            vertical-align: top;
+            text-align: left;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+
+        .info-table th {
+            background: color-mix(in srgb, var(--bg-alt) 80%, var(--accent) 20%);
+            font-weight: 600;
+        }
+
+        .info-table tr:last-child td {
+            border-bottom: 0;
+        }
+
+        .footer {
+            padding: 28px 0 10px;
+            border-top: 1px solid var(--border);
+            color: var(--text-secondary);
+            font-size: 13px;
+        }
+
+        @media (max-width: 900px) {
+            .metrics-strip,
+            .two-col {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
+
+        @media (max-width: 720px) {
+            .page-shell {
+                padding: 0 16px 56px;
+            }
+
+            .topbar {
+                align-items: flex-start;
+                flex-direction: column;
+            }
+
+            .metrics-strip,
+            .two-col {
+                grid-template-columns: 1fr;
+            }
+
+            .hero h1 {
+                font-size: 28px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="page-shell">
+        <div class="topbar">
+            <a href="index.html#publications" class="back-link"><i class="fa-solid fa-arrow-left"></i><span data-i18n="back">Back to Home</span></a>
+            <div class="top-actions">
+                <button class="icon-btn" id="langToggle" aria-label="Toggle language">中</button>
+                <button class="icon-btn" id="themeToggle" aria-label="Toggle theme">
+                    <i class="fa-solid fa-sun icon-light"></i>
+                    <i class="fa-solid fa-moon icon-dark"></i>
+                </button>
+            </div>
+        </div>
+
+        <main>
+            <section class="hero">
+                <div class="hero-kicker">Science Robotics 2026</div>
+                <h1 data-i18n="hero.title">Retrieval-Augmented Manipulation</h1>
+                <div class="subtitle" data-i18n="hero.venue">Science Robotics · CUHK</div>
+                <p class="tagline" data-i18n="hero.tagline">Object discovery, 3D reconstruction, template retrieval, and trajectory execution for object-centric robot manipulation</p>
+                <div class="hero-links">
+                    <a href="https://github.com/RetrievalManip/Retrieval-augmented-Manipulation" target="_blank" rel="noopener"><i class="fa-brands fa-github"></i><span data-i18n="hero.links.code">GitHub</span></a>
+                    <a href="https://doi.org/10.1126/scirobotics.aea2092" target="_blank" rel="noopener"><i class="fa-solid fa-file-lines"></i><span data-i18n="hero.links.paper">Paper</span></a>
+                    <a href="https://www7.erg.cuhk.edu.hk/erg/node/3042" target="_blank" rel="noopener"><i class="fa-solid fa-globe"></i><span data-i18n="hero.links.article">CUHK article</span></a>
+                </div>
+            </section>
+
+            <section class="metrics-strip" aria-label="Project metrics">
+                <div class="metric-card">
+                    <div class="number" data-i18n="m.tasks">14 / 31</div>
+                    <div class="label" data-i18n="m.tasksLabel">paper scale: tasks / objects</div>
+                </div>
+                <div class="metric-card">
+                    <div class="number" data-i18n="m.stages">4</div>
+                    <div class="label" data-i18n="m.stagesLabel">runtime stages</div>
+                </div>
+                <div class="metric-card">
+                    <div class="number" data-i18n="m.views">128</div>
+                    <div class="label" data-i18n="m.viewsLabel">template views per object</div>
+                </div>
+                <div class="metric-card">
+                    <div class="number" data-i18n="m.k">5</div>
+                    <div class="label" data-i18n="m.kLabel">RAM-K candidates</div>
+                </div>
+            </section>
+
+            <section class="section-block" id="overview">
+                <h2><i class="fa-solid fa-circle-info"></i><span data-i18n="overview.title">Overview</span></h2>
+                <div class="scope-callout" data-i18n-html="overview.scope"><i class="fa-solid fa-user-pen"></i>My scope: I mined the public repo, reconstructed the four-stage data flow, and translated the code into a portfolio page. I did not retrain the backbone or fabricate benchmark numbers.</div>
+                <p data-i18n-html="overview.p1">The public RAM code path treats manipulation as a retrieval problem first and a motion problem second: step1_grounding finds object instances in a live RGB frame, step2_ram lifts them into an explicit object-centric 3D representation, step3_planning turns that geometry into VLM subgoals, and step4_conducting converts those subgoals into Fairino waypoints.</p>
+                <p data-i18n-html="overview.p2">The key boundary is the object contract, not the robot SDK. <code>config/config.yaml</code> pins <code>ram_k=5</code>, <code>foundation_model=dinov2-b14</code>, <code>feat_layer=[7,9,11]</code>, <code>img_size=224</code>, <code>n_pts=1024</code>, and <code>planner.map_size=100</code>, so the entire stack has a fixed retrieval and planning shape.</p>
+                <div class="result-block" data-i18n-html="overview.result"><i class="fa-solid fa-bullhorn"></i>The paper frames the system for zero-shot real-world robot execution, spatially aware manipulation from a single 2D image, and adaptive replanning under physical constraints.</div>
+            </section>
+
+            <section class="section-block" id="architecture">
+                <h2><i class="fa-solid fa-diagram-project"></i><span data-i18n="architecture.title">Architecture</span></h2>
+                <figure class="diagram">
+                    <img src="Pic/ram/ram-model_architechture.svg" alt="RAM architecture diagram" />
+                    <figcaption data-i18n="fig.arch">RAM architecture diagram showing the GroundingDINO + SAM2, VGGT-1B, RAMNet, planner, and Fairino execution stack.</figcaption>
+                </figure>
+                <p data-i18n-html="architecture.cap">The runtime binds semantic discovery to geometry through GroundingDINO + SAM2, VGGT-1B, RAMNet, a VLM planner, and a deterministic trajectory layer.</p>
+                <div class="two-col">
+                    <div class="hl-card">
+                        <h3 data-i18n="architecture.card1.title">RAMNet core</h3>
+                        <p data-i18n-html="architecture.card1.body">`visions/ram/lib/network.py` keeps the DINOv2-B/14 backbone frozen, reads features from layers `[7,9,11]`, expands them to a 2304D embedding, and passes them through a 1-layer view adapter, a 4-layer shape encoder, a 4-layer map adapter, and a `2304 -> 512 -> 256 -> 3` deformation decoder.</p>
+                    </div>
+                    <div class="hl-card">
+                        <h3 data-i18n="architecture.card2.title">Runtime split</h3>
+                        <p data-i18n-html="architecture.card2.body">`step1_grounding.py` discovers objects, `step2_ram.py` estimates object pose and functional priors, `step3_planning.py` decomposes task language into constraints, and `step4_conducting.py` converts those constraints into robot waypoints.</p>
+                    </div>
+                </div>
+            </section>
+
+            <section class="section-block" id="interfaces">
+                <h2><i class="fa-solid fa-table-columns"></i><span data-i18n="interfaces.title">Data Contracts</span></h2>
+                <p data-i18n-html="interfaces.cap">Each stage writes inspectable artifacts, which makes the pipeline debuggable without hidden state.</p>
+                <div class="table-wrap">
+                    <table class="info-table">
+                        <thead>
+                            <tr>
+                                <th data-i18n="interfaces.th.stage">Stage</th>
+                                <th data-i18n="interfaces.th.inputs">Inputs</th>
+                                <th data-i18n="interfaces.th.outputs">Outputs</th>
+                                <th data-i18n="interfaces.th.note">Note</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><code>step1_grounding.py</code></td>
+                                <td>Prompt + ZED RGB-D frame</td>
+                                <td><code>instruction.json</code>, <code>rgb_ext.png</code>, <code>depth_ext.npy</code>, <code>vlm_objects.json</code>, <code>detections.npy</code>, <code>vlm_categories.json</code></td>
+                                <td>RamVLM filters RAM categories before GroundingDINO + SAM2 produce boxes and masks.</td>
+                            </tr>
+                            <tr>
+                                <td><code>step2_ram.py</code></td>
+                                <td>Detections + ZED / RealSense views + template assets</td>
+                                <td><code>vggt_depth_ext.npy</code>, <code>vggt_K.npy</code>, <code>ram_objects_meta.npy</code></td>
+                                <td>VGGT-1B depth is rescaled from the stereo baseline before RAMNet predicts viewpoint, NOCS, grasps, and planes.</td>
+                            </tr>
+                            <tr>
+                                <td><code>step3_planning.py</code></td>
+                                <td>RAM object metadata + prompt</td>
+                                <td><code>vlm_subtasks.json</code>, <code>vlm_actions.json</code></td>
+                                <td>Task text is decomposed into subgoals and action constraints through the VLM.</td>
+                            </tr>
+                            <tr>
+                                <td><code>step4_conducting.py</code></td>
+                                <td>Action JSON + object metadata + depth + camera pose</td>
+                                <td>Robot waypoints + Fairino motions</td>
+                                <td>ConstraintParser, PathPlanner, and TrajectoryGenerator own the motion boundary.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <section class="section-block" id="training">
+                <h2><i class="fa-solid fa-wand-magic-sparkles"></i><span data-i18n="training.title">Training and Template Prep</span></h2>
+                <p data-i18n-html="training.p1">Training uses BOP-style rendered scenes generated by BlenderProc: the README shows <code>--num-scenes 400</code> and <code>--views-per-scene 25</code>, while template preparation renders <code>128</code> views per object and stores the result as <code>obj_&lt;id&gt;.ply</code> plus <code>&lt;template_id&gt;.pkl</code>.</p>
+                <p data-i18n-html="training.p2"><code>train_bop.py</code> builds RAMNet from the DINOv2-B/14 checkpoint, freezes the foundation model, and optimizes with <code>PoseNCE</code>, <code>NOCSLoss</code>, and <code>MatchLoss</code> for up to <code>50</code> epochs, <code>2000</code> train steps, batch size <code>4</code>, and learning rate <code>1e-4</code>.</p>
+                <p data-i18n-html="training.p3">The template side is object-category specific: <code>template.json</code> drives loading of <code>grasp_*</code>, <code>contact_point_*</code>, <code>hinge*</code>, and <code>plane_*</code> primitives, so the runtime can recover object-specific affordances instead of generic boxes.</p>
+                <div class="result-block" data-i18n-html="training.result"><i class="fa-solid fa-layer-group"></i>The training path is closer to structured geometry fitting than end-to-end policy learning: the backbone stays frozen, while the adapters and geometric heads absorb category-specific priors.</div>
+            </section>
+
+            <section class="section-block" id="runtime">
+                <h2><i class="fa-solid fa-gear"></i><span data-i18n="runtime.title">Runtime and Control</span></h2>
+                <figure class="diagram">
+                    <img src="Pic/ram/ram-runtime_visualization.svg" alt="RAM runtime visualization" />
+                    <figcaption data-i18n="fig.runtime">RAM runtime visualization with the four scripts and their inspectable file contracts.</figcaption>
+                </figure>
+                <p data-i18n-html="runtime.p1"><code>PathPlanner</code> uses a <code>100^3</code> voxel map, <code>max_steps=300</code>, <code>stop_threshold=0.001</code>, <code>target_map_weight=2</code>, <code>obstacle_map_weight=1</code>, and <code>pushing_skip_per_k=5</code>. <code>TrajectoryGenerator</code> converts voxels to base-frame poses, clamps Z to <code>table_height</code>, and emits robot waypoints with orientation and gripper state.</p>
+                <p data-i18n-html="runtime.p2"><code>controller/fairino_arm.py</code> wraps the Fairino <code>Robot.RPC</code> interface and issues <code>MoveL</code> at velocity <code>60</code> and <code>MoveC</code> at velocity <code>20</code>, plus gripper commands. The result is a conventional motion layer rather than an end-to-end policy.</p>
+                <p data-i18n-html="runtime.p3">The runtime SVG keeps the four scripts separate, which is the right shape for debugging camera calibration, depth rescaling, template lookup, and constraint parsing independently.</p>
+            </section>
+
+            <section class="section-block" id="results">
+                <h2><i class="fa-solid fa-chart-line"></i><span data-i18n="results.title">Results and Limits</span></h2>
+                <p data-i18n-html="results.p1">The paper reports zero-shot real-world robot execution, spatially aware manipulation from a single 2D image, and adaptive replanning under physical constraints such as object size and collisions. It also reports CO3D generalization to unseen categories and robustness to shape and occlusion variation.</p>
+                <p data-i18n-html="results.p2">The local repo exposes the code path but not a benchmark logbook, so I treat the project as a reproducible public pipeline rather than a numbers-heavy claim.</p>
+                <div class="result-block" data-i18n-html="results.limit"><i class="fa-solid fa-triangle-exclamation"></i>External checkpoints and large assets are required for a full run: Grounded-SAM-2, VGGT, DINOv2-B/14, the Fairino SDK, and the RAM template payloads are not vendored.</div>
+            </section>
+
+            <section class="section-block" id="highlights">
+                <h2><i class="fa-solid fa-lightbulb"></i><span data-i18n="highlights.title">What To Say In Interview</span></h2>
+                <div class="highlight-grid">
+                    <div class="hl-card">
+                        <h3 data-i18n="highlights.card1.title">Object discovery</h3>
+                        <p data-i18n-html="highlights.card1.body">Explain how <code>RamVLM</code> filters categories, GroundingDINO returns <code>xyxy</code> boxes, and SAM2 turns them into masks on the source image plane.</p>
+                    </div>
+                    <div class="hl-card">
+                        <h3 data-i18n="highlights.card2.title">Object-centric 3D</h3>
+                        <p data-i18n-html="highlights.card2.body">Explain how RAMNet fuses frozen DINOv2 tokens with position embeddings, <code>choose</code> indices, and template priors to predict view, NOCS, grasps, and planes.</p>
+                    </div>
+                    <div class="hl-card">
+                        <h3 data-i18n="highlights.card3.title">Motion boundary</h3>
+                        <p data-i18n-html="highlights.card3.body">Explain how <code>ConstraintParser</code> turns VLM subgoals into gripper poses and how <code>PathPlanner</code> and <code>TrajectoryGenerator</code> convert them into Fairino motion.</p>
+                    </div>
+                </div>
+            </section>
+
+            <footer class="footer" data-i18n-html="footer">
+                &copy; <span id="year">2026</span> Yueyi Chen. Powered by <a href="https://pages.github.com/" target="_blank" rel="noopener">GitHub Pages</a>.
+            </footer>
+        </main>
+    </div>
+
+    <script src="ram.js"></script>
+</body>
+</html>
