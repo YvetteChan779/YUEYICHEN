@@ -154,7 +154,7 @@ Free-choice pool of visual style references. No file is locked to a specific pro
 | PLAN-A | `Pic/plan_a_system.png`; `Pic/plana/` (plana-model_architechture.svg, plana-runtime_visualization.svg) |
 | PLAN-A Retargeting | `Pic/plana_retargeting/plana_retargeting_arch.svg` |
 | pi0.5 | `Pic/pi05/` (includes `pi05_libero_finetune_report.pdf`) |
-| Embodied Coin Standing and Placement | `Pic/coin_stand/coin_architechture.png`; `Pic/coin_stand/coin_stand_pipeline.svg` (academic-style architecture sketch + runtime pipeline) |
+| Embodied Coin Standing and Placement | `Pic/coin_stand/coin_architecture.png`; `Pic/coin_stand/coin_stand_pipeline.svg` (ACT-style architecture sketch with preserved coin.mp4 frames + runtime pipeline) |
 
 ---
 
