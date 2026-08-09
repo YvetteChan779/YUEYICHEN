@@ -76,9 +76,9 @@ Before ANY project-related output, pass this checklist. If any item fails → st
 | `script.js` | Main page JS (theme toggle, nav highlight, i18n for index.html) |
 | `private-kb/` | Authorized local full-text Robotics Knowledge Base mirror; deployable static site under `private-kb/public/` |
 | `personnel page technical content KB.md` | Curated KB synthesis and auto-generated local reference catalog |
-| `PROJECT.md` | PLAN-B mining record and long-term evidence memory |
+| `PROJECT.md` | PLAN-B Speech-to-Grasp mining record, evidence table, diagram audit, and resume bullets |
 | `chenyy_cv.md` | PLAN-B resume bullets, grammar extraction, and risk notes |
-| `planb.html` + `planb.js` | PLAN-B project detail page (DreamZero-style, redrawn model_architechture/runtime SVGs, ~100 bilingual i18n keys) |
+| `planb.html` + `planb.js` | PLAN-B Speech-to-Grasp detail page (DreamZero-style, corrected model/runtime SVGs, bilingual i18n keys) |
 | `pi05.html` + `pi05.js` | pi0.5/LIBERO fine-tuning project page |
 | `aloha_lekiwi.html` + `aloha_lekiwi.js` | ALOHA/LeKiwi DreamZero reproduction page |
 | `coin_stand.html` | Embodied Coin Standing and Placement project page |
@@ -89,7 +89,7 @@ Before ANY project-related output, pass this checklist. If any item fails → st
 
 | Project | Page | Key Technical Depth | Source Docs |
 |---------|------|-------------------|-------------|
-| PLAN-B | planb.html | 3-tier VAD → cloud_qwen3 ASR → qwen3.5-flash NLU → Qwen2.5-VL/SAM3 grounding → depth → grasp_check → 13-mixin FSM, latency budget, failure diagnosis | `/home/CNS2026391745/Documents/PLAN-B-CYY/planb-robot/` — `project.md` (988 lines), `docs/cyy/算法答辩云文档_new.md` (917 lines) |
+| PLAN-B | planb.html | Streaming ALSA audio → cloud_qwen3 ASR → qwen3.5-flash JSON NLU → VLM bbox/SAM3 box-text grounding → TTS echo guard → 3D grasp_check server (no z_fallback) + optional pipeline `vlm_or_tactile` → 13-mixin FSM, latency budget, failure diagnosis | `/home/CNS2026391745/Documents/PLAN-B-CYY/planb-robot/` — `project.md` (988 lines), `docs/cyy/算法答辩云文档_new.md` (917 lines) |
 | pi0.5/LIBERO | pi05.html | VLA fine-tuning, freeze-filter matrix, action normalization fix, 2000-episode eval | `Pic/pi05/pi05_libero_finetune_report.pdf` |
 | ALOHA/LeKiwi | aloha_lekiwi.html | LeRobot schema conversion, embodiment registration, WebSocket inference | — |
 | Embodied Coin Standing and Placement | coin_stand.html | Frozen RADIO summaries, ACT-style 4-layer encoder/decoder, checkpoint hot switching, grasp verification, rule-based half-arc transfer | — |
@@ -98,7 +98,7 @@ Before ANY project-related output, pass this checklist. If any item fails → st
 
 ### What "deep mining" means per project
 
-- **PLAN-B**: Don't say "multimodal perception". Describe the ASR→NLU→VLM→SAM3→depth→grasp→FSM pipeline with latencies, failure modes, and specific fixes (letterbox, confidence calibration, etc.)
+- **PLAN-B**: Don't say "multimodal perception". Describe the ALSA audio→cloud_qwen3 ASR→qwen3.5-flash NLU→VLM bbox→SAM3 box/text→PerceptionResult→TTS echo guard→3D grasp_check/FSM pipeline with latencies, failure modes, and specific fixes (source-pixel bbox contract, stateful Silero, stale SHM audit, no z_fallback in standalone grasp_check).
 - **pi0.5/LIBERO**: Don't say "fine-tuned a VLA". Describe the freeze-filter matrix, action normalization fix, norm_stats reuse issue, LoRA scope, evaluation protocol.
 - **ALOHA/LeKiwi**: Don't say "teleoperation". Describe LeRobot schema conversion, embodiment registration, camera order, timestamp alignment, WebSocket inference.
 - **PLAN-A Retargeting**: Don't say "motion mapping". Describe VDMocap 23-node struct parsing, T-pose offset calibration, quaternion/position runtime routes, 10D Dynamixel encoder contract, `[0,4095]` clamps, 60D-to-10D Teleop Transformer regression, and the 47-sample final-frame MAE caveat.

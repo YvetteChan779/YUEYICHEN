@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="PLAN-B: Voice-to-Grasp Pipeline for Humanoid Robot — Yueyi Chen" />
-    <title>PLAN-B: Voice-to-Grasp Pipeline for Humanoid Robot | Yueyi Chen</title>
+    <meta name="description" content="PLAN-B Speech-to-Grasp Interaction Stack — Yueyi Chen" />
+    <title>PLAN-B Speech-to-Grasp Interaction Stack | Yueyi Chen</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Lora:wght@400;500;600;700&family=JetBrains+Mono:wght@400&display=swap" rel="stylesheet" />
@@ -279,9 +279,9 @@
             <a href="index.html" class="back-link"><i class="fa-solid fa-arrow-left"></i> <span data-i18n="back">Back to Home</span></a>
 <!-- ============ HERO ============ -->
 <div class="hero">
-    <h1 data-i18n="hero.title">PLAN-B: Voice-to-Grasp Pipeline for Humanoid Robot</h1>
+    <h1 data-i18n="hero.title">PLAN-B Speech-to-Grasp Interaction Stack</h1>
     <p class="subtitle"><strong>Yueyi Chen</strong> &middot; <span data-i18n="hero.venue">The Chinese University of Hong Kong</span> &middot; 2026</p>
-    <p class="tagline" data-i18n="hero.tagline">3-tier VAD &middot; cloud_qwen3 ASR &middot; qwen3.5-flash NLU &middot; Qwen2.5-VL + SAM3 &middot; grasp_check + 13-mixin FSM</p>
+    <p class="tagline" data-i18n="hero.tagline">Streaming audio &middot; cloud_qwen3 ASR &middot; qwen3.5-flash NLU &middot; VLM bbox + SAM3 box/text &middot; TTS echo guard &middot; verification FSM</p>
     <div class="links">
         <a href="#voice"><i class="fa-solid fa-file-lines"></i> <span data-i18n="hero.pipeline">Pipeline</span></a>
         <a href="#runtime"><i class="fa-solid fa-chart-column"></i> <span data-i18n="hero.visuals">Visuals</span></a>
@@ -311,26 +311,26 @@
 <!-- ============ OVERVIEW ============ -->
 <section class="section-block" id="overview">
     <h2><i class="fa-solid fa-bullseye"></i> <span data-i18n="s0.title">Overview</span></h2>
-    <p data-i18n-html="s0.p1">Deploying voice-controlled grasping on Jetson AGX Orin exposed a hard interface problem: far-field speech sits below the noise floor, cloud ASR needs its own endpointing, small objects collapse under box-only grounding, and grasp verification must close the loop instead of guessing success. <strong>PLAN-B</strong> owns the voice entry of the humanoid-robot chain: 16 kHz PCM enters a three-stage VAD gate, routes through cloud_qwen3 / fallback ASR, is parsed by regex + qwen3.5-flash NLU, then becomes a Qwen2.5-VL box prior, SAM3 mask, depth-based grasp_check vote, and a 13-mixin closed-loop FSM.</p>
+    <p data-i18n-html="s0.p1">Deploying speech-controlled grasping on Jetson AGX Orin exposed a hard interface problem: far-field speech, TTS echo, ASR endpointing, small-object grounding, and post-grasp verification all fail through different interfaces. <strong>PLAN-B</strong> is a speech-to-grasp interaction stack: 16 kHz ALSA PCM enters a cloud-first ASR route, qwen3.5-flash converts clean commands into JSON intents, a Qwen-compatible VLM supplies source-pixel bbox priors for SAM3 box/text masks, and a 13-mixin ROS2 FSM publishes stamped <code>PerceptionResult</code> geometry into the grasp execution chain.</p>
 
     <ul class="contrib-list">
         <li data-i18n-html="s0.c1">Engineered a <strong>3-tier cascaded VAD quality gate</strong> (adaptive energy + software AGC + stateful Silero v4 ONNX h/c [2,1,64]), field-calibrated on-site with noise around &minus;46 dB and speech around &minus;39 dB, lifting far-field hit rate from 0% to 92%.</li>
-        <li data-i18n-html="s0.c2">Architected a <strong>cloud-first 4-engine streaming ASR router</strong> (cloud_qwen3 / cloud_paraformer / local Qwen3-ASR TRT / FunASR) with envelope AGC v5, cloud endpointing ownership transfer, and rapid-stitch recovery for split verb-head fragments.</li>
-        <li data-i18n-html="s0.c3">Designed <strong>dual-path NLU</strong> (7-template regex fast path + qwen3.5-flash LLM, temperature=0, max_new_tokens=28) with a 5-layer semantic defense cascade, plus <strong>VLM bbox + CLIP joint grounding</strong> with letterbox alignment, lifting SAM3 mask success from 9% to at least 90%.</li>
-        <li data-i18n-html="s0.c4">Built a <strong>13-mixin pipeline FSM</strong> with 3D multi-feature grasp verification (grasp_check v1.0.0: median&lt;55 mm, P25&lt;45 mm, frac&lt;3 cm &ge; 2%, frac&lt;5 cm &ge; 8%) and tactile baseline verification, enabling closed-loop retry with 4-class failure grading.</li>
+        <li data-i18n-html="s0.c2">Architected a <strong>cloud-first 4-engine streaming ASR router</strong> (cloud_qwen3 / cloud_paraformer / local Qwen3-ASR TRT / FunASR) with envelope AGC v5, cloud endpointing ownership transfer, TTS playback zero-fill echo guard, and rapid-stitch recovery for split verb-head fragments.</li>
+        <li data-i18n-html="s0.c3">Designed <strong>dual-path NLU</strong> (six action regex templates + wake/chat handling + qwen3.5-flash JSON NLU, temperature=0, max_new_tokens=28) with a 5-layer semantic defense cascade, plus <strong>VLM bbox + SAM3 box/text grounding</strong> on one original-pixel coordinate plane, lifting reported SAM3 mask success from 4/44 to at least 90%.</li>
+        <li data-i18n-html="s0.c4">Integrated a <strong>13-mixin pipeline FSM</strong> with standalone <code>grasp_check_server</code> verification (SAM3 target+hand batch2, median&lt;55 mm, P25&lt;45 mm, frac&lt;3 cm &ge; 2%, frac&lt;5 cm &ge; 8%, no z_fallback) and a separate optional <code>vlm_or_tactile</code> serial confirmation path.</li>
     </ul>
 </section>
 <!-- ============ RUNTIME VISUALS ============ -->
 <section class="section-block" id="runtime">
     <h2><i class="fa-solid fa-video"></i> <span data-i18n="sd.title">Runtime Visualization</span></h2>
-    <p data-i18n-html="sd.placeholder">One timeline keeps cloud_qwen3 ASR, qwen3.5-flash parsing, Qwen2.5-VL + SAM3 grounding, depth-based grasp_check, and barge-in recovery aligned on Jetson AGX Orin.</p>
+    <p data-i18n-html="sd.placeholder">One timeline keeps cloud_qwen3 ASR, qwen3.5-flash parsing, VLM + SAM3 grounding, TTS echo guarding, 3D grasp_check, and target-loss recovery aligned on Jetson AGX Orin.</p>
     <figure class="diagram">
         <img src="Pic/planb/planb-runtime_visualization.svg" alt="PLAN-B runtime visualization" />
         <figcaption data-i18n="sd.cap1">Runtime visualization of the serial voice-to-grasp loop: ASR, NLU, VLM-SAM3, depth, grasp_check, and target-lost recovery remain on one timeline.</figcaption>
     </figure>
     <div class="result-block">
         <i class="fa-solid fa-chart-line"></i>
-        <span data-i18n-html="sd.result">Serial scheduling avoids GPU thrash while keeping barge-in and target-loss recovery live.</span>
+        <span data-i18n-html="sd.result">Serial scheduling keeps ASR, VLM/SAM3, TTS playback state, and target-loss recovery on explicit ROS2 boundaries.</span>
     </div>
 </section>
 <!-- ============ S1: SYSTEM ARCHITECTURE ============ -->
@@ -338,11 +338,11 @@
     <h2><i class="fa-solid fa-diagram-project"></i> <span data-i18n="s1.title">System Architecture</span></h2>
     <figure class="diagram">
         <img src="Pic/planb/planb-model_architechture.svg" alt="PLAN-B model architecture" />
-        <figcaption data-i18n="s1.cap">Voice-to-grasp architecture on Jetson AGX Orin: 3-tier VAD, cloud_qwen3/qwen3.5-flash routing, Qwen2.5-VL + SAM3 grounding, depth-based grasp_check, closed-loop verification, and downstream execution.</figcaption>
+        <figcaption data-i18n="s1.cap">Speech-to-grasp architecture on Jetson AGX Orin: ALSA PCM, cloud_qwen3 ASR, qwen3.5-flash NLU, VLM bbox + SAM3 box/text grounding, TTS playback guard, 3D grasp_check, and downstream execution.</figcaption>
     </figure>
     <div class="scope-callout">
         <i class="fa-solid fa-user"></i>
-        <span data-i18n-html="s1.scope"><strong>My scope:</strong> I owned the voice front-end, cloud_qwen3 / paraformer ASR, qwen3.5-flash NLU, VLM-SAM3 visual grounding, depth-based grasp_check, and the 13-mixin closed-loop state machine. Downstream execution (navigation, IK planning, motor control) was handled by collaborators.</span>
+        <span data-i18n-html="s1.scope"><strong>My scope:</strong> I owned the voice front-end, cloud_qwen3 / paraformer ASR routing, qwen3.5-flash NLU, VLM-SAM3 grounding contracts, 3D grasp verification integration, TTS feedback guards, and the 13-mixin closed-loop state machine. Downstream navigation, IK planning, and motor control were collaborator-owned.</span>
     </div>
 </section>
 
@@ -391,7 +391,7 @@
                     <td><code>cloud_paraformer</code></td>
                     <td data-i18n="s3.e2.backend">DashScope paraformer-realtime-v2 (hotword)</td>
                     <td data-i18n="s3.e2.audio">RMS gate (280) + hangover (0.6s) + zero-fill</td>
-                    <td data-i18n="s3.e2.eou">Cloud endpointing (max_sentence_silence=800ms, heartbeat)</td>
+                    <td data-i18n="s3.e2.eou">Cloud endpointing (max_sentence_silence=1800ms, heartbeat)</td>
                 </tr>
                 <tr>
                     <td><code>qwen</code></td>
@@ -434,15 +434,15 @@
                 <h2><i class="fa-solid fa-brain"></i> <span data-i18n="s4.title">Dual-Path NLU &amp; VLM-SAM3 Grounding</span></h2>
 
                 <h3 data-i18n="s4.h.nlu">Dual-Path Intent Parsing</h3>
-                <p data-i18n-html="s4.p1">The <code>VoiceCommandParser</code> operates in <code>regex_then_llm</code> mode. <strong>Fast path</strong>: 7 regex templates extract intent (pick_up / pick_and_place / place_only / move_to / chat / unknown) and entities from clean commands in &lt;1 ms. <strong>LLM path</strong>: qwen3.5-flash (TRT-LLM or OpenAI-compatible HTTP) with a structured system prompt defining 6 intent types, noise classification rules (garbled ASR, background speech, filler phrases), and entity fields (target_object, quantity, location, object_en, location_en). Generation: <code>temperature=0</code>, <code>max_new_tokens=28</code>. A <code>chat_fallback</code> regex catches clear questions that the LLM occasionally misclassifies as unknown.</p>
+                <p data-i18n-html="s4.p1">The <code>VoiceCommandParser</code> operates in <code>regex_then_llm</code> mode. <strong>Fast path</strong>: six action regex templates plus wake/chat phrase handling extract intent (pick_up / pick_and_place / place_only / move_to / chat / unknown) and entities from clean commands in &lt;1 ms. <strong>LLM path</strong>: qwen3.5-flash (TRT-LLM or OpenAI-compatible HTTP) with a structured system prompt defining 6 intent types, noise classification rules (garbled ASR, background speech, filler phrases), and entity fields (target_object, quantity, location, object_en, location_en). Generation: <code>temperature=0</code>, <code>max_new_tokens=28</code>. A <code>chat_fallback</code> regex catches clear questions that the LLM occasionally misclassifies as unknown.</p>
 
-                <h3 data-i18n="s4.h.vlm">VLM Bbox + CLIP Text Joint Grounding</h3>
-                <p data-i18n-html="s4.p2">The perception pipeline feeds NLU output to VLM (Qwen2.5-VL via HTTP) for bounding-box extraction, then to SAM3 with <strong>joint box + CLIP English text prompts</strong>. The key geometric fix is <strong>letterbox alignment</strong>: VLM resizes the input image to fit its max resolution (e.g., 512 px) with padding, outputting bbox coordinates in letterboxed space. These must be inverse-transformed to original pixel coordinates before feeding SAM3 &mdash; naive resize produces 1.78&times; vertical distortion, collapsing small-object masks. A color-to-VLM routing fix moved color discrimination from SAM3&rsquo;s HSV heuristic to VLM&rsquo;s semantic understanding, eliminating false rejections (e.g., &ldquo;red bull&rdquo; rejected because the can is blue/silver).</p>
+                <h3 data-i18n="s4.h.vlm">VLM Bbox + SAM3 Box/Text Grounding</h3>
+                <p data-i18n-html="s4.p2">The perception pipeline feeds NLU output to a Qwen-compatible VLM HTTP route for bounding-box extraction, then to SAM3 with <strong>box + English text prompts</strong>. The critical contract is that VLM bbox decoding and SAM3 masks share the same original image pixel plane: the bridge maps 0-1000 bbox outputs to source-pixel <code>xyxy</code> and passes <code>input_boxes_pixel_xyxy</code> into SAM3, while SAM3 handles its own letterbox preprocessing internally. A color-to-VLM routing fix moved color/brand discrimination from SAM3 HSV heuristics to the VLM bbox stage, with HSV rerank kept only as rollback.</p>
 
                 <div class="two-col">
                     <figure class="diagram">
                         <img src="Pic/planb/sam3_improvement.png" alt="SAM3 mask success improvement" />
-                        <figcaption data-i18n="s4.cap1">Box-only: 9% &rarr; Box+Text joint grounding: &ge;90% (44 trials)</figcaption>
+                        <figcaption data-i18n="s4.cap1">Box-only: 4/44 &rarr; Box+Text joint grounding: &ge;90% (44 trials)</figcaption>
                     </figure>
                     <figure class="diagram">
                         <img src="Pic/planb/letterbox_comparison.png" alt="Letterbox alignment" />
@@ -451,11 +451,11 @@
                 </div>
 
                 <h3 data-i18n="s4.h.defense">5-Layer Semantic Defense Cascade</h3>
-                <p data-i18n-html="s4.p3">Dirty data at any stage cascades into wrong targets and failed grasps. Five ordered defense layers intercept errors progressively: (1) <strong>Whitelist recovery</strong> &mdash; regex dictionary maps ASR noise to known objects (e.g., phonetic corruptions); (2) <strong>Color backfill</strong> &mdash; if ASR omits a color prefix present in the original command, the parser re-injects it from <code>_ZH_COLOR_PREFIXES</code>; (3) <strong>Hallucination stripping</strong> &mdash; removes phantom locations invented by the LLM; (4) <strong>Sentinel filtering</strong> &mdash; <code>translate_for_sam3</code> checks against a known-object dictionary to prevent dictionary pollution (e.g., an unknown object mapping to a wrong English word); (5) <strong>VLM-SAM3 contradiction</strong> &mdash; if VLM bbox and SAM3 mask disagree on spatial location (CLIP logit &lt; 0.20 or mask area &lt; 200 px), the result is rejected.</p>
+                <p data-i18n-html="s4.p3">Dirty data at any stage cascades into wrong targets and failed grasps. Five ordered defense layers intercept errors progressively: (1) <strong>Whitelist recovery</strong> &mdash; regex dictionary maps ASR noise to known objects (e.g., phonetic corruptions); (2) <strong>Color backfill</strong> &mdash; if ASR omits a color prefix present in the original command, the parser re-injects it from <code>_ZH_COLOR_PREFIXES</code>; (3) <strong>Hallucination stripping</strong> &mdash; removes phantom locations invented by the LLM; (4) <strong>Sentinel filtering</strong> &mdash; <code>translate_for_sam3</code> checks against a known-object dictionary to prevent dictionary pollution (e.g., an unknown object mapping to a wrong English word); (5) <strong>VLM-SAM3 contradiction</strong> &mdash; if VLM gives a concrete bbox but SAM3 returns an empty/too-small mask or a low-confidence VLM-backed result, the result is rejected before it can pollute tracking cache.</p>
 
                 <div class="result-block">
                     <i class="fa-solid fa-chart-line"></i>
-                    <span data-i18n-html="s4.result">SAM3 mask success (small targets): <strong>9% &rarr; &ge;90%</strong> &bull; Color/brand routing error: <strong>0</strong> &bull; NLU intent: 6 types + noise classification</span>
+                    <span data-i18n-html="s4.result">SAM3 mask success (small targets): <strong>4/44 &rarr; &ge;90%</strong> &bull; Color/brand routing moved to VLM &bull; NLU intent: 6 types + noise classification</span>
                 </div>
             </section>
 <!-- ============ S5: CLOSED-LOOP FSM ============ -->
@@ -477,7 +477,7 @@
     </div>
 
     <h3 data-i18n="s5.h.grasp">grasp_check v1.0.0: 3D Multi-Feature Voting</h3>
-    <p data-i18n-html="s5.p1">After each grasp attempt, the <code>GraspFeedbackMixin</code> transitions through states: <code>idle &rarr; executing &rarr; verifying &rarr; retrying/aborting</code>. Verification uses a 3D multi-feature voting system on hand+object point cloud proximity: <strong>median distance &lt; 55 mm</strong>, <strong>P25 &lt; 45 mm</strong>, <strong>frac within 3 cm &ge; 2%</strong>, <strong>frac within 5 cm &ge; 8%</strong>. Tactile verification supplements vision: post-gripper-close baseline capture (<code>ResetTactileSensor()</code> + 0.35 s sampling window), then delta comparison at grasp_check position &mdash; retained force indicates true hold, force decay indicates empty grasp. Failures are classified into <strong>infrastructure</strong> (IK unreachable), <strong>genuine</strong> (object missed), and <strong>displacement</strong> (object moved) with graded TTS feedback.</p>
+    <p data-i18n-html="s5.p1">After each grasp attempt, the <code>GraspFeedbackMixin</code> transitions through <code>idle &rarr; executing &rarr; verifying &rarr; retrying/aborting</code>. The standalone <code>grasp_check_server</code> runs SAM3 once with target and robotic-hand prompts, reconstructs both masks into 3D, and gates hand-object nearest-neighbor overlap with <strong>median distance &lt; 55 mm</strong>, <strong>P25 &lt; 45 mm</strong>, <strong>frac within 3 cm &ge; 2%</strong>, and <strong>frac within 5 cm &ge; 8%</strong>; pure depth <code>z_fallback</code> is disabled. In the pipeline-level <code>vlm_or_tactile</code> route, VLM failure fails directly, while VLM success opens a serial tactile polling window for confirmation.</p>
 
     <h3 data-i18n="s5.h.p0">P0 Cascading Failure: 7-Step Root-Cause Audit</h3>
     <figure class="diagram">
@@ -486,7 +486,7 @@
     </figure>
     <div class="result-block">
         <i class="fa-solid fa-bug"></i>
-        <span data-i18n-html="s5.result">A missing <code>ok=True</code> in <code>_bg_write_shm()</code> caused stale frame reads &rarr; degraded masks (&lt;93 px) &rarr; infinite retry. Audit traced: flag &rarr; stale cache &rarr; VLM old frame &rarr; SAM3 misalignment &rarr; mask collapse &rarr; depth failure &rarr; retry loop. <strong>One-line fix restored full grasping success.</strong></span>
+        <span data-i18n-html="s5.result">A missing <code>ok=True</code> in <code>_bg_write_shm()</code> caused stale frame reads &rarr; degraded masks (&lt;93 px) &rarr; infinite retry. Audit traced: flag &rarr; stale cache &rarr; VLM old frame &rarr; SAM3 misalignment &rarr; mask collapse &rarr; depth failure &rarr; retry loop. <strong>The report changed this P0 flow from four failed retries to closed-loop success.</strong></span>
     </div>
 </section>
 <!-- ============ S6: RESULTS ============ -->
@@ -512,9 +512,9 @@
                 </tr>
                 <tr>
                     <td data-i18n="s6.r2.m">SAM3 mask success (small obj)</td>
-                    <td>9%</td>
+                    <td>4/44</td>
                     <td class="improved">&ge;90%</td>
-                    <td data-i18n="s6.r2.how">Letterbox + VLM bbox + CLIP text joint grounding</td>
+                    <td data-i18n="s6.r2.how">Source-pixel VLM bbox + SAM3 box/text grounding</td>
                 </tr>
                 <tr>
                     <td data-i18n="s6.r3.m">ASR streaming partial</td>
@@ -535,9 +535,9 @@
                     <td data-i18n="s6.r5.how">7-step root-cause audit + 1-line fix</td>
                 </tr>
                 <tr>
-                    <td data-i18n="s6.r6.m">Color/brand routing error</td>
-                    <td data-i18n="s6.r6.b">HSV misclassification</td>
-                    <td class="improved">0</td>
+                    <td data-i18n="s6.r6.m">Color/brand routing boundary</td>
+                    <td data-i18n="s6.r6.b">HSV-stage gate</td>
+                    <td class="improved">VLM-stage</td>
                     <td data-i18n="s6.r6.how">VLM-stage color routing (HSV rerank disabled)</td>
                 </tr>
                 <tr>
@@ -576,18 +576,18 @@
             </div>
             <div class="hl-card">
                 <div class="hl-icon"><i class="fa-solid fa-bolt"></i></div>
-                <h4 data-i18n="s7.h2.title">Cloud Endpointing</h4>
-                <p data-i18n="s7.h2.desc">All PCM frames, including silence, stay in the cloud stream so the server-side endpointing timer can actually fire; local VAD keeps barge-in only.</p>
+                <h4 data-i18n="s7.h2.title">Cloud Endpointing + TTS Echo Guard</h4>
+                <p data-i18n="s7.h2.desc">All PCM frames, including silence, stay in the cloud stream so server-side endpointing can fire; default config disables barge-in, while TTS playback still zero-fills echo frames and the optional interrupt path remains guarded.</p>
             </div>
             <div class="hl-card">
                 <div class="hl-icon"><i class="fa-solid fa-crop-simple"></i></div>
-                <h4 data-i18n="s7.h3.title">Letterbox Alignment</h4>
-                <p data-i18n="s7.h3.desc">Aspect-ratio-preserving preprocessing keeps VLM box coordinates and SAM3 masks in the same reference frame, avoiding the 1.78x vertical stretch from naive resize.</p>
+                <h4 data-i18n="s7.h3.title">Source-Pixel VLM/SAM3 Contract</h4>
+                <p data-i18n="s7.h3.desc">The VLM bbox bridge decodes 0-1000 outputs into original-pixel xyxy and passes input_boxes_pixel_xyxy to SAM3, avoiding coordinate drift between VLM grounding and SAM3 masks.</p>
             </div>
             <div class="hl-card">
                 <div class="hl-icon"><i class="fa-solid fa-shield-halved"></i></div>
-                <h4 data-i18n="s7.h4.title">5-Layer Semantic Defense</h4>
-                <p data-i18n="s7.h4.desc">Cascaded error interception: whitelist recovery, color backfill, hallucination stripping, sentinel filtering, and VLM-SAM3 contradiction checks. Each layer catches what the previous one missed.</p>
+                <h4 data-i18n="s7.h4.title">3D Grasp Voting Boundary</h4>
+                <p data-i18n="s7.h4.desc">Standalone grasp_check is SAM3 target+hand batch2 plus 3D overlap with no z_fallback; tactile belongs to the separate pipeline-level vlm_or_tactile confirmation route.</p>
             </div>
         </div>
     </section>

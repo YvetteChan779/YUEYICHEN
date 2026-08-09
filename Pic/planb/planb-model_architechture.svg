@@ -24,8 +24,8 @@
   </defs>
 
   <rect class="bg" x="0" y="0" width="1900" height="980" />
-  <text class="title" x="54" y="62">PLAN-B voice-to-grasp model architecture</text>
-  <text class="sub" x="54" y="93">16 kHz PCM enters the voice front end, then branches through semantic routing, visual grounding, grasp verification, and closed-loop execution.</text>
+  <text class="title" x="54" y="62">PLAN-B speech-to-grasp interaction stack</text>
+  <text class="sub" x="54" y="93">16 kHz ALSA PCM flows through cloud ASR, JSON NLU, VLM/SAM3 grounding, TTS echo guards, 3D verification, and collaborator-owned execution.</text>
 
   <!-- Top lane -->
   <rect class="block" x="50" y="150" width="150" height="124" fill="#e0f2fe" stroke="#2563eb" />
@@ -36,7 +36,7 @@
   <rect class="block" x="228" y="150" width="170" height="124" fill="#dbeafe" stroke="#2563eb" />
   <text class="label" x="313" y="180" text-anchor="middle">VAD gate</text>
   <text class="note" x="313" y="204" text-anchor="middle">energy + AGC</text>
-  <text class="tiny" x="313" y="228" text-anchor="middle">stateful Silero v4 h/c [2,1,64]</text>
+  <text class="tiny" x="313" y="228" text-anchor="middle">stateful Silero v4/v5 state</text>
   <text class="tiny" x="313" y="248" text-anchor="middle">field-calibrated thresholds</text>
 
   <rect class="block" x="426" y="150" width="220" height="124" fill="#c7d2fe" stroke="#6366f1" />
@@ -53,8 +53,8 @@
   <rect class="block" x="852" y="150" width="200" height="124" fill="#ede9fe" stroke="#7c3aed" />
   <text class="label" x="952" y="180" text-anchor="middle">NLU parser</text>
   <text class="note" x="952" y="204" text-anchor="middle">regex_then_llm</text>
-  <text class="tiny" x="952" y="228" text-anchor="middle">qwen3.5-flash via OpenAI-compatible HTTP</text>
-  <text class="tiny" x="952" y="248" text-anchor="middle">7 regex templates + chat fallback</text>
+  <text class="tiny" x="952" y="228" text-anchor="middle">qwen3.5-flash JSON via HTTP</text>
+  <text class="tiny" x="952" y="248" text-anchor="middle">6 action regex + wake/chat fallback</text>
 
   <rect class="block" x="1080" y="150" width="180" height="124" fill="#dcfce7" stroke="#16a34a" />
   <text class="label" x="1170" y="180" text-anchor="middle">VLM bbox</text>
@@ -66,11 +66,11 @@
   <text class="label" x="1388" y="180" text-anchor="middle">SAM3 grounder</text>
   <text class="note" x="1388" y="204" text-anchor="middle">box + English text</text>
   <text class="tiny" x="1388" y="228" text-anchor="middle">HAR_SAM3_PREPROCESS=letterbox</text>
-  <text class="tiny" x="1388" y="248" text-anchor="middle">pixel_boxes_xyxy_list / CLIP ASCII prompt</text>
+  <text class="tiny" x="1388" y="248" text-anchor="middle">input_boxes_pixel_xyxy + English text</text>
 
   <rect class="block" x="1516" y="150" width="180" height="124" fill="#ffedd5" stroke="#f97316" />
   <text class="label" x="1606" y="180" text-anchor="middle">grasp_check</text>
-  <text class="note" x="1606" y="204" text-anchor="middle">3D overlap + tactile</text>
+  <text class="note" x="1606" y="204" text-anchor="middle">SAM3 target+hand</text>
   <text class="tiny" x="1606" y="228" text-anchor="middle">median &lt; 55 mm, P25 &lt; 45 mm</text>
   <text class="tiny" x="1606" y="248" text-anchor="middle">frac&lt;3cm &ge; 2%, frac&lt;5cm &ge; 8%</text>
 
@@ -92,12 +92,12 @@
   <!-- Middle support lane -->
   <rect class="block" x="78" y="352" width="224" height="114" fill="#eff6ff" stroke="#2563eb" />
   <text class="label" x="190" y="385" text-anchor="middle">TTS playback_active</text>
-  <text class="note" x="190" y="410" text-anchor="middle">barge-in feedback loop</text>
-  <text class="tiny" x="190" y="434" text-anchor="middle">keeps users able to interrupt speech</text>
+  <text class="note" x="190" y="410" text-anchor="middle">TTS echo guard</text>
+  <text class="tiny" x="190" y="434" text-anchor="middle">optional barge-in disabled by default</text>
 
   <rect class="block" x="352" y="352" width="224" height="114" fill="#f8fafc" stroke="#94a3b8" />
   <text class="label" x="464" y="385" text-anchor="middle">RGB-D inputs</text>
-  <text class="note" x="464" y="410" text-anchor="middle">head RGB SHM + chest RGB + depth</text>
+  <text class="note" x="464" y="410" text-anchor="middle">head RGB/depth SHM + left camera</text>
   <text class="tiny" x="464" y="434" text-anchor="middle">shared-memory readers avoid DDS copies</text>
 
   <rect class="block" x="628" y="352" width="260" height="114" fill="#ecfccb" stroke="#65a30d" />
@@ -107,8 +107,8 @@
 
   <rect class="block" x="940" y="352" width="280" height="114" fill="#fef3c7" stroke="#d97706" />
   <text class="label" x="1080" y="385" text-anchor="middle">Closed-loop verification</text>
-  <text class="note" x="1080" y="410" text-anchor="middle">grasp_check + tactile baseline</text>
-  <text class="tiny" x="1080" y="434" text-anchor="middle">fail-open false, retry on error limited to 3</text>
+  <text class="note" x="1080" y="410" text-anchor="middle">grasp_check server + optional tactile</text>
+  <text class="tiny" x="1080" y="434" text-anchor="middle">no z_fallback; pipeline vlm_or_tactile is separate</text>
 
   <rect class="block" x="1262" y="352" width="274" height="114" fill="#fee2e2" stroke="#dc2626" />
   <text class="label" x="1399" y="385" text-anchor="middle">Retry + state machine</text>

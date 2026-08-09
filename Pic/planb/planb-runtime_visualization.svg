@@ -30,7 +30,7 @@
 
   <rect class="bg" x="0" y="0" width="1900" height="980" />
   <text class="title" x="54" y="62">PLAN-B runtime visualization</text>
-  <text class="sub" x="54" y="93">One command travels through audio, parsing, vision grounding, grasp verification, and retry logic while barge-in and target-lost guards stay live.</text>
+  <text class="sub" x="54" y="93">One command travels through audio, parsing, vision grounding, TTS playback state, 3D verification, and retry logic with target-lost guards explicit.</text>
 
   <!-- Metric cards -->
   <rect class="card" x="52" y="132" width="410" height="124" fill="#ffffff" stroke="#cbd5e1" />
@@ -62,7 +62,7 @@
   <text class="note" x="195" y="362" text-anchor="middle">16 kHz PCM</text>
   <text class="tiny" x="195" y="388" text-anchor="middle">VAD gate + envelope AGC</text>
   <text class="tiny" x="195" y="410" text-anchor="middle">stateful Silero h/c [2,1,64]</text>
-  <text class="tiny" x="195" y="432" text-anchor="middle">barge-in stays active</text>
+  <text class="tiny" x="195" y="432" text-anchor="middle">TTS echo guard active</text>
 
   <rect class="card" x="332" y="300" width="230" height="160" fill="#c7d2fe" stroke="#6366f1" />
   <text class="label" x="447" y="336" text-anchor="middle">Streaming ASR</text>
@@ -75,7 +75,7 @@
   <text class="label" x="699" y="336" text-anchor="middle">NLU parser</text>
   <text class="note" x="699" y="362" text-anchor="middle">regex_then_llm</text>
   <text class="tiny" x="699" y="388" text-anchor="middle">qwen3.5-flash via OpenAI-compatible HTTP</text>
-  <text class="tiny" x="699" y="410" text-anchor="middle">7 regex templates first</text>
+  <text class="tiny" x="699" y="410" text-anchor="middle">6 action regex first</text>
   <text class="tiny" x="699" y="432" text-anchor="middle">chat_fallback catches true questions</text>
 
   <rect class="card" x="836" y="300" width="240" height="160" fill="#dcfce7" stroke="#16a34a" />
@@ -83,7 +83,7 @@
   <text class="note" x="956" y="362" text-anchor="middle">openai_http + source pixels</text>
   <text class="tiny" x="956" y="388" text-anchor="middle">TTFB 850-2950 ms</text>
   <text class="tiny" x="956" y="410" text-anchor="middle">500-2500 ms when max_side=512</text>
-  <text class="tiny" x="956" y="432" text-anchor="middle">letterbox space is inverse-mapped</text>
+  <text class="tiny" x="956" y="432" text-anchor="middle">source-pixel bbox contract</text>
 
   <rect class="card" x="1108" y="300" width="240" height="160" fill="#d1fae5" stroke="#059669" />
   <text class="label" x="1228" y="336" text-anchor="middle">SAM3 grounder</text>
@@ -94,9 +94,9 @@
 
   <rect class="card" x="1380" y="300" width="230" height="160" fill="#ffedd5" stroke="#f97316" />
   <text class="label" x="1495" y="336" text-anchor="middle">grasp_check</text>
-  <text class="note" x="1495" y="362" text-anchor="middle">3D overlap + tactile</text>
+  <text class="note" x="1495" y="362" text-anchor="middle">SAM3 target+hand 3D</text>
   <text class="tiny" x="1495" y="388" text-anchor="middle">median &lt; 55 mm, P25 &lt; 45 mm</text>
-  <text class="tiny" x="1495" y="410" text-anchor="middle">50 N force gate, baseline settle 0.5 s</text>
+  <text class="tiny" x="1495" y="410" text-anchor="middle">no z_fallback in server</text>
   <text class="tiny" x="1495" y="432" text-anchor="middle">retry cap = 3</text>
 
   <rect class="card" x="1640" y="300" width="180" height="160" fill="#fee2e2" stroke="#dc2626" />
@@ -115,7 +115,7 @@
 
   <!-- Feedback loops -->
   <path class="arrow-blue" d="M195 300 C195 262, 304 262, 304 224" />
-  <text class="tiny" x="244" y="266" text-anchor="middle">barge-in</text>
+  <text class="tiny" x="244" y="266" text-anchor="middle">playback_active</text>
 
   <path class="arrow-orange" d="M1495 460 C1495 520, 1220 520, 1220 460" />
   <text class="tiny" x="1366" y="512" text-anchor="middle">retry / re-ground</text>
@@ -128,7 +128,7 @@
   <text class="metric" x="120" y="642">Observed runtime guarantees</text>
   <text class="note" x="120" y="676">• cloud_qwen3 owns endpointing, so silence gaps do not force session rebuilds.</text>
   <text class="note" x="120" y="706">• `head_rgb_shm` is the main RGB path; DDS stays off unless explicitly enabled.</text>
-  <text class="note" x="120" y="736">• `grasp_check` uses geometry first, then tactile confirmation on top of the same endpoint.</text>
+  <text class="note" x="120" y="736">• `grasp_check` uses geometry; pipeline `vlm_or_tactile` adds serial tactile confirmation.</text>
   <text class="note" x="120" y="766">• The P0 path was traced as stale frame → wrong bbox → degraded mask → retry deadlock.</text>
 
   <rect x="648" y="600" width="600" height="230" rx="22" fill="#ffffff" stroke="#cbd5e1" stroke-width="2" />
