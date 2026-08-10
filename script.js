@@ -61,7 +61,7 @@
             'experience.roboscience.org': 'Beijing Jike Future Technology Co., Ltd. (RoboScience)',
             'experience.roboscience.role': 'Algorithm Intern · Social-robot interaction and real-robot manipulation systems',
             'experience.roboscience.b1': '<strong>Affective Robot Interaction:</strong> engineered a multimodal social-robot interaction stack with Qwen2.5-VL/OpenCV perception, Text-to-Action CVAE, image-conditioned Diffusion Policy, and 10D WebSocket + Dynamixel execution over 194 reaction episodes.',
-            'experience.roboscience.b2': '<strong>PLAN-B:</strong> engineered a Jetson AGX Orin voice-to-grasp pipeline around 3-tier VAD, cloud_qwen3 ASR, qwen3.5-flash NLU, Qwen2.5-VL + SAM3 grounding, depth-based grasp_check, and a 13-mixin FSM, lifting documented far-field VAD hit rate from 0% to 92% and SAM3 mask success from 9% to >=90% while reducing target-lost timeout from 60 s to 3 s.',
+            'experience.roboscience.b2': '<strong>VoxIntent:</strong> engineered the voice-to-intent subsystem of a Jetson AGX Orin manipulation robot around a 3-tier VAD, a cloud-first 4-engine streaming ASR router, dual-path NLU (6 action regex + qwen3.5-flash JSON), a 6-state dialog manager with 3-score ambient rejection, VLM instruction grounding with a source-pixel xyxy bbox contract, and a TTS echo guard, lifting field-reported far-field VAD hit rate from 0% to 92% with 150-300 ms ASR partials.',
             'experience.roboscience.b3': '<strong>Embodied Coin Standing and Placement:</strong> architected an xArm6 + LEAP Hand closed-loop manipulation workflow with D435 / fingertip cameras, frozen RADIO summaries, a 16-step / 6-step ACT-style policy, checkpoint hot-switching, HSV tilt + hand-joint gating, grasp verification, rule-based half-arc transfer, and automatic episode reset.',
             'experience.huawei.org': 'Huawei Technologies Co., Ltd. & SYSU VLN Lab',
             'experience.huawei.role': 'VLM Navigation Intern · NavLLaVA visual-language navigation decision model',
@@ -95,9 +95,9 @@
             'proj.ram.link.details': 'Details',
             'proj.ram.link.code': 'Code',
             'proj.ram.link.paper': 'Paper',
-            'proj.planb.title': 'PLAN-B: Voice-to-Grasp Pipeline for Humanoid Robot',
-            'proj.planb.venue': '<em>Algorithm Intern Project</em> · Jetson AGX Orin, 2026',
-            'proj.planb.desc': 'Architected a Jetson AGX Orin voice-to-grasp pipeline around 3-tier VAD, cloud_qwen3 ASR, qwen3.5-flash NLU, Qwen2.5-VL + SAM3 grounding, depth-based grasp_check, and a 13-mixin FSM. The documented route lifted far-field VAD hit rate from <strong>0% -> 92%</strong> and small-target SAM3 mask success from <strong>9% -> >=90%</strong>, while target-lost timeout dropped from <strong>60 s -> 3 s</strong>. I redrew the model_architechture and runtime visualization pages so the pipeline boundaries are explicit. No controlled end-to-end success benchmark is claimed beyond module-level measurements.',
+            'proj.voxintent.title': 'VoxIntent: Voice-to-Intent Pipeline for Manipulation Robot',
+            'proj.voxintent.venue': '<em>Algorithm Intern Project</em> · Jetson AGX Orin, 2026',
+            'proj.voxintent.desc': 'Owned the voice-to-intent subsystem of a Jetson AGX Orin manipulation robot: a field-calibrated 3-tier VAD, a cloud-first 4-engine streaming ASR router (cloud_qwen3 default), dual-path NLU (6 action regex + qwen3.5-flash JSON), a 6-state dialog manager with 3-score ambient rejection, VLM instruction grounding with a source-pixel xyxy bbox contract, and a TTS echo guard (no AEC). Field-reported far-field VAD hit rate rose <strong>0% -> 92%</strong> with <strong>150-300 ms</strong> ASR partials; downstream SAM3 masks, 3D grasp verification, IK, and motor control are collaborator-owned. Metrics are single-device field reports, not formal benchmarks.',
             'footer': '&copy; <span id="year">' + new Date().getFullYear() + '</span> Yueyi Chen. Powered by <a href="https://pages.github.com/" target="_blank" rel="noopener">GitHub Pages</a>.'
         },
         zh: {
@@ -120,7 +120,7 @@
             'experience.roboscience.org': '北京机科未来科技有限公司 RoboScience',
             'experience.roboscience.role': '算法实习生 · 社交机器人交互与真机操作系统',
             'experience.roboscience.b1': '<strong>情感陪伴场景的多模态交互系统：</strong>工程化实现多模态社交机器人交互栈，覆盖 Qwen2.5-VL/OpenCV 感知、Text-to-Action CVAE、图像条件 Diffusion Policy，以及 194 个反应 episode 上的 10D WebSocket + Dynamixel 执行链路。',
-            'experience.roboscience.b2': '<strong>PLAN-B：</strong>在 Jetson AGX Orin 上工程化语音到抓取管线，围绕 3 级 VAD、cloud_qwen3 ASR、qwen3.5-flash NLU、Qwen2.5-VL + SAM3 定位、depth-based grasp_check 和 13-mixin FSM，将文档记录的远场 VAD 命中率从 0% 提升到 92%，SAM3 mask 成功率从 9% 提升到 >=90%，并把目标丢失超时从 60 s 降到 3 s。',
+            'experience.roboscience.b2': '<strong>VoxIntent：</strong>负责 Jetson AGX Orin 操作机器人的语音意图子系统，围绕 3 级 VAD、云优先 4 引擎流式 ASR 路由、双路径 NLU（6 动作正则 + qwen3.5-flash JSON）、6 状态对话管理器搭配 3 维度环境音拒绝、原图像素 xyxy bbox 契约的 VLM 指令定位，以及 TTS 回声门控，将现场记录的远场 VAD 命中率从 0% 提升到 92%，ASR partial 150-300 ms。',
             'experience.roboscience.b3': '<strong>具身硬币立起与放置：</strong>工程化实现 xArm6 + LEAP Hand 闭环操作流程，接入 D435 / 指尖相机、冻结的 RADIO summary、16 步 / 6 步 ACT 风格策略、checkpoint 热切换、HSV 倾角 + 手指关节门控、夹稳验证、规则化半弧转移与 episode 自动复位。',
             'experience.huawei.org': '华为技术有限公司 & SYSU VLN 实验室',
             'experience.huawei.role': 'VLM 导航算法实习 · NavLLaVA 多场景导航决策模型',
@@ -154,9 +154,9 @@
             'proj.ram.link.details': '详情',
             'proj.ram.link.code': '代码',
             'proj.ram.link.paper': '论文',
-            'proj.planb.title': 'PLAN-B：人形机器人语音到抓取管线',
-            'proj.planb.venue': '<em>算法实习项目</em> · Jetson AGX Orin, 2026',
-            'proj.planb.desc': '在 Jetson AGX Orin 上把人形机器人语音到抓取管线工程化为 3 级 VAD、cloud_qwen3 ASR、qwen3.5-flash NLU、Qwen2.5-VL + SAM3 定位、depth-based grasp_check 和 13-mixin FSM。文档记录的远场 VAD 命中率从 <strong>0% -> 92%</strong>，小目标 SAM3 mask 成功率从 <strong>9% -> >=90%</strong>，目标丢失超时从 <strong>60 s -> 3 s</strong>。我重画了 model_architechture 和 runtime visualization，让管线边界更明确。除模块级指标外，不声称受控端到端成功率。',
+            'proj.voxintent.title': 'VoxIntent：操作机器人语音意图全链路',
+            'proj.voxintent.venue': '<em>算法实习项目</em> · Jetson AGX Orin, 2026',
+            'proj.voxintent.desc': '负责 Jetson AGX Orin 操作机器人的语音意图子系统：现场标定的 3 级 VAD、云优先 4 引擎流式 ASR 路由（默认 cloud_qwen3）、双路径 NLU（6 动作正则 + qwen3.5-flash JSON）、6 状态对话管理器搭配 3 维度环境音拒绝、原图像素 xyxy bbox 契约的 VLM 指令定位，以及 TTS 回声门控（无 AEC）。现场记录的远场 VAD 命中率从 <strong>0% -> 92%</strong>，ASR partial <strong>150-300 ms</strong>；下游 SAM3 mask、3D 抓取验证、IK 与电机控制由协作方负责。指标为单机现场报告，非正式 benchmark。',
             'footer': '&copy; <span id="year">' + new Date().getFullYear() + '</span> 陈悦怡. 基于 <a href="https://pages.github.com/" target="_blank" rel="noopener">GitHub Pages</a> 搭建。'
         }
     };

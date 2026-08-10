@@ -171,7 +171,7 @@ Mining scope: streaming audio capture, VAD, ASR, NLU, intent recognition, keywor
 Target project:
 - Source focus: `/home/CNS2026391745/Documents/PLAN-B-CYY/planb-robot/src/har_interaction/src/`
 - Scoped modules: `audio/`, `asr/`, `nlu/`, `tts/`, `dialog/`, `common/keyword_extract.py`, `common/quick_chat_responses.py`, `common/model_paths.py`, `pipeline/dialog/`, `pipeline/speech/`, `pipeline/mixins/_asr_mixin.py`, `_tts_mixin.py`, `_wake_mixin.py`, `pipeline/segmentation/vlm_box_sam_bridge.py` (VLM bbox bridge only), `inference/har_qwen_inference_client.py`, `inference/remote_inference_client.py`
-- Homepage target: `/home/CNS2026391745/Documents/YUEYICHEN/planb.html` + `planb.js` (full replacement)
+- Homepage target: `/home/CNS2026391745/Documents/YUEYICHEN/voxintent.html` + `voxintent.js` (published as project **VoxIntent**; replaced the former planb.html/planb.js)
 - Architecture diagram: new SVG required (existing module_arch.pdf is aspirational, not factual)
 
 ---

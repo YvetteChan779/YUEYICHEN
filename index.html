@@ -43,7 +43,7 @@
                     <div class="profile-photo">
                         <img src="Pic/self.jpg" alt="Yueyi Chen" />
                     </div>
-                    <h1 class="profile-name">Yueyi Chen (陈悦怡)</h1>
+                    <h1 class="profile-name">Yueyi Chen (陈悦仪)</h1>
                     <p class="profile-title" data-i18n="profile.title">M.Sc. in Computer Science</p>
                     <p class="profile-affiliation" data-i18n="profile.affiliation">The Chinese University of Hong Kong</p>
 
@@ -115,7 +115,7 @@
                                 <p data-i18n-html="experience.roboscience.role">Algorithm Intern · Social-robot interaction and real-robot manipulation systems</p>
                                 <ul class="info-bullets">
                                     <li data-i18n-html="experience.roboscience.b1"><strong>Affective Robot Interaction:</strong> engineered a multimodal social-robot interaction stack with Qwen2.5-VL/OpenCV perception, Text-to-Action CVAE, image-conditioned Diffusion Policy, and 10D WebSocket + Dynamixel execution over 194 reaction episodes.</li>
-                                    <li data-i18n-html="experience.roboscience.b2"><strong>PLAN-B:</strong> built a Jetson AGX Orin voice-to-grasp pipeline spanning VAD/ASR/NLU/VLM/SAM3/depth/grasp FSM, lifting documented far-field VAD hit rate from 0% to 92% and SAM3 mask success from 9% to at least 90%.</li>
+                                    <li data-i18n-html="experience.roboscience.b2"><strong>VoxIntent:</strong> engineered the voice-to-intent subsystem of a Jetson AGX Orin manipulation robot (3-tier VAD, 4-engine streaming ASR, dual-path NLU, 6-state dialog manager, VLM instruction grounding, TTS echo guard), lifting field-reported far-field VAD hit rate from 0% to 92% with 150-300 ms ASR partials.</li>
                                     <li data-i18n-html="experience.roboscience.b3"><strong>Embodied Coin Standing and Placement:</strong> architected an xArm6 + LEAP Hand closed-loop manipulation workflow with D435 / fingertip cameras, frozen RADIO summaries, a 16-step / 6-step ACT-style policy, checkpoint hot-switching, HSV tilt + hand-joint gating, grasp verification, rule-based half-arc transfer, and automatic episode reset.</li>
                                 </ul>
                             </article>
@@ -133,8 +133,9 @@
                             </article>
                         </div>
                     </section>
-
+                    
                     <!-- Skill Graph -->
+                    <!--
                     <section class="skills-section" id="skills">
                         <h2><i class="fa-solid fa-diagram-project"></i> Skill Graph</h2>
                         <div class="skill-list" aria-label="Skill graph">
@@ -164,6 +165,7 @@
                             </div>
                         </div>
                     </section>
+                    -->
 
                     <section class="tag-section">
                         <h2><i class="fa-solid fa-layer-group"></i> Tech Stack</h2>
@@ -200,6 +202,38 @@
                     <!-- Selected Projects -->
                     <section class="publications-section" id="publications">
                         <h2 data-i18n-html="projects.title"><i class="fa-solid fa-thumbtack"></i> Pinned Projects</h2>
+
+                        <div class="pub-entry">
+                            <div class="pub-thumbnail">
+                                <img src="Pic/planb/planb-model_architechture.svg" alt="VoxIntent voice-to-intent architecture" class="pub-thumbnail-contain" />
+                            </div>
+                            <div class="pub-info">
+                                <h3 class="pub-title" data-i18n="proj.voxintent.title">VoxIntent: Voice-to-Intent Pipeline for Manipulation Robot</h3>
+                                <p class="pub-authors"><strong>Yueyi Chen</strong></p>
+                                <p class="pub-venue" data-i18n-html="proj.voxintent.venue"><em>Algorithm Intern Project</em> &middot; Jetson AGX Orin, 2026</p>
+                                <p class="pub-desc" data-i18n-html="proj.voxintent.desc">Owned the voice-to-intent subsystem of a Jetson AGX Orin manipulation robot: a field-calibrated 3-tier VAD, a cloud-first 4-engine streaming ASR router (cloud_qwen3 default), dual-path NLU (6 action regex + qwen3.5-flash JSON), a 6-state dialog manager with 3-score ambient rejection, VLM instruction grounding with a source-pixel xyxy bbox contract, and a TTS echo guard (no AEC). Field-reported far-field VAD hit rate rose <strong>0% -> 92%</strong> with <strong>150-300 ms</strong> ASR partials; downstream SAM3 masks, 3D grasp verification, IK, and motor control are collaborator-owned. Metrics are single-device field reports, not formal benchmarks.</p>
+                                <div class="pub-links">
+                                    <a href="voxintent.html" class="pub-link">Details</a>
+                                    <a href="voxintent.html#results" class="pub-link">Report</a>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="pub-entry">
+                            <div class="pub-thumbnail">
+                                <img src="Pic/aloha_lekiwi/aloha_lekiwi_arch.svg" alt="ALOHA LeKiwi DreamZero architecture" />
+                            </div>
+                            <div class="pub-info">
+                                <h3 class="pub-title" data-i18n="proj.aloha.title">ALOHA/LeKiwi SFT Full Episode: DreamZero VLA Reproduction</h3>
+                                <p class="pub-authors"><strong>Yueyi Chen</strong></p>
+                                <p class="pub-venue" data-i18n-html="proj.aloha.venue"><em>Robot Learning Project</em>, 2026</p>
+                                <p class="pub-desc" data-i18n-html="proj.aloha.desc">Built a reproduction-oriented VLA pipeline for an ALOHA/LeKiwi tabletop manipulation setup, covering LeRobot data collection design, GEAR-style metadata conversion, DreamZero embodiment registration, LoRA fine-tuning protocol, and WebSocket-based action-chunk inference. The project emphasizes practical robot-learning details often missed in paper-level reproductions: 3-view camera-order validation, state/action schema audit, gripper normalization, receding-horizon execution, safety clamping, and rollout-video based evaluation.</p>
+                                <div class="pub-links">
+                                    <a href="aloha_lekiwi.html" class="pub-link">Details</a>
+                                    <a href="aloha_lekiwi.html#demo" class="pub-link">Videos</a>
+                                </div>
+                            </div>
+                        </div>
 
                         <div class="pub-entry featured-project">
                             <div class="pub-thumbnail">
@@ -251,21 +285,7 @@
                             </div>
                         </div>
 
-                        <div class="pub-entry">
-                            <div class="pub-thumbnail">
-                                <img src="Pic/aloha_lekiwi/aloha_lekiwi_arch.svg" alt="ALOHA LeKiwi DreamZero architecture" />
-                            </div>
-                            <div class="pub-info">
-                                <h3 class="pub-title" data-i18n="proj.aloha.title">ALOHA/LeKiwi SFT Full Episode: DreamZero VLA Reproduction</h3>
-                                <p class="pub-authors"><strong>Yueyi Chen</strong></p>
-                                <p class="pub-venue" data-i18n-html="proj.aloha.venue"><em>Robot Learning Project</em>, 2026</p>
-                                <p class="pub-desc" data-i18n-html="proj.aloha.desc">Built a reproduction-oriented VLA pipeline for an ALOHA/LeKiwi tabletop manipulation setup, covering LeRobot data collection design, GEAR-style metadata conversion, DreamZero embodiment registration, LoRA fine-tuning protocol, and WebSocket-based action-chunk inference. The project emphasizes practical robot-learning details often missed in paper-level reproductions: 3-view camera-order validation, state/action schema audit, gripper normalization, receding-horizon execution, safety clamping, and rollout-video based evaluation.</p>
-                                <div class="pub-links">
-                                    <a href="aloha_lekiwi.html" class="pub-link">Details</a>
-                                    <a href="aloha_lekiwi.html#demo" class="pub-link">Videos</a>
-                                </div>
-                            </div>
-                        </div>
+
 
                         <div class="pub-entry">
                             <div class="pub-thumbnail">
@@ -284,21 +304,7 @@
                             </div>
                         </div>
 
-                        <div class="pub-entry">
-                            <div class="pub-thumbnail">
-                                <img src="Pic/planb/planb-model_architechture.svg" alt="PLAN-B model architecture" class="pub-thumbnail-contain" />
-                            </div>
-                            <div class="pub-info">
-                                <h3 class="pub-title" data-i18n="proj.planb.title">PLAN-B: Voice-to-Grasp Pipeline for Humanoid Robot</h3>
-                                <p class="pub-authors"><strong>Yueyi Chen</strong></p>
-                                <p class="pub-venue" data-i18n-html="proj.planb.venue"><em>Algorithm Intern Project</em> &middot; Jetson AGX Orin, 2026</p>
-                                <p class="pub-desc" data-i18n-html="proj.planb.desc">Architected a Jetson AGX Orin voice-to-grasp pipeline around 3-tier VAD, cloud_qwen3 ASR, qwen3.5-flash NLU, Qwen2.5-VL + SAM3 grounding, depth-based grasp_check, and a 13-mixin FSM. The documented route lifted far-field VAD hit rate from <strong>0% -> 92%</strong> and small-target SAM3 mask success from <strong>9% -> >=90%</strong>, while target-lost timeout dropped from <strong>60 s -> 3 s</strong>. I redrew the model_architechture and runtime visualization pages so the pipeline boundaries are explicit. No controlled end-to-end success benchmark is claimed beyond module-level measurements.</p>
-                                <div class="pub-links">
-                                    <a href="planb.html" class="pub-link">Details</a>
-                                    <a href="planb.html#results" class="pub-link">Report</a>
-                                </div>
-                            </div>
-                        </div>
+
 
                     </section>
 

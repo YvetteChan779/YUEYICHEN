@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="PLAN-B Voice-to-Intent Pipeline — Yueyi Chen" />
-    <title>PLAN-B Voice-to-Intent Pipeline | Yueyi Chen</title>
+    <meta name="description" content="VoxIntent Voice-to-Intent Pipeline — Yueyi Chen" />
+    <title>VoxIntent: Voice-to-Intent Pipeline | Yueyi Chen</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Lora:wght@400;500;600;700&family=JetBrains+Mono:wght@400&display=swap" rel="stylesheet" />
@@ -270,7 +270,7 @@
 
 <!-- ============ HERO ============ -->
 <div class="hero">
-    <h1 data-i18n="hero.title">PLAN-B Voice-to-Intent Pipeline</h1>
+    <h1 data-i18n="hero.title">VoxIntent: Voice-to-Intent Pipeline</h1>
     <p class="subtitle"><strong>Yueyi Chen</strong> &middot; <span data-i18n="hero.venue">The Chinese University of Hong Kong</span> &middot; 2026</p>
     <p class="tagline" data-i18n="hero.tagline">16 kHz ALSA &middot; 3-tier cascaded VAD &middot; 4-engine streaming ASR &middot; dual-path NLU &middot; VLM instruction grounding &middot; TTS echo guard</p>
     <div class="links">
@@ -304,7 +304,7 @@
 <!-- ============ S0: OVERVIEW ============ -->
 <section class="section-block" id="overview">
     <h2><i class="fa-solid fa-bullseye"></i> <span data-i18n="s0.title">Overview</span></h2>
-    <p data-i18n-html="s0.p1">Deploying voice-controlled manipulation on Jetson AGX Orin surfaced a chain of interface failures: far-field speech vanishes into background noise, TTS echo re-triggers the ASR, cloud endpointing splits single commands, and dirty NLU output cascades into wrong targets. <strong>PLAN-B</strong> is a voice-to-intent pipeline that converts 16 kHz ALSA PCM into structured execution intents through a field-calibrated 3-tier VAD, a cloud-first 4-engine streaming ASR router with envelope AGC v5, dual-path NLU (6 Chinese action regex + qwen3.5-flash JSON), a 5-layer semantic defense cascade, VLM-grounded instruction understanding, and a multi-engine TTS feedback loop with echo suppression.</p>
+    <p data-i18n-html="s0.p1">Deploying voice-controlled manipulation on Jetson AGX Orin surfaced a chain of interface failures: far-field speech vanishes into background noise, TTS echo re-triggers the ASR, cloud endpointing splits single commands, and dirty NLU output cascades into wrong targets. <strong>VoxIntent</strong> is a voice-to-intent pipeline that converts 16 kHz ALSA PCM into structured execution intents through a field-calibrated 3-tier VAD, a cloud-first 4-engine streaming ASR router with envelope AGC v5, dual-path NLU (6 Chinese action regex + qwen3.5-flash JSON), a 5-layer semantic defense cascade, VLM-grounded instruction understanding, and a multi-engine TTS feedback loop with echo suppression.</p>
 
     <ul class="contrib-list">
         <li data-i18n-html="s0.c1">Engineered a <strong>3-tier cascaded VAD quality gate</strong> (adaptive P10 energy floor + software AGC &minus;20 dBFS + stateful Silero v4 ONNX h/c [2,1,64]) with on-site field calibration (noise &minus;46 dB, speech &minus;39 dB, margin 6 dB), lifting far-field hit rate from 0% to 92%.</li>
@@ -312,6 +312,66 @@
         <li data-i18n-html="s0.c3">Designed a <strong>dual-path NLU</strong> (6 priority-ordered action regex against a 290+ object whitelist + qwen3.5-flash JSON, temperature=0, 28-token cap, reasoning mode disabled) with a <strong>5-layer semantic defense cascade</strong> and a <strong>6-state dialog manager</strong> with 3-score ambient rejection gating.</li>
         <li data-i18n-html="s0.c4">Integrated <strong>VLM-grounded instruction understanding</strong> (source-pixel xyxy bbox contract with letterbox alignment) and a <strong>multi-engine TTS feedback loop</strong> (preset cache / edge-tts streaming / Qwen TTS) with playback-active echo suppression replacing planned AEC.</li>
     </ul>
+</section>
+
+<!-- ============ S0.5: TARGET ROLE & JD FIT ============ -->
+<section class="section-block" id="jd-fit">
+    <h2><i class="fa-solid fa-briefcase"></i> <span data-i18n="jd.title">Target Role &amp; JD Fit</span></h2>
+    <p data-i18n-html="jd.intro">This project is written against a specific target role in embodied-AI / robot voice interaction. The mapping below ties each job-description competency to concrete, code-traceable evidence in this pipeline. It is a fit argument, not a claim of novel research.</p>
+
+    <div class="scope-callout">
+        <i class="fa-solid fa-paste"></i>
+        <span data-i18n-html="jd.paste"><strong>Job Description (paste here):</strong> the target posting is a WeChat article that is access-gated, so its text is not embedded automatically. Paste the JD text into <code>jd.jdtext</code> in <code>voxintent.js</code> to render it here verbatim. Source: <a href="https://mp.weixin.qq.com/s/fCcVl2ljaI3WZN-dVNCEOQ" target="_blank" rel="noopener">target posting</a>.</span>
+    </div>
+
+    <div class="table-wrapper">
+        <table class="results-table">
+            <thead>
+                <tr>
+                    <th data-i18n="jd.th.req">Typical JD Requirement</th>
+                    <th data-i18n="jd.th.e0eng">VoxIntent Evidence</th>
+                    <th data-i18n="jd.th.where">Where on this page</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td data-i18n="jd.r1.req">Speech recognition / ASR integration for robots</td>
+                    <td data-i18n-html="jd.r1.ev">Cloud-first 4-engine streaming ASR router (qwen3-asr-flash-realtime / paraformer-realtime-v2 / Qwen3-ASR TRT / FunASR), 150&ndash;300 ms partials, cloud endpointing ownership, rapid-stitch.</td>
+                    <td data-i18n-html="jd.r1.where"><a href="#asr">Streaming ASR</a></td>
+                </tr>
+                <tr>
+                    <td data-i18n="jd.r2.req">Robust front-end audio in noisy / far-field conditions</td>
+                    <td data-i18n-html="jd.r2.ev">3-tier VAD (adaptive P10 floor + software AGC + stateful Silero v4 h/c [2,1,64]), envelope AGC v5, field calibration; far-field hit 0%&rarr;92%.</td>
+                    <td data-i18n-html="jd.r2.where"><a href="#vad">Voice Frontend</a></td>
+                </tr>
+                <tr>
+                    <td data-i18n="jd.r3.req">NLU / intent understanding &amp; LLM integration</td>
+                    <td data-i18n-html="jd.r3.ev">Dual-path NLU (6 action regex + qwen3.5-flash JSON, reasoning disabled), 6-state dialog manager with 3-score ambient rejection, 5-layer semantic defense.</td>
+                    <td data-i18n-html="jd.r3.where"><a href="#nlu">NLU &amp; Dialog</a></td>
+                </tr>
+                <tr>
+                    <td data-i18n="jd.r4.req">Multimodal grounding (vision + language)</td>
+                    <td data-i18n-html="jd.r4.ev">VLM instruction grounding with source-pixel xyxy bbox contract, letterbox alignment, color/category guards; box+text grounding 4/44&rarr;&ge;90%.</td>
+                    <td data-i18n-html="jd.r4.where"><a href="#vlm">VLM Grounding</a></td>
+                </tr>
+                <tr>
+                    <td data-i18n="jd.r5.req">On-device / edge deployment &amp; latency engineering</td>
+                    <td data-i18n-html="jd.r5.ev">Jetson AGX Orin deployment, HTTP connection pool + SSE early JSON, TTS echo guard (no AEC), circuit breaker; latency budgets stated per stage.</td>
+                    <td data-i18n-html="jd.r5.where"><a href="#tts">TTS Feedback</a> &middot; <a href="#results">Results</a></td>
+                </tr>
+                <tr>
+                    <td data-i18n="jd.r6.req">Full-pipeline / ROS2 system integration</td>
+                    <td data-i18n-html="jd.r6.ev">ROS2 topic/service integration from ALSA capture to intent dispatch; explicit scope boundary vs collaborator-owned navigation, IK, and motor control.</td>
+                    <td data-i18n-html="jd.r6.where"><a href="#architecture">Pipeline Architecture</a></td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div class="scope-callout">
+        <i class="fa-solid fa-circle-info"></i>
+        <span data-i18n-html="jd.caveat"><strong>Honesty boundary:</strong> all metrics are field-reported on a single Jetson AGX Orin, not formal benchmarks. No ASR WER, NLU accuracy, or end-to-end task-success table is claimed. ASR/NLU/VLM/TTS models are off-the-shelf; the contribution is integration, calibration, and failure-cascade engineering.</span>
+    </div>
 </section>
 
 <!-- ============ S1: PIPELINE ARCHITECTURE ============ -->
@@ -420,10 +480,6 @@
 <!-- ============ S3: VOICE FRONTEND ============ -->
 <section class="section-block" id="vad">
     <h2><i class="fa-solid fa-microphone"></i> <span data-i18n="s3.title">Voice Frontend: Field-Calibrated 3-Tier VAD</span></h2>
-    <figure class="diagram">
-        <img src="Pic/planb/vad_funnel.png" alt="VAD 3-tier cascade" />
-        <figcaption data-i18n="s3.cap1">Three-layer VAD cascade: Adaptive Energy Gate &rarr; Software AGC &rarr; Silero v4 (stateful h/c), with field-calibrated thresholds.</figcaption>
-    </figure>
     <p data-i18n-html="s3.p1">The <code>VadQualityGate</code> class implements a 3-tier cascaded quality gate. <strong>Layer 1</strong> (pre-AGC): adaptive energy filtering with self-calibrating noise floor &mdash; a sliding window collects non-speech energy history, computes P10 percentile as noise floor, and sets threshold = floor + margin. On-site measurements: noise &asymp; &minus;46 dB, speech &asymp; &minus;39 dB, margin = 6 dB. <strong>Layer 2</strong>: software AGC normalizes RMS to &minus;20 dBFS target (max gain +30 dB, upward-only &mdash; never attenuates). <strong>Layer 3</strong>: Silero v4 ONNX on CPU, processing 512-sample chunks (32 ms @ 16 kHz), with h/c separated hidden state [2,1,64].</p>
 
     <p data-i18n-html="s3.p2">The critical fix was enabling <strong>stateful Silero inference</strong> across 64 ms audio blocks. Without <code>stateful_silero=True</code>, each ROS audio callback (1024 samples = 2 Silero chunks) ran Silero from cold-start h/c = zeros &mdash; far too little context for the RNN to distinguish weak speech from noise. Field logs showed <code>speech=0</code> across all windows despite peak amplitude 26063. With cross-call state preservation, the RNN accumulates context naturally, and speech detection recovers.</p>
@@ -480,11 +536,6 @@
             </tbody>
         </table>
     </div>
-
-    <figure class="diagram">
-        <img src="Pic/planb/engine_quadrant.png" alt="ASR engine selection quadrant" />
-        <figcaption data-i18n="s4.cap1">Cloud-first engine matrix: cloud_qwen3 and cloud_paraformer own production routing, while local qwen and FunASR stay as fallback lanes.</figcaption>
-    </figure>
 
     <h3 data-i18n="s4.h.agc">Envelope AGC v5: Silence-Creep + Fast Peak Ceiling</h3>
     <p data-i18n-html="s4.p2">The <code>cloud_qwen3</code> path applies a 5-iteration envelope-following AGC (<code>_apply_envelope_agc</code>) before feeding raw audio to the cloud. Key design: (1) <strong>fast peak ceiling</strong> &mdash; if <code>peak &times; gain &gt; 0.85</code>, gain is instantly clamped to <code>0.85/peak</code>; (2) <strong>envelope follow</strong> &mdash; when <code>rms &gt; noise_floor (&minus;38 dBFS)</code>, gain tracks toward <code>target/rms</code> with attack=0.30 / release=0.30; (3) <strong>silence creep (v5)</strong> &mdash; when <code>rms &le; noise_floor</code>, gain slowly rises toward max_gain at <code>attack &times; 0.2 = 0.06</code> per chunk (~2.4 s to max), pre-staging for the next far-field utterance; (4) <strong>soft-clip</strong> &mdash; <code>tanh</code> compression above knee=0.9.</p>
@@ -603,17 +654,6 @@
             </tbody>
         </table>
     </div>
-
-    <div class="two-col">
-        <figure class="diagram">
-            <img src="Pic/planb/latency_waterfall.png" alt="Latency waterfall" />
-            <figcaption data-i18n="s8.cap1">End-to-end single-command latency on Jetson AGX Orin</figcaption>
-        </figure>
-        <figure class="diagram">
-            <img src="Pic/planb/metrics_comparison.png" alt="Metrics comparison" />
-            <figcaption data-i18n="s8.cap2">Key metrics: before vs after optimization</figcaption>
-        </figure>
-    </div>
 </section>
 
 <!-- ============ S9: HIGHLIGHTS ============ -->
@@ -646,6 +686,6 @@
         </div><!-- /.project-detail -->
     </main>
 
-    <script src="planb.js"></script>
+    <script src="voxintent.js"></script>
 </body>
 </html>

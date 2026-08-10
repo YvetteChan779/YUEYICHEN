@@ -8,7 +8,7 @@ Static GitHub Pages portfolio for embodied AI, robot learning, VLA fine-tuning, 
 - `coin_stand.html` - real-robot Embodied Coin Standing and Placement project page.
 - `pi05.html` - pi0.5 VLA fine-tuning project page.
 - `aloha_lekiwi.html` - ALOHA/LeKiwi VLA reproduction project page.
-- `planb.html` - multimodal perception and closed-loop grasping project page.
+- `voxintent.html` - VoxIntent voice-to-intent pipeline project page (voice subsystem of the PLAN-B robot: VAD/ASR/NLU/dialog/VLM-grounding/TTS).
 
 ## Local Preview
 

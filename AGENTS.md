@@ -78,7 +78,7 @@ Before ANY project-related output, pass this checklist. If any item fails → st
 | `personnel page technical content KB.md` | Curated KB synthesis and auto-generated local reference catalog |
 | `PROJECT.md` | RAM + PLAN-B mining record, evidence tables, diagram audits, and resume bullets |
 | `chenyy_cv.md` | PLAN-B resume bullets, grammar extraction, and risk notes |
-| `planb.html` + `planb.js` | PLAN-B Speech-to-Grasp detail page (DreamZero-style, corrected model/runtime SVGs, bilingual i18n keys) |
+| `voxintent.html` + `voxintent.js` | VoxIntent voice-to-intent detail page (voice-to-intent subsystem of the PLAN-B robot; DreamZero-style, inline pipeline SVG + JD-fit section, bilingual i18n keys) |
 | `ram.html` + `ram.js` | RAM retrieval-augmented manipulation detail page (DreamZero-style, code-backed metrics, bilingual i18n keys) |
 | `pi05.html` + `pi05.js` | pi0.5/LIBERO fine-tuning project page |
 | `aloha_lekiwi.html` + `aloha_lekiwi.js` | ALOHA/LeKiwi DreamZero reproduction page |
@@ -91,7 +91,7 @@ Before ANY project-related output, pass this checklist. If any item fails → st
 | Project | Page | Key Technical Depth | Source Docs |
 |---------|------|-------------------|-------------|
 | RAM | ram.html | GroundingDINO + SAM2 object discovery, VGGT-1B depth reconstruction, frozen DINOv2-B/14 RAMNet, 128-view templates, 100^3 voxel planning, 14-task / 31-object public evaluation framing | `/home/CNS2026391745/Documents/YUEYICHEN/Retrieval-augmented-Manipulation/` — `README.md`, `config/config.yaml`, `visions/ram/lib/network.py`, `tools/ram_training/train_bop.py` |
-| PLAN-B | planb.html | Streaming ALSA audio → cloud_qwen3 ASR → qwen3.5-flash JSON NLU → VLM bbox/SAM3 box-text grounding → TTS echo guard → 3D grasp_check server (no z_fallback) + optional pipeline `vlm_or_tactile` → 13-mixin FSM, latency budget, failure diagnosis | `/home/CNS2026391745/Documents/PLAN-B-CYY/planb-robot/` — `project.md` (988 lines), `docs/cyy/算法答辩云文档_new.md` (917 lines) |
+| VoxIntent (voice-to-intent subsystem of PLAN-B robot) | voxintent.html | Streaming ALSA audio → 3-tier VAD → cloud_qwen3 4-engine ASR router → qwen3.5-flash JSON NLU → 6-state dialog manager → VLM bbox source-pixel grounding → TTS echo guard, latency budget, failure diagnosis, JD-fit mapping. Downstream SAM3 mask / 3D grasp_check / IK / motor control are collaborator-owned and out of page scope. | `/home/CNS2026391745/Documents/PLAN-B-CYY/planb-robot/src/har_interaction/src/` — `project.md` (988 lines), `docs/cyy/算法答辩云文档_new.md` (917 lines) |
 | pi0.5/LIBERO | pi05.html | VLA fine-tuning, freeze-filter matrix, action normalization fix, 2000-episode eval | `Pic/pi05/pi05_libero_finetune_report.pdf` |
 | ALOHA/LeKiwi | aloha_lekiwi.html | LeRobot schema conversion, embodiment registration, WebSocket inference | — |
 | Embodied Coin Standing and Placement | coin_stand.html | Frozen RADIO summaries, ACT-style 4-layer encoder/decoder, checkpoint hot switching, grasp verification, rule-based half-arc transfer | — |
@@ -100,7 +100,7 @@ Before ANY project-related output, pass this checklist. If any item fails → st
 
 ### What "deep mining" means per project
 
-- **PLAN-B**: Don't say "multimodal perception". Describe the ALSA audio→cloud_qwen3 ASR→qwen3.5-flash NLU→VLM bbox→SAM3 box/text→PerceptionResult→TTS echo guard→3D grasp_check/FSM pipeline with latencies, failure modes, and specific fixes (source-pixel bbox contract, stateful Silero, stale SHM audit, no z_fallback in standalone grasp_check).
+- **VoxIntent** (homepage-facing name for the PLAN-B robot's voice-to-intent subsystem): Don't say "multimodal perception". Describe the ALSA audio→3-tier VAD→cloud_qwen3 4-engine ASR router→qwen3.5-flash NLU→6-state dialog manager→VLM bbox source-pixel grounding→TTS echo guard pipeline with latencies, failure modes, and specific fixes (source-pixel bbox contract, stateful Silero, envelope AGC v5 silence-creep, cloud endpointing ownership, rapid-stitch, 5-layer semantic defense, translation sentinel). Page scope stops at instruction grounding; SAM3 mask, 3D grasp_check, IK, and motor control are collaborator-owned downstream.
 - **pi0.5/LIBERO**: Don't say "fine-tuned a VLA". Describe the freeze-filter matrix, action normalization fix, norm_stats reuse issue, LoRA scope, evaluation protocol.
 - **ALOHA/LeKiwi**: Don't say "teleoperation". Describe LeRobot schema conversion, embodiment registration, camera order, timestamp alignment, WebSocket inference.
 - **PLAN-A Retargeting**: Don't say "motion mapping". Describe VDMocap 23-node struct parsing, T-pose offset calibration, quaternion/position runtime routes, 10D Dynamixel encoder contract, `[0,4095]` clamps, 60D-to-10D Teleop Transformer regression, and the 47-sample final-frame MAE caveat.
@@ -153,7 +153,7 @@ Free-choice pool of visual style references. No file is locked to a specific pro
 
 | Project | Location |
 |---------|----------|
-| PLAN-B | `Pic/planb/` — 14 PNGs + 2 SVGs (`planb-model_architechture.svg`, `planb-runtime_visualization.svg`) (system_overview, dataflow_panorama, vad_funnel, engine_quadrant, sam3_improvement, letterbox_comparison, fsm_closed_loop, tracking_bargein, p0_causal_chain, p0_fix_timeline, metrics_comparison, latency_waterfall, gpu_gantt, radar_heatmap) |
+| VoxIntent (PLAN-B robot voice subsystem) | `Pic/planb/` — 1 PNG + 2 SVGs actually on disk: `vad_asr_architecture.png`, `planb-model_architechture.svg`, `planb-runtime_visualization.svg`. voxintent.html uses `vad_asr_architecture.png` + an inline pipeline SVG only. (Directory name stays `Pic/planb/`; prior 14-PNG list was aspirational and removed.) |
 | RAM | `Pic/ram/` — `ram-model_architechture.svg`, `ram-runtime_visualization.svg` |
 | PLAN-A | `Pic/plan_a_system.png`; `Pic/plana/` (plana-model_architechture.svg, plana-runtime_visualization.svg) |
 | PLAN-A Retargeting | `Pic/plana_retargeting/plana_retargeting_arch.svg` |

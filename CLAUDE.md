@@ -90,7 +90,7 @@ video. If missing, write `Unknown`.
 
 | Project | Page | Required technical depth |
 | --- | --- | --- |
-| PLAN-B | `planb.html` | ASR -> NLU -> VLM -> SAM3 -> depth -> grasp -> FSM, latency, failure diagnosis. |
+| VoxIntent (PLAN-B robot voice subsystem) | `voxintent.html` | VAD -> 4-engine ASR -> dual-path NLU -> 6-state dialog -> VLM instruction grounding -> TTS echo guard, latency, failure diagnosis, JD-fit. Downstream SAM3/grasp/IK/motor are collaborator-owned, out of scope. |
 | pi0.5/LIBERO | `pi05.html` | VLA fine-tuning, freeze-filter matrix, action normalization, norm_stats, 2000-episode eval. |
 | ALOHA/LeKiwi | `aloha_lekiwi.html` | LeRobot schema conversion, embodiment registration, camera order, timestamp alignment, WebSocket inference. |
 | Embodied Coin Standing and Placement | `coin_stand.html` | xArm6 + LEAP Hand manipulation, RADIO summaries, checkpoint switching, verification, recovery. |
