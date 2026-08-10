@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1900 980" role="img" aria-labelledby="title desc">
-  <title id="title">PLAN-B model architecture</title>
+  <title id="title">VoxIntent model architecture</title>
   <desc id="desc">Voice-to-grasp pipeline with VAD, ASR routing, NLU, VLM bounding boxes, SAM3 grounding, grasp verification, and FSM execution.</desc>
   <defs>
     <marker id="arrow" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto">
@@ -24,7 +24,7 @@
   </defs>
 
   <rect class="bg" x="0" y="0" width="1900" height="980" />
-  <text class="title" x="54" y="62">PLAN-B speech-to-grasp interaction stack</text>
+  <text class="title" x="54" y="62">VoxIntent speech-to-grasp interaction stack</text>
   <text class="sub" x="54" y="93">16 kHz ALSA PCM flows through cloud ASR, JSON NLU, VLM/SAM3 grounding, TTS echo guards, 3D verification, and collaborator-owned execution.</text>
 
   <!-- Top lane -->
@@ -118,7 +118,7 @@
   <rect class="block" x="1570" y="352" width="280" height="114" fill="#f1f5f9" stroke="#64748b" />
   <text class="label" x="1710" y="385" text-anchor="middle">Downstream execution</text>
   <text class="note" x="1710" y="410" text-anchor="middle">navigation / IK / motor control</text>
-  <text class="tiny" x="1710" y="434" text-anchor="middle">owned by collaborators; PLAN-B provides the control entry</text>
+  <text class="tiny" x="1710" y="434" text-anchor="middle">owned by collaborators; VoxIntent provides the control entry</text>
 
   <path class="arrow-blue" d="M190 352 C190 306, 286 306, 313 274" />
   <path class="arrow-blue" d="M464 352 C464 312, 570 300, 758 274" />

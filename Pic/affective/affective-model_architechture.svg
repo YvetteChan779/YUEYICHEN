@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1440" height="780" viewBox="0 0 1440 780" role="img" aria-labelledby="title desc">
-  <title id="title">PLAN-A model architecture</title>
-  <desc id="desc">End-to-end PLAN-A architecture showing perception, text CVAE, image-conditioned diffusion policy, retargeting, and WebSocket execution.</desc>
+  <title id="title">Affective Robot Interaction model architecture</title>
+  <desc id="desc">End-to-end Affective Robot Interaction architecture showing perception, text CVAE, image-conditioned diffusion policy, retargeting, and WebSocket execution.</desc>
   <defs>
     <marker id="arrow" markerWidth="12" markerHeight="12" refX="9" refY="3" orient="auto" markerUnits="strokeWidth">
       <path d="M0,0 L0,6 L9,3 z" fill="#334155"/>
@@ -31,7 +31,7 @@
   </defs>
 
   <rect class="bg" x="0" y="0" width="1440" height="780" rx="0"/>
-  <text class="title" x="54" y="58">PLAN-A Multimodal Interaction System</text>
+  <text class="title" x="54" y="58">Affective Robot Interaction Multimodal System</text>
   <text class="subtitle" x="54" y="86">Camera / VDMocap inputs -> perception and representation -> CVAE / Diffusion policy routes -> 10D WebSocket + Dynamixel execution.</text>
 
   <rect class="panel-soft" x="38" y="120" width="206" height="568" rx="12"/>

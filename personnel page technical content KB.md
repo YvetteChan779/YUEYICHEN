@@ -9,7 +9,7 @@ Purpose: this Markdown is the curated cross-model map, writing grammar, and rigo
 
 <!-- AUTO-SOURCE-START -->
 Local reference status:
-- Last indexed: 2026-08-09 02:10:54 CST
+- Last indexed: 2026-08-10 09:17:01 CST
 - Primary full-text reference: /home/CNS2026391745/Documents/YUEYICHEN/private-kb
 - HTML document root: /home/CNS2026391745/Documents/YUEYICHEN/private-kb/public
 - Source provenance: https://vla.yilong-zhu.com/

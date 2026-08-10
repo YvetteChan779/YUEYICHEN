@@ -82,7 +82,7 @@
             <div class="hero-actions">
                 <a href="index.html#publications"><i class="fa-solid fa-arrow-left"></i><span data-i18n="hero.back">Back to projects</span></a>
                 <a href="#architecture"><i class="fa-solid fa-diagram-project"></i><span data-i18n="hero.arch">Model architecture</span></a>
-                <a href="plana_retargeting.html"><i class="fa-solid fa-route"></i><span data-i18n="hero.retarget">Retargeting layer</span></a>
+                <a href="affective_retargeting.html"><i class="fa-solid fa-route"></i><span data-i18n="hero.retarget">Retargeting layer</span></a>
                 <button type="button" id="langHero"><i class="fa-solid fa-language"></i><span data-i18n="hero.lang">Switch language</span></button>
             </div>
         </section>
@@ -105,7 +105,7 @@
         <section class="section-block" id="architecture">
             <h2><i class="fa-solid fa-diagram-project"></i><span data-i18n="arch.title">Model Architecture</span></h2>
             <figure class="diagram">
-                <img src="Pic/plana/plana-model_architechture.svg" alt="Affective Robot Interaction model architecture" />
+                <img src="Pic/affective/affective-model_architechture.svg" alt="Affective Robot Interaction model architecture" />
             </figure>
             <p class="fig-cap" data-i18n="arch.cap">The redrawn architecture separates unified inputs, Qwen/OpenCV + mocap state extraction, Text-to-Action CVAE, image-conditioned DP, and the WebSocket/Dynamixel execution contract.</p>
         </section>
@@ -157,7 +157,7 @@
         <section class="section-block" id="runtime">
             <h2><i class="fa-solid fa-gauge-high"></i><span data-i18n="runtime.title">Runtime And Visualization</span></h2>
             <figure class="diagram">
-                <img src="Pic/plana/plana-runtime_visualization.svg" alt="Affective Robot Interaction runtime visualization" />
+                <img src="Pic/affective/affective-runtime_visualization.svg" alt="Affective Robot Interaction runtime visualization" />
             </figure>
             <p class="fig-cap" data-i18n="runtime.cap">The runtime visualization keeps dataset, CVAE training, latency, Qwen caching, retargeting regression, and data-quality diagnosis in separate evidence boxes.</p>
             <div class="result-block" data-i18n-html="runtime.block"><i class="fa-solid fa-circle-check"></i> The execution path is intentionally conservative: receive a valid text message, acquire a non-blocking execution lock, run policy inference in a background thread, clamp each 10D frame, stream at 10 FPS, and increment <code>skipped_busy</code> when a new request arrives during playback.</div>
@@ -229,7 +229,7 @@
                 <table class="results-table">
                     <thead><tr><th data-i18n="evidence.claim">Claim</th><th data-i18n="evidence.source">Source</th></tr></thead>
                     <tbody>
-                        <tr><td data-i18n="evidence.c1">Full Affective Robot Interaction boundary, 194 episodes, latency, and CVAE/DP split</td><td><code>docs/PLAN-A_云文档.md:8-30,228-332</code>; <code>PlanA-情感陪伴场景的多模态交互系统.pdf</code></td></tr>
+                        <tr><td data-i18n="evidence.c1">Full Affective Robot Interaction boundary, 194 episodes, latency, and CVAE/DP split</td><td><code>docs/项目云文档.md:8-30,228-332</code>; <code>情感陪伴场景的多模态交互系统.pdf</code></td></tr>
                         <tr><td data-i18n="evidence.c2">CVAE report architecture and training config</td><td><code>docs/scripts/01_train_cvae.py:29-54</code>; <code>docs/assets/tables/t5_training_summary.csv</code></td></tr>
                         <tr><td data-i18n="evidence.c3">DP architecture, v-prediction, self-conditioning, and Qwen cache</td><td><code>image_conditioned_dp_dynamic.py:188-459</code>; <code>diffusion_wrapper.py:307-391</code>; <code>dataset_qwen_episode.py:23-257</code></td></tr>
                         <tr><td data-i18n="evidence.c4">Perception fallback and emotion mapping</td><td><code>qwen_multimodal/detect_face_complete.py:18-54,352-520</code></td></tr>

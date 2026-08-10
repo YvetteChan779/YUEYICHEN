@@ -94,8 +94,8 @@ video. If missing, write `Unknown`.
 | pi0.5/LIBERO | `pi05.html` | VLA fine-tuning, freeze-filter matrix, action normalization, norm_stats, 2000-episode eval. |
 | ALOHA/LeKiwi | `aloha_lekiwi.html` | LeRobot schema conversion, embodiment registration, camera order, timestamp alignment, WebSocket inference. |
 | Embodied Coin Standing and Placement | `coin_stand.html` | xArm6 + LEAP Hand manipulation, RADIO summaries, checkpoint switching, verification, recovery. |
-| PLAN-A Retargeting | `plana_retargeting.html` | VDMocap 23-node mocap to 10D Dynamixel encoder contract, T-pose offset calibration, quaternion/position runtime mapping, Teleop Transformer 60D-to-10D regression, and 47-sample MAE caveat. |
-| PLAN-A | `index.html` reference | CVAE route, diffusion route, retargeting calibration, execution runtime. |
+| Affective Robot Interaction Retargeting (codename PLAN-A) | `affective_retargeting.html` | VDMocap 23-node mocap to 10D Dynamixel encoder contract, T-pose offset calibration, quaternion/position runtime mapping, Teleop Transformer 60D-to-10D regression, and 47-sample MAE caveat. |
+| Affective Robot Interaction (codename PLAN-A) | `affective_interaction.html` + `index.html` reference | CVAE route, diffusion route, retargeting calibration, execution runtime. |
 
 ## 4. Execution Protocols
 

@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1900 980" role="img" aria-labelledby="title desc">
-  <title id="title">PLAN-B runtime visualization</title>
-  <desc id="desc">Runtime timeline and diagnostic summary for PLAN-B, including ASR partial latency, VLM TTFB, SAM3 grounding, grasp_check, and retry loops.</desc>
+  <title id="title">VoxIntent runtime visualization</title>
+  <desc id="desc">Runtime timeline and diagnostic summary for VoxIntent, including ASR partial latency, VLM TTFB, SAM3 grounding, grasp_check, and retry loops.</desc>
   <defs>
     <marker id="arrow" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto">
       <path d="M0,0 L12,6 L0,12 z" fill="#475569"/>
@@ -29,7 +29,7 @@
   </defs>
 
   <rect class="bg" x="0" y="0" width="1900" height="980" />
-  <text class="title" x="54" y="62">PLAN-B runtime visualization</text>
+  <text class="title" x="54" y="62">VoxIntent runtime visualization</text>
   <text class="sub" x="54" y="93">One command travels through audio, parsing, vision grounding, TTS playback state, 3D verification, and retry logic with target-lost guards explicit.</text>
 
   <!-- Metric cards -->

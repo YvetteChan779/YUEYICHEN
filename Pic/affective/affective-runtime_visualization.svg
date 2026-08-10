@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1440" height="760" viewBox="0 0 1440 760" role="img" aria-labelledby="title desc">
-  <title id="title">PLAN-A runtime and evaluation visualization</title>
-  <desc id="desc">Visualization of PLAN-A dataset composition, CVAE training summary, runtime latency, Qwen cache speedup, and retargeting regression scope.</desc>
+  <title id="title">Affective Robot Interaction runtime and evaluation visualization</title>
+  <desc id="desc">Visualization of Affective Robot Interaction dataset composition, CVAE training summary, runtime latency, Qwen cache speedup, and retargeting regression scope.</desc>
   <defs>
     <marker id="arrow" markerWidth="12" markerHeight="12" refX="9" refY="3" orient="auto" markerUnits="strokeWidth">
       <path d="M0,0 L0,6 L9,3 z" fill="#334155"/>
@@ -33,7 +33,7 @@
   </defs>
 
   <rect class="bg" width="1440" height="760"/>
-  <text class="title" x="54" y="58">PLAN-A Evidence Visualization</text>
+  <text class="title" x="54" y="58">Affective Robot Interaction Evidence Visualization</text>
   <text class="small" x="54" y="84">A compact view of the defensible scope: 3-class data, CVAE validation, runtime latency, Qwen cache acceleration, and retargeting regression.</text>
 
   <rect class="panel" x="54" y="122" width="406" height="270" rx="14"/>

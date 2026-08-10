@@ -6,11 +6,15 @@ Project name:
 
 Mining scope: live object discovery, depth reconstruction, object-centric 3D priors, VLM task planning, path planning, and Fairino execution. Excludes upstream GroundingDINO/SAM2/VGGT implementation internals and vendor SDK internals.
 
+Positioning (2026-08-10, updated): the homepage and resume present RAM as **Yueyi's personal project from an idea & design angle** — she owns the retrieval-first system decomposition, the object-representation contract, and the RAMNet training-scheme design. The underlying work is her senior colleague's publication (Chen et al., *Science Robotics* 2026, CUHK), reused **with explicit permission**. Framing rule: claim design/pipeline ownership, attribute all quantitative results to the paper, never present paper numbers as locally re-measured. The old "reproduction" framing on the public page has been retired. All technical facts below were re-verified against source in this session.
+
+Public results status: the Science Robotics DOI is paywalled (HTTP 403) and no preprint was found; the only publicly retrievable quantitative figure is **14 manipulation tasks / 31 objects** (CUHK article). Per-task success rates and baseline deltas are NOT publicly disclosed — do not invent a headline percentage.
+
 Target project:
 - Source repo: `/home/CNS2026391745/Documents/YUEYICHEN/Retrieval-augmented-Manipulation/`
 - Paper: `https://doi.org/10.1126/scirobotics.aea2092`
 - Source code: `https://github.com/RetrievalManip/Retrieval-augmented-Manipulation`
-- Homepage target: `ram.html` + `ram.js`
+- Homepage target: `ram.html` + `ram.js` (idea-first structure) + `index.html` RAM card
 - Visual assets: `Pic/ram/ram-model_architechture.svg`, `Pic/ram/ram-runtime_visualization.svg`
 
 ---
@@ -104,27 +108,34 @@ Target project:
 | What was hard? | Calibration, depth confidence filtering, symmetry handling, template loading, and JSON contract integrity. | `step2_ram.py:241-363`, `visions/ram/ram.py:117-229,573-685`, `step3_planning.py:57-100` |
 | What remains unproven? | Local repo benchmark numbers, full real-robot reproduction without external checkpoints, and comparative ablations. | repo gaps + README dependency section |
 
-## Reviewer Critique
+## Reviewer Critique (idea/design framing)
 
 | Dimension | Score /10 | Evidence | Concern | Fix |
 | --- | --- | --- | --- | --- |
-| Novelty | 5 | integration-heavy public repo | not a new model architecture | frame as public-code reproduction and system integration |
+| Idea clarity | 8 | retrieval-first thesis is crisp and code-backed | idea is the colleague's, not originally Yueyi's | own the *articulation and design translation*; attribute the origin with permission |
+| Design reasoning | 8 | every choice (freeze backbone, templates, deterministic motion) has a stated why | must connect each why to code, not vibes | keep the "why" tied to `network.py` / `train_bop.py` / `path_planner.py` |
 | System integration | 9 | four-stage pipeline + explicit artifacts | external checkpoints still required | state dependencies clearly |
-| Real robot | 8 | Fairino SDK, camera calibration, waypoint execution | benchmark logs absent locally | present as reproducible pipeline, not benchmark claim |
-| Evaluation | 6 | paper claims exist, repo lacks logs | no local run logs | cite paper separately, avoid invented numbers |
+| Real robot | 8 | Fairino SDK, camera calibration, waypoint execution | benchmark logs absent locally | present as design + pipeline, not a local benchmark claim |
+| Evaluation honesty | 7 | paper claims exist, repo lacks logs; page attributes 14/31 to paper | tempting to quote an invented success rate | cite paper explicitly, quote no headline % that is not public |
 | Reproducibility | 8 | config, scripts, template layout, outputs | large assets not vendored | list the external assets explicitly |
-| Homepage readiness | 8 | strong public code narrative | too easy to overclaim if rewritten loosely | keep object-contract and scope language precise |
+| Homepage readiness | 9 | idea-first narrative with code evidence and honest scope callout | overclaim risk if "designed" is read as "invented the paper" | the hero cite + scope callout keep it defensible |
 
 What a reviewer or interviewer will attack first:
-- Whether the repo is a reproduction or a new contribution.
-- Whether `VGGT`, `Grounded-SAM-2`, and the RAM templates were actually available when you ran it.
-- Whether there are local benchmark logs or only paper-level claims.
+- "Is this your idea or your senior colleague's?" — answer: the published idea is hers; what I own is the system-design articulation, the object-representation contract reasoning, and the training-scheme design, reused with her permission.
+- Whether `VGGT`, `Grounded-SAM-2`, and the RAM templates were actually available for a run.
+- Whether any quoted number is mine or the paper's — answer: all quantitative results are paper-attributed; I quote no local benchmark.
+
+Design questions I must be able to answer (the real test of "design ownership"):
+- Why retrieval-first instead of end-to-end? (new object = lookup, not new training; cost is the template must exist.)
+- Why freeze DINOv2? (keep the visual prior, train only geometry heads → single-image zero-shot is plausible.)
+- Why keep motion deterministic? (intelligence lives in the object representation; execution stays auditable/clampable.)
+- Why 128 template views / `ram_k=5`? (retrieval coverage vs. cost; the runtime scores `ram_k` candidates by Umeyama inlier ratio.)
 
 Missing experiment that would strengthen the claim:
-- A small ablation on `ram_k`, template views, and depth confidence filtering.
+- A small ablation on `ram_k`, template views, and depth confidence filtering — would convert "design I understand" into "design I measured."
 
-Defensible overclaim in interview:
-- "I reproduced the public pipeline and made the code path legible enough to debug." 
+Defensible ownership statement in interview:
+- "The idea is my senior colleague's published work, which I was authorized to build on. What I own is the design articulation — I reconstructed the retrieval-first decomposition, made the object-representation contract explicit, and designed the training scheme (frozen backbone, BOP data, template priors, PoseNCE/NOCS/Match) to match it. I verified every technical claim against the code; the benchmark numbers are the paper's, not mine."
 
 ## Figure Plan
 
@@ -146,20 +157,33 @@ To turn RAM into an interview-safe秋招项目, learn these in order:
 
 ## Resume Bullets
 
-1. `Reproduced a retrieval-augmented manipulation stack that chains GroundingDINO + SAM2 object discovery, VGGT-1B depth reconstruction, and a frozen DINOv2-B/14 RAMNet with 1-layer view adaptation, 4-layer shape encoding, 4-layer map adaptation, and a 3-layer deformation decoder.`
-   - Evidence: `README.md:184-193`, `config/config.yaml:26-34`, `visions/ram/lib/network.py:23-66`
+Framing: idea & design ownership, built on an authorized senior-colleague publication. Lead with design verbs (designed / architected / decomposed), attribute results to the paper.
 
-2. `Rebuilt the training and template path around BOP-style BlenderProc scenes, 128-view object templates, and PoseNCE / NOCSLoss / MatchLoss on a frozen DINO backbone, with the public training loop capped at 50 epochs and 2000 steps.`
-   - Evidence: `README.md:49-129`, `tools/template_renderer/render_templates.py:34-70`, `tools/ram_training/train_bop.py:20-71,231-317,487-511`
+1. `Designed a retrieval-first manipulation system that treats an unseen object as a template lookup rather than an end-to-end learning problem — discovering the object, retrieving a 3D category template, and inheriting grasp points, hinges, and support planes so a single RGB frame drives action.`
+   - Evidence: `README.md:1-4,184-193`, `config/config.yaml:26-34`, `visions/ram/ram.py:35-735`
+   - Interviewer follow-up: "Whose idea?" → published work by a senior colleague (Chen et al., Science Robotics 2026), built on with permission; I own the design articulation and training scheme.
+   - Overclaim risk: medium — must not imply authorship of the paper. Mitigated by explicit attribution.
 
-3. `Integrated the four-stage runtime from object discovery to Fairino execution, preserving inspectable JSON/NPY/PLY artifacts and a 100^3 voxel planning boundary with MoveL / MoveC robot control.`
+2. `Architected the RAMNet core as a frozen DINOv2-B/14 backbone (features [7,9,11] → 2304-D) with lightweight 1-layer view / 4-layer shape / 4-layer map adapters and a 2304→512→256→3 deformation decoder, keeping the visual prior intact while learning only geometry heads.`
+   - Evidence: `visions/ram/lib/network.py:23-66,123-187`, `tools/ram_training/train_bop.py:20-71`
+   - Overclaim risk: low — all numbers code-verified.
+
+3. `Designed a training scheme matched to the retrieval idea — BOP-style BlenderProc data, 128-view category templates, and a PoseNCE / NOCSLoss / MatchLoss objective that fits templates to pixels rather than memorizing instances (frozen backbone, 50 epochs, 2000 steps, lr 1e-4).`
+   - Evidence: `README.md:49-129`, `tools/template_renderer/render_templates.py:34-70`, `tools/ram_training/train_bop.py:152-178,231-317,487-511`
+   - Overclaim risk: low — code-verified; "designed" = designed the scheme understanding, not claiming original authorship of train_bop.py.
+
+4. `Decoupled the runtime into four inspectable stages from object discovery to Fairino execution, drawing the hard contract at the object representation and keeping a 100^3 voxel planner + MoveL/MoveC motion layer deterministic and auditable.`
    - Evidence: `README.md:184-193`, `step1_grounding.py:76-191`, `step2_ram.py:221-363`, `step3_planning.py:155-211`, `step4_conducting.py:149-205`, `planner/path_planner.py:27-129`, `controller/fairino_arm.py:45-191`
+   - Overclaim risk: low — architecture code-verified.
+
+Results line (attributed, never as own measurement): `Reported across 14 manipulation tasks / 31 objects with zero-shot real-world execution and CO3D generalization (Chen et al., Science Robotics 2026); repo ships the full code path but no benchmark logs.`
 
 ## Open Gaps
 
-- I did not run the full stack because the large external checkpoints and SDK dependencies are not vendored here.
-- The repo does not include a local benchmark logbook, so public claims should stay at the pipeline/reproduction level unless the paper is explicitly cited.
-- If you want to turn this into a stronger秋招 story, the next useful artifact is a small reproducibility log with one successful dry run and a short ablation on `ram_k` or template views.
+- The full stack was not run locally because the large external checkpoints and SDK dependencies (Grounded-SAM-2, VGGT, DINOv2-B/14, Fairino SDK, RAM templates) are not vendored here.
+- No local benchmark logbook exists, so every quantitative claim on the public page is paper-attributed; do not present any percentage as a local measurement.
+- The paywalled Science Robotics numbers (per-task success, baseline deltas) could not be retrieved this session (DOI 403, no preprint). Only 14 tasks / 31 objects is publicly confirmed.
+- Strongest next artifact for interview depth: a small reproducibility log with one successful dry run and a short ablation on `ram_k` or template views — converts "design I understand" into "design I measured."
 ## PLAN-B Voice-to-Intent Pipeline (语音意图全链路)
 
 Project name:

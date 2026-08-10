@@ -315,6 +315,7 @@
 </section>
 
 <!-- ============ S0.5: TARGET ROLE & JD FIT ============ -->
+<!--
 <section class="section-block" id="jd-fit">
     <h2><i class="fa-solid fa-briefcase"></i> <span data-i18n="jd.title">Target Role &amp; JD Fit</span></h2>
     <p data-i18n-html="jd.intro">This project is written against a specific target role in embodied-AI / robot voice interaction. The mapping below ties each job-description competency to concrete, code-traceable evidence in this pipeline. It is a fit argument, not a claim of novel research.</p>
@@ -373,6 +374,7 @@
         <span data-i18n-html="jd.caveat"><strong>Honesty boundary:</strong> all metrics are field-reported on a single Jetson AGX Orin, not formal benchmarks. No ASR WER, NLU accuracy, or end-to-end task-success table is claimed. ASR/NLU/VLM/TTS models are off-the-shelf; the contribution is integration, calibration, and failure-cascade engineering.</span>
     </div>
 </section>
+-->
 
 <!-- ============ S1: PIPELINE ARCHITECTURE ============ -->
 <section class="section-block" id="architecture">
@@ -472,7 +474,7 @@
 <section class="section-block" id="arch-detail">
     <h2><i class="fa-solid fa-layer-group"></i> <span data-i18n="s2.title">ASR + VAD Architecture</span></h2>
     <figure class="diagram">
-        <img src="Pic/planb/vad_asr_architecture.png" alt="VAD + ASR architecture detail" />
+        <img src="Pic/voxintent/vad_asr_architecture.png" alt="VAD + ASR architecture detail" />
         <figcaption data-i18n="s2.cap">VadQualityGate front-end cascading into the 4-engine ASR router: local Qwen3-ASR TRT (conv_frontend + AuT encoder 32&times;SA+3&times;Conv2d + AuT decoder 8&times;) and cloud Qwen3 LM path, with post-processing chain feeding downstream NLU.</figcaption>
     </figure>
 </section>

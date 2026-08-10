@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 880" role="img" aria-labelledby="title desc">
-  <title id="title">PLAN-A Retargeting architecture</title>
+  <title id="title">Affective Robot Interaction Retargeting architecture</title>
   <desc id="desc">VDMocap data is converted by calibrated geometry and a Teleop Transformer into 10 raw encoder commands sent over WebSocket.</desc>
   <defs>
     <marker id="arrow" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto" markerUnits="strokeWidth">
@@ -45,7 +45,7 @@
 
   <rect class="bg" width="1440" height="880" rx="0"/>
   <rect x="40" y="36" width="1360" height="96" rx="14" fill="url(#hero)" opacity="0.96"/>
-  <text class="ink title" x="70" y="78" fill="#fff">PLAN-A Retargeting: Mocap-to-10DOF Robot Motion Interface</text>
+  <text class="ink title" x="70" y="78" fill="#fff">Mocap-to-10DOF Robot Motion Retargeting Interface</text>
   <text class="ink small" x="72" y="110" fill="#e0f2fe">Geometry calibration + 1.00M-param Teleop Transformer + WebSocket/Dynamixel execution contract</text>
 
   <!-- VDMocap input -->

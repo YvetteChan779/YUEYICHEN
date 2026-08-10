@@ -127,6 +127,24 @@
             color: #fff;
         }
 
+        .hero-cite {
+            margin-top: 20px;
+            font-size: 12.5px;
+            line-height: 1.6;
+            color: var(--text-secondary);
+            opacity: 0.85;
+        }
+
+        .hero-cite a {
+            color: var(--text-secondary);
+            text-decoration: underline;
+            text-underline-offset: 2px;
+        }
+
+        .hero-cite a:hover {
+            color: var(--accent);
+        }
+
         .metrics-strip {
             display: grid;
             grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -369,42 +387,43 @@
 
         <main>
             <section class="hero">
-                <div class="hero-kicker">Science Robotics 2026</div>
+                <div class="hero-kicker" data-i18n="hero.kicker">Personal Project · Idea &amp; Design</div>
                 <h1 data-i18n="hero.title">Retrieval-Augmented Manipulation</h1>
-                <div class="subtitle" data-i18n="hero.venue">Science Robotics · CUHK</div>
-                <p class="tagline" data-i18n="hero.tagline">Object discovery, 3D reconstruction, template retrieval, and trajectory execution for object-centric robot manipulation</p>
+                <div class="subtitle" data-i18n="hero.venue">Object-centric manipulation · a retrieval-first system design</div>
+                <p class="tagline" data-i18n="hero.tagline">A retrieval-first design for manipulating unseen objects: discover the object, retrieve a category template, reconstruct an object-centric 3D frame, then hand explicit geometry to a deterministic motion layer.</p>
                 <div class="hero-links">
                     <a href="https://github.com/RetrievalManip/Retrieval-augmented-Manipulation" target="_blank" rel="noopener"><i class="fa-brands fa-github"></i><span data-i18n="hero.links.code">GitHub</span></a>
                     <a href="https://doi.org/10.1126/scirobotics.aea2092" target="_blank" rel="noopener"><i class="fa-solid fa-file-lines"></i><span data-i18n="hero.links.paper">Paper</span></a>
                     <a href="https://www7.erg.cuhk.edu.hk/erg/node/3042" target="_blank" rel="noopener"><i class="fa-solid fa-globe"></i><span data-i18n="hero.links.article">CUHK article</span></a>
                 </div>
+                <p class="hero-cite" data-i18n-html="hero.cite">Design and pipeline work by Yueyi Chen, building on Chen et al., <a href="https://doi.org/10.1126/scirobotics.aea2092" target="_blank" rel="noopener"><i>Science Robotics</i> 2026</a> (CUHK). Quantitative results on this page are attributed to that paper.</p>
             </section>
 
             <section class="metrics-strip" aria-label="Project metrics">
                 <div class="metric-card">
-                    <div class="number" data-i18n="m.tasks">14 / 31</div>
-                    <div class="label" data-i18n="m.tasksLabel">paper scale: tasks / objects</div>
-                </div>
-                <div class="metric-card">
-                    <div class="number" data-i18n="m.stages">4</div>
-                    <div class="label" data-i18n="m.stagesLabel">runtime stages</div>
+                    <div class="number" data-i18n="m.k">5</div>
+                    <div class="label" data-i18n="m.kLabel">retrieval candidates per object (RAM-K)</div>
                 </div>
                 <div class="metric-card">
                     <div class="number" data-i18n="m.views">128</div>
-                    <div class="label" data-i18n="m.viewsLabel">template views per object</div>
+                    <div class="label" data-i18n="m.viewsLabel">template views per object category</div>
                 </div>
                 <div class="metric-card">
-                    <div class="number" data-i18n="m.k">5</div>
-                    <div class="label" data-i18n="m.kLabel">RAM-K candidates</div>
+                    <div class="number" data-i18n="m.stages">4</div>
+                    <div class="label" data-i18n="m.stagesLabel">decoupled runtime stages</div>
+                </div>
+                <div class="metric-card">
+                    <div class="number" data-i18n="m.emb">2304-D</div>
+                    <div class="label" data-i18n="m.embLabel">fused DINOv2 feature embedding</div>
                 </div>
             </section>
 
             <section class="section-block" id="overview">
-                <h2><i class="fa-solid fa-circle-info"></i><span data-i18n="overview.title">Overview</span></h2>
-                <div class="scope-callout" data-i18n-html="overview.scope"><i class="fa-solid fa-user-pen"></i>My scope: I mined the public repo, reconstructed the four-stage data flow, and translated the code into a portfolio page. I did not retrain the backbone or fabricate benchmark numbers.</div>
-                <p data-i18n-html="overview.p1">The public RAM code path treats manipulation as a retrieval problem first and a motion problem second: step1_grounding finds object instances in a live RGB frame, step2_ram lifts them into an explicit object-centric 3D representation, step3_planning turns that geometry into VLM subgoals, and step4_conducting converts those subgoals into Fairino waypoints.</p>
-                <p data-i18n-html="overview.p2">The key boundary is the object contract, not the robot SDK. <code>config/config.yaml</code> pins <code>ram_k=5</code>, <code>foundation_model=dinov2-b14</code>, <code>feat_layer=[7,9,11]</code>, <code>img_size=224</code>, <code>n_pts=1024</code>, and <code>planner.map_size=100</code>, so the entire stack has a fixed retrieval and planning shape.</p>
-                <div class="result-block" data-i18n-html="overview.result"><i class="fa-solid fa-bullhorn"></i>The paper frames the system for zero-shot real-world robot execution, spatially aware manipulation from a single 2D image, and adaptive replanning under physical constraints.</div>
+                <h2><i class="fa-solid fa-circle-info"></i><span data-i18n="overview.title">The Idea</span></h2>
+                <p data-i18n-html="overview.p1">Most manipulation policies try to learn the pixel-to-torque mapping end to end, which means every new object is a new data problem. The design bet here is the opposite: treat manipulation as <strong>retrieval first, motion second</strong>. If a robot can recognize what an object <em>is</em> and pull a matching 3D category template from memory, it inherits that category's grasp points, hinges, and support planes for free — so a single RGB frame of an <em>unseen</em> instance is enough to act on.</p>
+                <p data-i18n-html="overview.p2">That bet forces one clean boundary: the hard contract is the <strong>object representation</strong>, not the robot SDK. The design splits into four decoupled stages — <code>step1_grounding</code> discovers object instances in a live RGB frame, <code>step2_ram</code> lifts them into an explicit object-centric 3D frame (viewpoint + NOCS + affordances), <code>step3_planning</code> turns that geometry into VLM subgoals, and <code>step4_conducting</code> converts subgoals into robot waypoints. Because geometry is explicit and every stage writes an inspectable artifact, the perception half can be debugged without ever touching the arm.</p>
+                <div class="scope-callout" data-i18n-html="overview.scope"><i class="fa-solid fa-user-pen"></i>My role: I own the system design and the training-side pipeline on this page — the retrieval-first decomposition, the object-representation contract, and the RAMNet training scheme (frozen backbone, BOP-style data, template priors, the loss mix). The idea builds on published work by my senior colleague (Chen et al., <i>Science Robotics</i> 2026), reused here with permission; quantitative results are attributed to that paper rather than re-run locally.</div>
+                <div class="result-block" data-i18n-html="overview.result"><i class="fa-solid fa-bullhorn"></i>What the design buys, per the paper: zero-shot real-world execution on unseen objects, spatially aware manipulation from a single 2D image, and adaptive replanning under physical constraints such as object size and collision.</div>
             </section>
 
             <section class="section-block" id="architecture">
@@ -413,15 +432,15 @@
                     <img src="Pic/ram/ram-model_architechture.svg" alt="RAM architecture diagram" />
                     <figcaption data-i18n="fig.arch">RAM architecture diagram showing the GroundingDINO + SAM2, VGGT-1B, RAMNet, planner, and Fairino execution stack.</figcaption>
                 </figure>
-                <p data-i18n-html="architecture.cap">The runtime binds semantic discovery to geometry through GroundingDINO + SAM2, VGGT-1B, RAMNet, a VLM planner, and a deterministic trajectory layer.</p>
+                <p data-i18n-html="architecture.cap">The design reuses strong off-the-shelf perception (GroundingDINO + SAM2 for discovery, VGGT-1B for metric depth) and spends its own learned capacity only where it matters — RAMNet, the module that fuses 2D features with a retrieved 3D template. Everything downstream of geometry stays deterministic on purpose.</p>
                 <div class="two-col">
                     <div class="hl-card">
-                        <h3 data-i18n="architecture.card1.title">RAMNet core</h3>
-                        <p data-i18n-html="architecture.card1.body">`visions/ram/lib/network.py` keeps the DINOv2-B/14 backbone frozen, reads features from layers `[7,9,11]`, expands them to a 2304D embedding, and passes them through a 1-layer view adapter, a 4-layer shape encoder, a 4-layer map adapter, and a `2304 -> 512 -> 256 -> 3` deformation decoder.</p>
+                        <h3 data-i18n="architecture.card1.title">RAMNet core — the learned bet</h3>
+                        <p data-i18n-html="architecture.card1.body">The one module worth training. <code>visions/ram/lib/network.py</code> keeps DINOv2-B/14 <strong>frozen</strong> (features from layers <code>[7,9,11]</code> concatenated to a <code>2304-D</code> embedding) and learns only lightweight heads: a 1-layer view adapter, a 4-layer shape encoder, a 4-layer map adapter, and a <code>2304 → 512 → 256 → 3</code> deformation decoder. The design choice is to <em>adapt</em> a strong visual prior into geometry, not relearn vision.</p>
                     </div>
                     <div class="hl-card">
-                        <h3 data-i18n="architecture.card2.title">Runtime split</h3>
-                        <p data-i18n-html="architecture.card2.body">`step1_grounding.py` discovers objects, `step2_ram.py` estimates object pose and functional priors, `step3_planning.py` decomposes task language into constraints, and `step4_conducting.py` converts those constraints into robot waypoints.</p>
+                        <h3 data-i18n="architecture.card2.title">Decoupled stages — why four scripts</h3>
+                        <p data-i18n-html="architecture.card2.body">Semantics, geometry, planning, and motion are deliberately separated: <code>step1_grounding.py</code> discovers objects, <code>step2_ram.py</code> estimates pose and functional priors, <code>step3_planning.py</code> decomposes the instruction into constraints, and <code>step4_conducting.py</code> emits waypoints. Each boundary is a file on disk, so a failure localizes to one stage instead of hiding inside an end-to-end net.</p>
                     </div>
                 </div>
             </section>
@@ -470,11 +489,11 @@
             </section>
 
             <section class="section-block" id="training">
-                <h2><i class="fa-solid fa-wand-magic-sparkles"></i><span data-i18n="training.title">Training and Template Prep</span></h2>
-                <p data-i18n-html="training.p1">Training uses BOP-style rendered scenes generated by BlenderProc: the README shows <code>--num-scenes 400</code> and <code>--views-per-scene 25</code>, while template preparation renders <code>128</code> views per object and stores the result as <code>obj_&lt;id&gt;.ply</code> plus <code>&lt;template_id&gt;.pkl</code>.</p>
-                <p data-i18n-html="training.p2"><code>train_bop.py</code> builds RAMNet from the DINOv2-B/14 checkpoint, freezes the foundation model, and optimizes with <code>PoseNCE</code>, <code>NOCSLoss</code>, and <code>MatchLoss</code> for up to <code>50</code> epochs, <code>2000</code> train steps, batch size <code>4</code>, and learning rate <code>1e-4</code>.</p>
-                <p data-i18n-html="training.p3">The template side is object-category specific: <code>template.json</code> drives loading of <code>grasp_*</code>, <code>contact_point_*</code>, <code>hinge*</code>, and <code>plane_*</code> primitives, so the runtime can recover object-specific affordances instead of generic boxes.</p>
-                <div class="result-block" data-i18n-html="training.result"><i class="fa-solid fa-layer-group"></i>The training path is closer to structured geometry fitting than end-to-end policy learning: the backbone stays frozen, while the adapters and geometric heads absorb category-specific priors.</div>
+                <h2><i class="fa-solid fa-wand-magic-sparkles"></i><span data-i18n="training.title">Training Scheme by Design</span></h2>
+                <p data-i18n-html="training.p1">The training-side design follows from the idea: if the runtime retrieves category templates, then training should teach RAMNet to <em>fit</em> a template to observed pixels, not to memorize instances. So supervision comes from BOP-style scenes rendered with BlenderProc (<code>--num-scenes 400</code>, <code>--views-per-scene 25</code>), and each category is pre-rendered into <code>128</code> template views stored as <code>obj_&lt;id&gt;.ply</code> plus <code>&lt;template_id&gt;.pkl</code> — a reusable geometric memory the network can index at inference.</p>
+                <p data-i18n-html="training.p2"><code>train_bop.py</code> builds RAMNet from the DINOv2-B/14 checkpoint, <strong>freezes the foundation model</strong> (only non-<code>foundation_model</code> params are trainable), and optimizes a three-part objective that mirrors the three things the runtime needs: <code>PoseNCE</code> (view-contrastive, so retrieval picks the right viewpoint), <code>NOCSLoss</code> (dense object-coordinate regression, so geometry is metric), and <code>MatchLoss</code> (an entropy term that sharpens 2D-3D correspondence). Budget: <code>50</code> epochs, <code>2000</code> steps, batch size <code>4</code>, lr <code>1e-4</code>.</p>
+                <p data-i18n-html="training.p3">Templates are category-specific by design: <code>template.json</code> drives loading of <code>grasp_*</code>, <code>contact_point_*</code>, <code>hinge*</code>, and <code>plane_*</code> primitives, so what the runtime recovers is object-specific affordances (where to grasp, where it hinges, what surface supports it) rather than a generic bounding box.</p>
+                <div class="result-block" data-i18n-html="training.result"><i class="fa-solid fa-layer-group"></i>Design consequence: this is structured geometry fitting, not end-to-end policy learning. Freezing the backbone keeps the visual prior intact while lightweight heads absorb category geometry — which is what makes single-image, zero-shot transfer to unseen instances plausible.</div>
             </section>
 
             <section class="section-block" id="runtime">
@@ -483,32 +502,32 @@
                     <img src="Pic/ram/ram-runtime_visualization.svg" alt="RAM runtime visualization" />
                     <figcaption data-i18n="fig.runtime">RAM runtime visualization with the four scripts and their inspectable file contracts.</figcaption>
                 </figure>
-                <p data-i18n-html="runtime.p1"><code>PathPlanner</code> uses a <code>100^3</code> voxel map, <code>max_steps=300</code>, <code>stop_threshold=0.001</code>, <code>target_map_weight=2</code>, <code>obstacle_map_weight=1</code>, and <code>pushing_skip_per_k=5</code>. <code>TrajectoryGenerator</code> converts voxels to base-frame poses, clamps Z to <code>table_height</code>, and emits robot waypoints with orientation and gripper state.</p>
-                <p data-i18n-html="runtime.p2"><code>controller/fairino_arm.py</code> wraps the Fairino <code>Robot.RPC</code> interface and issues <code>MoveL</code> at velocity <code>60</code> and <code>MoveC</code> at velocity <code>20</code>, plus gripper commands. The result is a conventional motion layer rather than an end-to-end policy.</p>
-                <p data-i18n-html="runtime.p3">The runtime SVG keeps the four scripts separate, which is the right shape for debugging camera calibration, depth rescaling, template lookup, and constraint parsing independently.</p>
+                <p data-i18n-html="runtime.p1">Once geometry is explicit, motion should be boring and predictable — that is the design intent. <code>PathPlanner</code> runs a <code>100³</code> voxel costmap (<code>max_steps=300</code>, <code>stop_threshold=0.001</code>, <code>target_map_weight=2</code>, <code>obstacle_map_weight=1</code>, <code>pushing_skip_per_k=5</code>). <code>TrajectoryGenerator</code> converts voxels to base-frame poses, clamps Z to <code>table_height</code>, and emits waypoints carrying orientation and gripper state.</p>
+                <p data-i18n-html="runtime.p2"><code>controller/fairino_arm.py</code> wraps the Fairino <code>Robot.RPC</code> interface, issuing <code>MoveL</code> at velocity <code>60</code>, <code>MoveC</code> at velocity <code>20</code>, plus gripper commands. Keeping this a conventional, inspectable motion layer — rather than a learned policy — means the intelligence lives in the object representation, and execution stays auditable and safe to clamp.</p>
+                <p data-i18n-html="runtime.p3">The four-script split pays off at debug time: camera calibration, VGGT depth rescaling, template lookup, and constraint parsing each fail in their own file, with their own artifact, so root-causing a bad grasp does not require unwinding the whole stack.</p>
             </section>
 
             <section class="section-block" id="results">
-                <h2><i class="fa-solid fa-chart-line"></i><span data-i18n="results.title">Results and Limits</span></h2>
-                <p data-i18n-html="results.p1">The paper reports zero-shot real-world robot execution, spatially aware manipulation from a single 2D image, and adaptive replanning under physical constraints such as object size and collisions. It also reports CO3D generalization to unseen categories and robustness to shape and occlusion variation.</p>
-                <p data-i18n-html="results.p2">The local repo exposes the code path but not a benchmark logbook, so I treat the project as a reproducible public pipeline rather than a numbers-heavy claim.</p>
-                <div class="result-block" data-i18n-html="results.limit"><i class="fa-solid fa-triangle-exclamation"></i>External checkpoints and large assets are required for a full run: Grounded-SAM-2, VGGT, DINOv2-B/14, the Fairino SDK, and the RAM template payloads are not vendored.</div>
+                <h2><i class="fa-solid fa-chart-line"></i><span data-i18n="results.title">What the Design Achieves</span></h2>
+                <p data-i18n-html="results.p1">Attributed to the paper (Chen et al., <i>Science Robotics</i> 2026) and the CUHK release: the system was evaluated across <strong>14 manipulation tasks</strong> spanning <strong>31 objects</strong>, demonstrating zero-shot real-world execution, spatially aware manipulation from a single 2D image, and adaptive replanning under physical constraints such as object size and collision. The release also reports CO3D generalization to unseen categories and robustness to shape and occlusion variation.</p>
+                <p data-i18n-html="results.p2">I present these as the paper's reported outcomes, not as numbers I re-measured. Per-task success rates and baseline deltas are not disclosed in the publicly accessible article or repository, so I deliberately do not quote a headline percentage here — the contribution I claim is the system design and the training-side scheme, which I verified line-by-line against the code.</p>
+                <div class="result-block" data-i18n-html="results.limit"><i class="fa-solid fa-triangle-exclamation"></i>Honest scope: a full run needs external assets that are not vendored — Grounded-SAM-2, VGGT, DINOv2-B/14, the Fairino SDK, and the RAM template payloads. The repo exposes the complete code path but no benchmark logbook, so any quantitative claim on this page traces to the publication, not to a local rollout.</div>
             </section>
 
             <section class="section-block" id="highlights">
-                <h2><i class="fa-solid fa-lightbulb"></i><span data-i18n="highlights.title">What To Say In Interview</span></h2>
+                <h2><i class="fa-solid fa-lightbulb"></i><span data-i18n="highlights.title">Design Decisions I Can Defend</span></h2>
                 <div class="highlight-grid">
                     <div class="hl-card">
-                        <h3 data-i18n="highlights.card1.title">Object discovery</h3>
-                        <p data-i18n-html="highlights.card1.body">Explain how <code>RamVLM</code> filters categories, GroundingDINO returns <code>xyxy</code> boxes, and SAM2 turns them into masks on the source image plane.</p>
+                        <h3 data-i18n="highlights.card1.title">Why retrieve, not learn end-to-end</h3>
+                        <p data-i18n-html="highlights.card1.body">Filtering categories with <code>RamVLM</code>, then boxing with GroundingDINO and masking with SAM2, means a new object is a <em>lookup</em>, not a new training run. The cost is a category template must exist; the payoff is single-image, zero-shot action.</p>
                     </div>
                     <div class="hl-card">
-                        <h3 data-i18n="highlights.card2.title">Object-centric 3D</h3>
-                        <p data-i18n-html="highlights.card2.body">Explain how RAMNet fuses frozen DINOv2 tokens with position embeddings, <code>choose</code> indices, and template priors to predict view, NOCS, grasps, and planes.</p>
+                        <h3 data-i18n="highlights.card2.title">Why freeze DINOv2 and learn geometry</h3>
+                        <p data-i18n-html="highlights.card2.body">RAMNet fuses frozen DINOv2 tokens with position embeddings, <code>choose</code> indices, and template priors to predict view, NOCS, grasps, and planes. Freezing the backbone is the choice that keeps a strong visual prior and limits training to the geometry heads.</p>
                     </div>
                     <div class="hl-card">
-                        <h3 data-i18n="highlights.card3.title">Motion boundary</h3>
-                        <p data-i18n-html="highlights.card3.body">Explain how <code>ConstraintParser</code> turns VLM subgoals into gripper poses and how <code>PathPlanner</code> and <code>TrajectoryGenerator</code> convert them into Fairino motion.</p>
+                        <h3 data-i18n="highlights.card3.title">Why keep motion deterministic</h3>
+                        <p data-i18n-html="highlights.card3.body"><code>ConstraintParser</code> turns VLM subgoals into gripper poses; <code>PathPlanner</code> and <code>TrajectoryGenerator</code> turn those into Fairino motion. Putting the intelligence in the object representation, not the controller, keeps execution auditable and safe to clamp.</p>
                     </div>
                 </div>
             </section>

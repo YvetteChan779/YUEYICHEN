@@ -22,7 +22,7 @@
     const i18n = {
         en: {
             'back': 'Back to Home',
-            'hero.title': 'ALOHA/LeKiwi SFT Full Episode: DreamZero VLA Reproduction',
+            'hero.title': 'DreamZero-LeKiwi: Joint Video-Action VLA Fine-Tuning on ALOHA/LeKiwi',
             'hero.venue': 'Embodied AI / Robot Learning Project',
             'hero.tagline': 'LeRobot data collection, GEAR-style conversion, DreamZero LoRA fine-tuning, and receding-horizon robot inference.',
             'hero.arch': 'Architecture',
@@ -40,7 +40,8 @@
             's0.c4': 'Integrated rollout videos into the project page as visual evidence for the inference/evaluation interface, while keeping them separate from trainable data.',
             's0.scope': '<strong>Data note:</strong> the mp4 files shown below are inference results, not training data. Training requires synchronized state/action trajectories, episode metadata, and language labels collected through LeRobot.',
             's1.title': 'System Architecture',
-            's1.cap': 'Full reproduction pipeline: data acquisition, LeRobot-to-GEAR conversion, DreamZero LoRA fine-tuning, WebSocket inference, safety adapter, and closed-loop rollout evaluation.',
+            's1.cap': 'Joint video-action model: Wan2.1 VAE + action + umt5-xxl text encoders feed a Causal Video-Action DiT; training uses joint flow matching (teacher forcing) with LoRA on the frozen DreamZero-AgiBot base, and inference autoregressively decodes future frames plus a 24-step action chunk under receding-horizon closed loop. Task frames are eval-viz rollouts (cond input / Wan-generated).',
+            's1.cap2': 'Reproduction pipeline: LeRobot data acquisition, LeRobot-to-GEAR conversion, DreamZero LoRA fine-tuning, WebSocket inference, safety adapter, and closed-loop rollout evaluation.',
             's2.title': 'Experimental Design',
             's2.p1': 'I designed the experiment as an engineering-first reproduction, because VLA failures on real robots are often caused by data-control interface bugs rather than model capacity. The first priority is proving that the observation/action schema is correct before scaling training.',
             's2.th.stage': 'Stage',
@@ -92,7 +93,7 @@
         },
         zh: {
             'back': '返回主页',
-            'hero.title': 'ALOHA/LeKiwi SFT Full Episode：DreamZero VLA 复现',
+            'hero.title': 'DreamZero-LeKiwi：ALOHA/LeKiwi 上的联合视频-动作 VLA 微调',
             'hero.venue': '具身智能 / 机器人学习项目',
             'hero.tagline': 'LeRobot 数据采集、GEAR 格式转换、DreamZero LoRA 微调与 receding-horizon 机器人推理。',
             'hero.arch': '架构图',
@@ -110,7 +111,8 @@
             's0.c4': '将 rollout 视频集成到项目页中，作为推理/评估接口的可视化证据，同时和训练数据严格区分。',
             's0.scope': '<strong>数据说明：</strong>下方 mp4 是推理结果，不是训练数据。训练需要通过 LeRobot 重新采集同步状态/动作轨迹、episode 元数据和语言标签。',
             's1.title': '系统架构',
-            's1.cap': '完整复现管线：数据采集、LeRobot 到 GEAR 转换、DreamZero LoRA 微调、WebSocket 推理、安全适配器与闭环 rollout 评估。',
+            's1.cap': '联合视频-动作模型：Wan2.1 VAE + 动作编码器 + umt5-xxl 文本编码器共同送入 Causal 视频-动作 DiT；训练用联合流匹配（teacher forcing），在冻结的 DreamZero-AgiBot 底座上做 LoRA，推理端自回归解码未来帧与 24 步动作块，并在 receding-horizon 闭环下执行。图中任务帧为评估可视化 rollout（条件输入 / Wan 生成）。',
+            's1.cap2': '复现管线：LeRobot 数据采集、LeRobot 到 GEAR 转换、DreamZero LoRA 微调、WebSocket 推理、安全适配器与闭环 rollout 评估。',
             's2.title': '实验设计',
             's2.p1': '我将实验设计成工程优先的复现流程，因为真实机器人上的 VLA 失败往往来自数据-控制接口错误，而不是模型容量不足。第一优先级是在扩大训练前证明观测/动作 schema 正确。',
             's2.th.stage': '阶段',

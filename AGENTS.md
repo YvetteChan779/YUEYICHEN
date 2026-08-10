@@ -81,10 +81,10 @@ Before ANY project-related output, pass this checklist. If any item fails → st
 | `voxintent.html` + `voxintent.js` | VoxIntent voice-to-intent detail page (voice-to-intent subsystem of the PLAN-B robot; DreamZero-style, inline pipeline SVG + JD-fit section, bilingual i18n keys) |
 | `ram.html` + `ram.js` | RAM retrieval-augmented manipulation detail page (DreamZero-style, code-backed metrics, bilingual i18n keys) |
 | `pi05.html` + `pi05.js` | pi0.5/LIBERO fine-tuning project page |
-| `aloha_lekiwi.html` + `aloha_lekiwi.js` | ALOHA/LeKiwi DreamZero reproduction page |
+| `aloha_lekiwi.html` + `aloha_lekiwi.js` | DreamZero-LeKiwi page (joint video-action VLA fine-tuning on ALOHA/LeKiwi; DreamZero-palette model figure + reproduction-pipeline figure, bilingual i18n keys) |
 | `coin_stand.html` | Embodied Coin Standing and Placement project page |
-| `plana.html` | PLAN-A multimodal interaction system detail page with bilingual inline i18n and redrawn model/runtime SVGs |
-| `plana_retargeting.html` | PLAN-A Retargeting project detail page with bilingual inline i18n |
+| `affective_interaction.html` | Affective Robot Interaction multimodal interaction system detail page (internal codename PLAN-A) with bilingual inline i18n and redrawn model/runtime SVGs |
+| `affective_retargeting.html` | Affective Robot Interaction Retargeting detail page (PLAN-A retargeting layer) with bilingual inline i18n |
 
 ### Projects and Required Technical Depth
 
@@ -93,18 +93,18 @@ Before ANY project-related output, pass this checklist. If any item fails → st
 | RAM | ram.html | GroundingDINO + SAM2 object discovery, VGGT-1B depth reconstruction, frozen DINOv2-B/14 RAMNet, 128-view templates, 100^3 voxel planning, 14-task / 31-object public evaluation framing | `/home/CNS2026391745/Documents/YUEYICHEN/Retrieval-augmented-Manipulation/` — `README.md`, `config/config.yaml`, `visions/ram/lib/network.py`, `tools/ram_training/train_bop.py` |
 | VoxIntent (voice-to-intent subsystem of PLAN-B robot) | voxintent.html | Streaming ALSA audio → 3-tier VAD → cloud_qwen3 4-engine ASR router → qwen3.5-flash JSON NLU → 6-state dialog manager → VLM bbox source-pixel grounding → TTS echo guard, latency budget, failure diagnosis, JD-fit mapping. Downstream SAM3 mask / 3D grasp_check / IK / motor control are collaborator-owned and out of page scope. | `/home/CNS2026391745/Documents/PLAN-B-CYY/planb-robot/src/har_interaction/src/` — `project.md` (988 lines), `docs/cyy/算法答辩云文档_new.md` (917 lines) |
 | pi0.5/LIBERO | pi05.html | VLA fine-tuning, freeze-filter matrix, action normalization fix, 2000-episode eval | `Pic/pi05/pi05_libero_finetune_report.pdf` |
-| ALOHA/LeKiwi | aloha_lekiwi.html | LeRobot schema conversion, embodiment registration, WebSocket inference | — |
+| DreamZero-LeKiwi (ALOHA/LeKiwi) | aloha_lekiwi.html | Joint video-action VLA: Wan2.1 Causal DiT + umt5 text, LoRA on DreamZero-AgiBot, flow matching, LeRobot→GEAR schema conversion, embodiment registration, 24×14 action chunk, WebSocket AR inference, receding horizon | `Pic/aloha_lekiwi/dreamzero_lekiwi_arch.png` |
 | Embodied Coin Standing and Placement | coin_stand.html | Frozen RADIO summaries, ACT-style 4-layer encoder/decoder, checkpoint hot switching, grasp verification, rule-based half-arc transfer | — |
-| PLAN-A Retargeting | plana_retargeting.html | VDMocap 23-node mocap to 10-DOF raw encoder interface, T-pose calibration, quaternion/position runtime mapping, 60D-to-10D Teleop Transformer | `/home/CNS2026391745/Documents/PLAN-A-CYY/RBS-Software-Interaction/retargeting/` |
-| PLAN-A | plana.html | Qwen2.5-VL/OpenCV perception, Text-to-Action CVAE report route, image-conditioned Diffusion Policy, retargeting calibration, 10D WebSocket + Dynamixel execution | `/home/CNS2026391745/Documents/PLAN-A-CYY/RBS-Software-Interaction/` — `docs/PLAN-A_云文档.md`, `PlanA-情感陪伴场景的多模态交互系统.pdf` |
+| Affective Robot Interaction Retargeting (codename PLAN-A) | affective_retargeting.html | VDMocap 23-node mocap to 10-DOF raw encoder interface, T-pose calibration, quaternion/position runtime mapping, 60D-to-10D Teleop Transformer | `/home/CNS2026391745/Documents/PLAN-A-CYY/RBS-Software-Interaction/retargeting/` |
+| Affective Robot Interaction (codename PLAN-A) | affective_interaction.html | Qwen2.5-VL/OpenCV perception, Text-to-Action CVAE report route, image-conditioned Diffusion Policy, retargeting calibration, 10D WebSocket + Dynamixel execution | `/home/CNS2026391745/Documents/PLAN-A-CYY/RBS-Software-Interaction/` — `docs/PLAN-A_云文档.md`, `PlanA-情感陪伴场景的多模态交互系统.pdf` |
 
 ### What "deep mining" means per project
 
 - **VoxIntent** (homepage-facing name for the PLAN-B robot's voice-to-intent subsystem): Don't say "multimodal perception". Describe the ALSA audio→3-tier VAD→cloud_qwen3 4-engine ASR router→qwen3.5-flash NLU→6-state dialog manager→VLM bbox source-pixel grounding→TTS echo guard pipeline with latencies, failure modes, and specific fixes (source-pixel bbox contract, stateful Silero, envelope AGC v5 silence-creep, cloud endpointing ownership, rapid-stitch, 5-layer semantic defense, translation sentinel). Page scope stops at instruction grounding; SAM3 mask, 3D grasp_check, IK, and motor control are collaborator-owned downstream.
 - **pi0.5/LIBERO**: Don't say "fine-tuned a VLA". Describe the freeze-filter matrix, action normalization fix, norm_stats reuse issue, LoRA scope, evaluation protocol.
 - **ALOHA/LeKiwi**: Don't say "teleoperation". Describe LeRobot schema conversion, embodiment registration, camera order, timestamp alignment, WebSocket inference.
-- **PLAN-A Retargeting**: Don't say "motion mapping". Describe VDMocap 23-node struct parsing, T-pose offset calibration, quaternion/position runtime routes, 10D Dynamixel encoder contract, `[0,4095]` clamps, 60D-to-10D Teleop Transformer regression, and the 47-sample final-frame MAE caveat.
-- **PLAN-A**: Don't say "diffusion policy". Describe CVAE vs diffusion routes, retargeting calibration, latent dimension choices, scheduler steps.
+- **Affective Robot Interaction Retargeting** (codename PLAN-A): Don't say "motion mapping". Describe VDMocap 23-node struct parsing, T-pose offset calibration, quaternion/position runtime routes, 10D Dynamixel encoder contract, `[0,4095]` clamps, 60D-to-10D Teleop Transformer regression, and the 47-sample final-frame MAE caveat.
+- **Affective Robot Interaction** (codename PLAN-A): Don't say "diffusion policy". Describe CVAE vs diffusion routes, retargeting calibration, latent dimension choices, scheduler steps.
 - **RAM**: Don't say "spatial reasoning". Describe GroundingDINO + SAM2 object discovery, VGGT-1B depth reconstruction, frozen DINOv2-B/14 RAMNet, 128-view templates, 100^3 voxel planning, and the 14-task / 31-object public evaluation framing.
 
 ---
@@ -153,12 +153,13 @@ Free-choice pool of visual style references. No file is locked to a specific pro
 
 | Project | Location |
 |---------|----------|
-| VoxIntent (PLAN-B robot voice subsystem) | `Pic/planb/` — 1 PNG + 2 SVGs actually on disk: `vad_asr_architecture.png`, `planb-model_architechture.svg`, `planb-runtime_visualization.svg`. voxintent.html uses `vad_asr_architecture.png` + an inline pipeline SVG only. (Directory name stays `Pic/planb/`; prior 14-PNG list was aspirational and removed.) |
+| VoxIntent (codename PLAN-B robot voice subsystem) | `Pic/voxintent/` — 1 PNG + 2 SVGs actually on disk: `vad_asr_architecture.png`, `voxintent-model_architechture.svg`, `voxintent-runtime_visualization.svg`. voxintent.html uses `vad_asr_architecture.png` + an inline pipeline SVG only. (Directory renamed from `Pic/planb/`; prior 14-PNG list was aspirational and removed.) |
 | RAM | `Pic/ram/` — `ram-model_architechture.svg`, `ram-runtime_visualization.svg` |
-| PLAN-A | `Pic/plan_a_system.png`; `Pic/plana/` (plana-model_architechture.svg, plana-runtime_visualization.svg) |
-| PLAN-A Retargeting | `Pic/plana_retargeting/plana_retargeting_arch.svg` |
+| Affective Robot Interaction (codename PLAN-A) | `Pic/affective/` (affective-model_architechture.svg, affective-runtime_visualization.svg) |
+| Affective Robot Interaction Retargeting (codename PLAN-A) | `Pic/affective_retargeting/affective_retargeting_arch.svg` |
 | pi0.5 | `Pic/pi05/` (includes `pi05_libero_finetune_report.pdf`) |
-| Embodied Coin Standing and Placement | `Pic/coin_stand/new_arch.png`; `Pic/coin_stand/coin_stand_pipeline.svg` (ACT-style architecture sketch with preserved coin.mp4 frames + runtime pipeline) |
+| Embodied Coin Standing and Placement | `Pic/coin_stand/coin_architechture.png` (+ source `coin_architecture.svg`, generator `gen_arch.py`); `Pic/coin_stand/coin_stand_pipeline.svg` (ACT Fig.4-layout ConSens policy figure: coin.mp4 rollout frames → frozen RADIO ViT → 4L encoder / 4L decoder → 11-D action chunk, no CVAE/style-z; + runtime pipeline) |
+| DreamZero-LeKiwi (ALOHA/LeKiwi) | `Pic/aloha_lekiwi/dreamzero_lekiwi_arch.png` (+ source `dreamzero_lekiwi_arch.svg`, generator `gen_arch.py`, embedded rollout frames in `frames/b64.json`): DreamZero-figure-layout joint video-action VLA — Wan2.1 VAE + action + umt5-xxl encoders → Causal Video-Action DiT → VAE/action decoders; train = joint flow matching + LoRA on frozen DreamZero-AgiBot, infer = AR decode of future frames + 24×14 action chunk, receding-horizon closed loop; frames are ep003 eval-viz (cond / Wan-pred). Also `Pic/aloha_lekiwi/aloha_lekiwi_arch.svg` (reproduction-pipeline figure, kept as secondary) |
 
 ---
 

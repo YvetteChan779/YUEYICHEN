@@ -205,7 +205,7 @@
 
                         <div class="pub-entry">
                             <div class="pub-thumbnail">
-                                <img src="Pic/planb/planb-model_architechture.svg" alt="VoxIntent voice-to-intent architecture" class="pub-thumbnail-contain" />
+                                <img src="Pic/voxintent/voxintent-model_architechture.svg" alt="VoxIntent voice-to-intent architecture" class="pub-thumbnail-contain" />
                             </div>
                             <div class="pub-info">
                                 <h3 class="pub-title" data-i18n="proj.voxintent.title">VoxIntent: Voice-to-Intent Pipeline for Manipulation Robot</h3>
@@ -221,10 +221,10 @@
 
                         <div class="pub-entry">
                             <div class="pub-thumbnail">
-                                <img src="Pic/aloha_lekiwi/aloha_lekiwi_arch.svg" alt="ALOHA LeKiwi DreamZero architecture" />
+                                <img src="Pic/aloha_lekiwi/dreamzero_lekiwi_arch.png" alt="DreamZero-LeKiwi joint video-action VLA architecture" class="pub-thumbnail-contain" />
                             </div>
                             <div class="pub-info">
-                                <h3 class="pub-title" data-i18n="proj.aloha.title">ALOHA/LeKiwi SFT Full Episode: DreamZero VLA Reproduction</h3>
+                                <h3 class="pub-title" data-i18n="proj.aloha.title">DreamZero-LeKiwi: Joint Video-Action VLA Fine-Tuning on ALOHA/LeKiwi</h3>
                                 <p class="pub-authors"><strong>Yueyi Chen</strong></p>
                                 <p class="pub-venue" data-i18n-html="proj.aloha.venue"><em>Robot Learning Project</em>, 2026</p>
                                 <p class="pub-desc" data-i18n-html="proj.aloha.desc">Built a reproduction-oriented VLA pipeline for an ALOHA/LeKiwi tabletop manipulation setup, covering LeRobot data collection design, GEAR-style metadata conversion, DreamZero embodiment registration, LoRA fine-tuning protocol, and WebSocket-based action-chunk inference. The project emphasizes practical robot-learning details often missed in paper-level reproductions: 3-view camera-order validation, state/action schema audit, gripper normalization, receding-horizon execution, safety clamping, and rollout-video based evaluation.</p>
@@ -237,7 +237,7 @@
 
                         <div class="pub-entry featured-project">
                             <div class="pub-thumbnail">
-                                <img src="Pic/coin_stand/new_arch.png" alt="Embodied Coin Standing and Placement ACT-style architecture sketch" class="pub-thumbnail-contain" />
+                                <img src="Pic/coin_stand/coin_architechture.png" alt="Embodied Coin Standing and Placement ACT-style architecture sketch" class="pub-thumbnail-contain" />
                             </div>
                             <div class="pub-info">
                                 <h3 class="pub-title" data-i18n="proj.coin.title">Embodied Coin Standing and Placement</h3>
@@ -253,17 +253,17 @@
 
                         <div class="pub-entry">
                             <div class="pub-thumbnail">
-                                <img src="Pic/plana/plana-model_architechture.svg" alt="Affective Robot Interaction multimodal architecture" class="pub-thumbnail-contain" />
+                                <img src="Pic/affective/affective-model_architechture.svg" alt="Affective Robot Interaction multimodal architecture" class="pub-thumbnail-contain" />
                             </div>
                             <div class="pub-info">
-                                <h3 class="pub-title" data-i18n="proj.plana.title">Affective Robot Interaction: A Multimodal System for Companion Robots</h3>
+                                <h3 class="pub-title" data-i18n="proj.affective.title">Affective Robot Interaction: A Multimodal System for Companion Robots</h3>
                                 <p class="pub-authors"><strong>Yueyi Chen</strong></p>
-                                <p class="pub-venue" data-i18n-html="proj.plana.venue"><em>Algorithm Intern Project</em>, 2026</p>
-                                <p class="pub-desc" data-i18n-html="proj.plana.desc">Engineered Affective Robot Interaction as a social-robot multimodal interaction stack that routes camera and VDMocap inputs through Qwen2.5-VL / OpenCV perception, Text-to-Action CVAE, image-conditioned Diffusion Policy, and a 10D WebSocket + Dynamixel execution layer. The validated report path uses 194 episodes across waving / reaching / sitting with a shared Normalized Actions <code>(T,10)</code> contract. The CVAE branch encodes BERT-base-chinese CLS to 128D, fuses a 128D category embedding, samples a 64D latent, and decodes with a 2-layer / 4-head Transformer Decoder. The DP branch conditions a 6-layer self+cross-attention action transformer on DINOv2-B/14 or cached Qwen-VL 256D tokens, using DDIM 1000-step v-prediction with self-conditioning 0.9 and min-SNR gamma 5. Runtime streams trajectories at 10 FPS with an execution lock and <code>skipped_busy</code> guard, while retargeting maps VDMocap 23-node pose into <code>[0,4095]</code> encoders through T-pose calibration. Reported scope: 535.95 best CVAE val loss, 100% category sanity accuracy, 2.5-5.5s documented latency, and ~9x Qwen-cache training speedup; no controlled CVAE-vs-DP task-success benchmark is claimed.</p>
+                                <p class="pub-venue" data-i18n-html="proj.affective.venue"><em>Algorithm Intern Project</em>, 2026</p>
+                                <p class="pub-desc" data-i18n-html="proj.affective.desc">Engineered Affective Robot Interaction as a social-robot multimodal interaction stack that routes camera and VDMocap inputs through Qwen2.5-VL / OpenCV perception, Text-to-Action CVAE, image-conditioned Diffusion Policy, and a 10D WebSocket + Dynamixel execution layer. The validated report path uses 194 episodes across waving / reaching / sitting with a shared Normalized Actions <code>(T,10)</code> contract. The CVAE branch encodes BERT-base-chinese CLS to 128D, fuses a 128D category embedding, samples a 64D latent, and decodes with a 2-layer / 4-head Transformer Decoder. The DP branch conditions a 6-layer self+cross-attention action transformer on DINOv2-B/14 or cached Qwen-VL 256D tokens, using DDIM 1000-step v-prediction with self-conditioning 0.9 and min-SNR gamma 5. Runtime streams trajectories at 10 FPS with an execution lock and <code>skipped_busy</code> guard, while retargeting maps VDMocap 23-node pose into <code>[0,4095]</code> encoders through T-pose calibration. Reported scope: 535.95 best CVAE val loss, 100% category sanity accuracy, 2.5-5.5s documented latency, and ~9x Qwen-cache training speedup; no controlled CVAE-vs-DP task-success benchmark is claimed.</p>
                                 <div class="pub-links">
-                                    <a href="plana.html" class="pub-link" data-i18n="proj.plana.link.details">Details</a>
-                                    <a href="plana.html#architecture" class="pub-link" data-i18n="proj.plana.link.model">Model</a>
-                                    <a href="plana_retargeting.html" class="pub-link" data-i18n="proj.plana.link.retarget">Retargeting</a>
+                                    <a href="affective_interaction.html" class="pub-link" data-i18n="proj.affective.link.details">Details</a>
+                                    <a href="affective_interaction.html#architecture" class="pub-link" data-i18n="proj.affective.link.model">Model</a>
+                                    <a href="affective_retargeting.html" class="pub-link" data-i18n="proj.affective.link.retarget">Retargeting</a>
                                 </div>
                             </div>
                         </div>
@@ -294,8 +294,8 @@
                             <div class="pub-info">
                                 <h3 class="pub-title" data-i18n="proj.ram.title">Retrieval-Augmented Manipulation</h3>
                                 <p class="pub-authors"><strong>Yueyi Chen</strong></p>
-                                <p class="pub-venue" data-i18n-html="proj.ram.venue"><em>Science Robotics / CUHK Paper Reproduction</em>, 2026</p>
-                                <p class="pub-desc" data-i18n-html="proj.ram.desc">Reproduced a retrieval-augmented manipulation stack that chains GroundingDINO + SAM2 object discovery, VGGT-1B depth reconstruction, and a frozen DINOv2-B/14 RAMNet with 1-layer view adaptation, 4-layer shape encoding, 4-layer map adaptation, and a 3-layer deformation decoder. The public code path is split into <code>step1_grounding.py</code> through <code>step4_conducting.py</code>, with <code>ram_k=5</code>, <code>img_size=224</code>, <code>n_pts=1024</code>, and <code>map_size=100</code> fixing the retrieval and planning contracts. I rebuilt the training side around BOP-style BlenderProc data, 128-view templates, and <code>PoseNCE</code> / <code>NOCSLoss</code> / <code>MatchLoss</code> on a frozen DINO backbone. The paper frames the system for zero-shot real-world manipulation and CO3D generalization, but the repo itself does not ship benchmark logs.</p>
+                                <p class="pub-venue" data-i18n-html="proj.ram.venue"><em>Personal Project · Idea &amp; Design</em>, 2026 &middot; on Chen et al., <i>Science Robotics</i></p>
+                                <p class="pub-desc" data-i18n-html="proj.ram.desc">Designed a <strong>retrieval-first</strong> manipulation system: instead of learning pixel-to-torque end to end, discover the object, retrieve a 3D category template, and inherit its grasp points, hinges, and support planes — so a single RGB frame of an unseen instance is enough to act. The design draws the hard boundary at the <strong>object representation</strong>, then decouples the runtime into four inspectable stages, <code>step1_grounding.py</code> through <code>step4_conducting.py</code> (<code>ram_k=5</code>, <code>img_size=224</code>, <code>n_pts=1024</code>, <code>map_size=100</code>). The learned bet is RAMNet — a frozen DINOv2-B/14 backbone (features <code>[7,9,11]</code> &rarr; <code>2304-D</code>) with lightweight view/shape/map adapters and a <code>2304&rarr;512&rarr;256&rarr;3</code> deformation decoder. I designed the training scheme to match: BOP-style BlenderProc data, 128-view category templates, and a <code>PoseNCE</code> / <code>NOCSLoss</code> / <code>MatchLoss</code> objective that fits templates to pixels rather than memorizing instances. Reported results (zero-shot real-world execution across 14 tasks / 31 objects, CO3D generalization) are attributed to the paper; the repo ships the full code path but no benchmark logs. Built on published work by a senior colleague, presented with permission.</p>
                                 <div class="pub-links">
                                     <a href="ram.html" class="pub-link" data-i18n="proj.ram.link.details">Details</a>
                                     <a href="https://github.com/RetrievalManip/Retrieval-augmented-Manipulation" target="_blank" rel="noopener" class="pub-link" data-i18n="proj.ram.link.code">Code</a>

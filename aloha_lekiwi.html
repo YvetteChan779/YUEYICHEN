@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="ALOHA/LeKiwi SFT Full Episode: DreamZero VLA reproduction and robot inference project — Yueyi Chen" />
-    <title>ALOHA/LeKiwi SFT Full Episode | Yueyi Chen</title>
+    <meta name="description" content="DreamZero-LeKiwi: joint video-action VLA fine-tuning on ALOHA/LeKiwi — DreamZero/Wan2.1 Causal DiT, LoRA, receding-horizon inference — Yueyi Chen" />
+    <title>DreamZero-LeKiwi: Joint Video-Action VLA | Yueyi Chen</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Lora:wght@400;500;600;700&family=JetBrains+Mono:wght@400&display=swap" rel="stylesheet" />
@@ -291,7 +291,7 @@
             <a href="index.html" class="back-link"><i class="fa-solid fa-arrow-left"></i> <span data-i18n="back">Back to Home</span></a>
 
             <div class="hero">
-                <h1 data-i18n="hero.title">ALOHA/LeKiwi SFT Full Episode: DreamZero VLA Reproduction</h1>
+                <h1 data-i18n="hero.title">DreamZero-LeKiwi: Joint Video-Action VLA Fine-Tuning on ALOHA/LeKiwi</h1>
                 <p class="subtitle"><strong>Yueyi Chen</strong> &middot; <span data-i18n="hero.venue">Embodied AI / Robot Learning Project</span> &middot; 2026</p>
                 <p class="tagline" data-i18n="hero.tagline">LeRobot data collection, GEAR-style conversion, DreamZero LoRA fine-tuning, and receding-horizon robot inference.</p>
                 <div class="links">
@@ -338,8 +338,12 @@
             <section class="section-block" id="architecture">
                 <h2><i class="fa-solid fa-diagram-project"></i> <span data-i18n="s1.title">System Architecture</span></h2>
                 <figure class="diagram">
-                    <img src="Pic/aloha_lekiwi/aloha_lekiwi_arch.svg" alt="DreamZero ALOHA LeKiwi system architecture" />
-                    <figcaption data-i18n="s1.cap">Full reproduction pipeline: data acquisition, LeRobot-to-GEAR conversion, DreamZero LoRA fine-tuning, WebSocket inference, safety adapter, and closed-loop rollout evaluation.</figcaption>
+                    <img src="Pic/aloha_lekiwi/dreamzero_lekiwi_arch.png" alt="DreamZero-LeKiwi joint video-action DiT: VAE/action/text encoders, Causal DiT, VAE/action decoders, closed-loop execution" />
+                    <figcaption data-i18n="s1.cap">Joint video-action model: Wan2.1 VAE + action + umt5-xxl text encoders feed a Causal Video-Action DiT; training uses joint flow matching (teacher forcing) with LoRA on the frozen DreamZero-AgiBot base, and inference autoregressively decodes future frames plus a 24-step action chunk under receding-horizon closed loop. Task frames are eval-viz rollouts (cond input / Wan-generated).</figcaption>
+                </figure>
+                <figure class="diagram">
+                    <img src="Pic/aloha_lekiwi/aloha_lekiwi_arch.svg" alt="DreamZero ALOHA LeKiwi reproduction pipeline" />
+                    <figcaption data-i18n="s1.cap2">Reproduction pipeline: LeRobot data acquisition, LeRobot-to-GEAR conversion, DreamZero LoRA fine-tuning, WebSocket inference, safety adapter, and closed-loop rollout evaluation.</figcaption>
                 </figure>
             </section>
 
