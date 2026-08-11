@@ -20,3 +20,14 @@ node_modules/
 # 临时
 .tmp/
 *.bak
+.cache/
+__pycache__/
+tmp_*
+
+# 私人文档（公开仓库不发布）
+简历_多模态_v1.*
+陈悦仪-香港中文大学.pdf
+excellent cv/简历认知库.md
+
+# 嵌套项目仓库（独立 git repo，不作为子模块纳入）
+Retrieval-augmented-Manipulation/

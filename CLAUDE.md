@@ -22,7 +22,8 @@ Claude must reload these layers before project-related output.
 | 5 | Homepage source | `index.html`, `styles.css`, `script.js`, existing project pages, `Pic/<project>/` assets. |
 | 6 | Target project repo | Source of truth for code, configs, docs, results, logs, figures, and videos. |
 | 7 | Per-project `PROJECT.md` | Long-term project memory after deep mining. Later public copy should derive from this plus source evidence. |
-| 8 | Excellent resume references | Default path `/home/CNS2026391745/Documents/YUEYICHEN/excellent cv`. Analyze bullet grammar first, then translate Yueyi projects into defensible resume language. |
+| 8 | `excellent cv/简历认知库.md` | Resume Cognition Base (load first for any resume work): 大厂算法/大模型/多模态 targeting, reference-CV grammar (阿秀 method, gl_cv north-star, lfy counter-example), 2026 JD demand model, project×JD mapping matrix, robotics→大模型 reframe strategy, resume architecture, gaps, iteration mechanism. |
+| 9 | Excellent resume references | Default path `/home/CNS2026391745/Documents/YUEYICHEN/excellent cv`. Analyze bullet grammar first, then translate Yueyi projects into defensible resume language. |
 
 Minimal session trigger:
 
@@ -113,6 +114,11 @@ When asked to mine or add a project:
 
 ### 4.2 Resume Bullets
 
+**Before anything else, load `excellent cv/简历认知库.md` in full and follow it.**
+It is the mandatory memory layer for all resume work: confirm 目标方向, the Part 2
+JD keyword cluster, candidate projects from the Part 3 matrix, and the Part 4
+reframe口径 before writing. No bullet may contradict it.
+
 When resume examples are provided:
 
 1. Extract reference bullet grammar: verb, compression pattern, metric placement,
@@ -121,11 +127,18 @@ When resume examples are provided:
 3. For each bullet include English bullet, Chinese rationale, interviewer
    follow-up, evidence, and overclaim risk.
 
+Cognition-base gate (enforce every time): every bullet traces to `PROJECT.md`
+evidence or deep-mined source and passes the no-code-reader test; not-yet-mined
+projects (CUHK Koopman+SOS, CUHK UWM) get no bullets until `/deep-project` runs;
+papers 在投 use "under review (target: venue)", never claimed acceptance;
+中文先行 then translate; one resume file per direction, never "algorithm 通用".
+
 ## 5. Pre-Output Self-Check
 
 Before any project-related output:
 
 - [ ] Have I read `AGENTS.md` in this session?
+- [ ] **If this is resume work: have I loaded `excellent cv/简历认知库.md` in full and confirmed 目标方向 + Part 2 JD 关键词簇 + Part 3 候选项目 + Part 4 reframe口径?**
 - [ ] Have I read `Project Mining Protocol.md`?
 - [ ] Have I read `personnel page technical content KB.md`?
 - [ ] Have I read the actual project source/config/docs/results?

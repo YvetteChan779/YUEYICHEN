@@ -31,6 +31,7 @@ Yueyi Chen (陈悦怡), M.Sc. @ CUHK, Embodied AI / Robot Learning.
 - For each project, understand: what model, what data, what was frozen/trained, what was measured, what broke, what was fixed
 
 ### Rule 4: Resume & Homepage Content
+- **MANDATORY for any resume output**: load `excellent cv/简历认知库.md` (Resume Cognition Base) FIRST and follow it. It is the single source of truth for resume targeting (大厂算法/大模型/多模态), reference-CV grammar, 2026 JD demand model, project×JD mapping matrix, robotics→大模型 reframe口径, resume architecture, and gaps. No resume bullet, headline, skills line, or ordering decision may contradict it.
 - Professional terminology, slight overclaiming OK (see Section 6 for rules)
 - Every bullet must invite a follow-up question the user can confidently answer
 - Structure: `[Strong verb] + [specific what] + [technical how] + [quantified scope]`
@@ -78,6 +79,7 @@ Before ANY project-related output, pass this checklist. If any item fails → st
 | `personnel page technical content KB.md` | Curated KB synthesis and auto-generated local reference catalog |
 | `PROJECT.md` | RAM + PLAN-B mining record, evidence tables, diagram audits, and resume bullets |
 | `chenyy_cv.md` | PLAN-B resume bullets, grammar extraction, and risk notes |
+| `excellent cv/简历认知库.md` | Resume Cognition Base for 大厂算法/大模型/多模态 targeting: reference-CV grammar (阿秀 method, gl_cv north-star, lfy counter-example), 2026 JD demand model, project×JD mapping matrix, robotics→大模型 reframe strategy, resume architecture, gaps, iteration mechanism. Load before any resume-bullet output. |
 | `voxintent.html` + `voxintent.js` | VoxIntent voice-to-intent detail page (voice-to-intent subsystem of the PLAN-B robot; DreamZero-style, inline pipeline SVG + JD-fit section, bilingual i18n keys) |
 | `ram.html` + `ram.js` | RAM retrieval-augmented manipulation detail page (DreamZero-style, code-backed metrics, bilingual i18n keys) |
 | `pi05.html` + `pi05.js` | pi0.5/LIBERO fine-tuning project page |
@@ -260,11 +262,18 @@ If yes → rewrite with code-level evidence.
 When asked to generate resume bullets for a project:
 
 ### Prerequisites (execute first if not yet done)
-1. Read `Project Mining Protocol.md`
-2. Read all source code for the target project
-3. Read `personnel page technical content KB.md` in full
-4. Read the relevant `private-kb/public/*.html` documents for every model family named in the bullets
-5. Browse `arch_style/` for style context
+1. **Load `excellent cv/简历认知库.md` in full — this is non-negotiable and comes first.** Confirm 目标方向, the matching Part 2 JD keyword cluster, candidate projects from the Part 3 matrix, and the Part 4 reframe口径 before writing any bullet.
+2. Read `Project Mining Protocol.md`
+3. Read all source code for the target project
+4. Read `personnel page technical content KB.md` in full
+5. Read the relevant `private-kb/public/*.html` documents for every model family named in the bullets
+6. Browse `arch_style/` for style context
+
+### Cognition-Base Gate (enforce every time)
+- Every bullet traces to `PROJECT.md` evidence or deep-mined source AND passes the no-code-reader test.
+- Not-yet-mined projects (CUHK Koopman+SOS, CUHK UWM) get NO bullets until `/deep-project` is run.
+- Papers 在投 → label "under review (target: venue)"; never claim acceptance.
+- 中文先行, then translate; one resume file per direction (多模态/大模型/具身), never "algorithm 通用".
 
 ### Generation Rules
 - Structure: `[Strong verb] + [specific what] + [technical how] + [quantified scope/result]`
