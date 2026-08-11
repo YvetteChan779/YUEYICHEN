@@ -17,7 +17,7 @@
 
     const Y = new Date().getFullYear();
     const footerEn = '&copy; <span id="year">' + Y + '</span> Yueyi Chen. Powered by <a href="https://pages.github.com/" target="_blank" rel="noopener">GitHub Pages</a>.';
-    const footerZh = '&copy; <span id="year">' + Y + '</span> 陈悦怡. 基于 <a href="https://pages.github.com/" target="_blank" rel="noopener">GitHub Pages</a> 搭建。';
+    const footerZh = '&copy; <span id="year">' + Y + '</span> 陈悦仪. 基于 <a href="https://pages.github.com/" target="_blank" rel="noopener">GitHub Pages</a> 搭建。';
 
     const i18n = {
         en: {

@@ -87,7 +87,7 @@
             'hero.links.code': '代码',
             'hero.links.paper': '论文',
             'hero.links.article': 'CUHK 文章',
-            'hero.cite': '设计与管线整理：陈悦怡；构想基于 Chen 等人，<a href="https://doi.org/10.1126/scirobotics.aea2092" target="_blank" rel="noopener"><i>Science Robotics</i> 2026</a>（CUHK）。本页的定量结果均归属于该论文。',
+            'hero.cite': '设计与管线整理：陈悦仪；构想基于 Chen 等人，<a href="https://doi.org/10.1126/scirobotics.aea2092" target="_blank" rel="noopener"><i>Science Robotics</i> 2026</a>（CUHK）。本页的定量结果均归属于该论文。',
             'm.k': '5',
             'm.kLabel': '每个物体的检索候选数（RAM-K）',
             'm.views': '128',
@@ -136,7 +136,7 @@
             'highlights.card3.body': '<code>ConstraintParser</code> 把 VLM 子目标转成夹爪位姿；<code>PathPlanner</code> 和 <code>TrajectoryGenerator</code> 再把它们转成 Fairino 运动。把智能放在物体表示里、而不是控制器里，让执行保持可审计、可安全钳制。',
             'fig.arch': 'RAM 架构图，展示 GroundingDINO + SAM2、VGGT-1B、RAMNet、planner 和 Fairino 执行栈。',
             'fig.runtime': 'RAM 运行时图，展示四个脚本及其可检查文件合约。',
-            footer: '&copy; <span id="year"></span> 陈悦怡. 基于 <a href="https://pages.github.com/" target="_blank" rel="noopener">GitHub Pages</a> 搭建。'
+            footer: '&copy; <span id="year"></span> 陈悦仪. 基于 <a href="https://pages.github.com/" target="_blank" rel="noopener">GitHub Pages</a> 搭建。'
         }
     };
 

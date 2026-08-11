@@ -5,7 +5,7 @@ aligned with `AGENTS.md`. If there is any conflict, `AGENTS.md` wins.
 
 ## 0. Owner
 
-Yueyi Chen (陈悦怡), M.Sc. @ CUHK, Embodied AI / Robot Learning.
+Yueyi Chen (陈悦仪), M.Sc. @ CUHK, Embodied AI / Robot Learning.
 Expected AI level: robotics PhD / senior robotics engineer. Precision and
 evidence matter more than fluent surface summaries.
 

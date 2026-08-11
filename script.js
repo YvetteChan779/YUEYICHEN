@@ -157,7 +157,7 @@
             'proj.voxintent.title': 'VoxIntent：操作机器人语音意图全链路',
             'proj.voxintent.venue': '<em>算法实习项目</em> · Jetson AGX Orin, 2026',
             'proj.voxintent.desc': '负责 Jetson AGX Orin 操作机器人的语音意图子系统：现场标定的 3 级 VAD、云优先 4 引擎流式 ASR 路由（默认 cloud_qwen3）、双路径 NLU（6 动作正则 + qwen3.5-flash JSON）、6 状态对话管理器搭配 3 维度环境音拒绝、原图像素 xyxy bbox 契约的 VLM 指令定位，以及 TTS 回声门控（无 AEC）。现场记录的远场 VAD 命中率从 <strong>0% -> 92%</strong>，ASR partial <strong>150-300 ms</strong>；下游 SAM3 mask、3D 抓取验证、IK 与电机控制由协作方负责。指标为单机现场报告，非正式 benchmark。',
-            'footer': '&copy; <span id="year">' + new Date().getFullYear() + '</span> 陈悦怡. 基于 <a href="https://pages.github.com/" target="_blank" rel="noopener">GitHub Pages</a> 搭建。'
+            'footer': '&copy; <span id="year">' + new Date().getFullYear() + '</span> 陈悦仪. 基于 <a href="https://pages.github.com/" target="_blank" rel="noopener">GitHub Pages</a> 搭建。'
         }
     };
 

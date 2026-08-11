@@ -6,7 +6,7 @@ This file is the single-source agent instruction set for ALL AI agents (Codex, C
 
 ## 0. Owner
 
-Yueyi Chen (陈悦怡), M.Sc. @ CUHK, Embodied AI / Robot Learning.
+Yueyi Chen (陈悦仪), M.Sc. @ CUHK, Embodied AI / Robot Learning.
 - Deep understanding of robotics systems, VLA architectures, control theory
 - Expects AI to engage at **peer level** (robotics PhD / senior engineer), not explain basics
 - Values: precision > verbosity, evidence > claims, architecture > buzzwords
