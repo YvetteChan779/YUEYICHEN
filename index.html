@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Yueyi Chen - Embodied AI, robot learning, VLA, and real-robot deployment" />
+    <meta name="author" content="Yueyichen" />
+    <title>Yueyi Chen | Embodied AI & Real-Robot Systems</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Lora:wght@400;500;600;700&family=JetBrains+Mono:wght@400&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+    <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="nav-container">
+            <a href="#" class="nav-brand">Yueyi Chen</a>
+            <div class="nav-right">
+                <ul class="nav-links">
+                    <li><a href="#about" class="nav-link active" data-i18n="nav.about">about</a></li>
+                    <li><a href="#skills" class="nav-link" data-i18n="nav.skills">skills</a></li>
+                    <li><a href="#publications" class="nav-link" data-i18n="nav.pubs">projects</a></li>
+                </ul>
+                <button class="lang-toggle" id="langToggle" aria-label="Toggle language">中</button>
+                <button class="theme-toggle" id="themeToggle" aria-label="Toggle theme">
+                    <i class="fa-solid fa-sun icon-light"></i>
+                    <i class="fa-solid fa-moon icon-dark"></i>
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="main">
+        <div class="container">
+            <div class="profile-layout" id="about">
+
+                <!-- Left Sidebar -->
+                <aside class="profile-sidebar">
+                    <div class="profile-photo">
+                        <img src="Pic/self.jpg" alt="Yueyi Chen" />
+                    </div>
+                    <h1 class="profile-name">Yueyi Chen (陈悦仪)</h1>
+                    <p class="profile-title" data-i18n="profile.title">M.Sc. in Computer Science</p>
+                    <p class="profile-affiliation" data-i18n="profile.affiliation">The Chinese University of Hong Kong</p>
+
+                    <div class="profile-links">
+                        <a href="mailto:chenyueyi200308@link.cuhk.edu.hk" title="Email">
+                            <i class="fa-solid fa-envelope"></i>
+                        </a>
+                        <a href="https://github.com/YvetteChan779" target="_blank" rel="noopener" title="GitHub">
+                            <i class="fa-brands fa-github"></i>
+                        </a>
+                        <a href="#" title="Google Scholar">
+                            <i class="fa-brands fa-google-scholar"></i>
+                        </a>
+                    </div>
+                    <div class="profile-contact">
+                        <a href="mailto:chenyueyi200308@link.cuhk.edu.hk">
+                            <i class="fa-solid fa-envelope"></i>
+                            <span>chenyueyi200308@link.cuhk.edu.hk</span>
+                        </a>
+                    </div>
+                </aside>
+
+                <!-- Right Content -->
+                <div class="profile-content">
+
+                    <!-- Biography -->
+                    <section class="bio-section">
+                        <p data-i18n-html="bio.p1">I am a M.Sc. student at <a href="https://www.cuhk.edu.hk/" target="_blank" rel="noopener">The Chinese University of Hong Kong (CUHK)</a>. I build embodied AI systems that connect teleoperation, multimodal perception, policy learning, and real-robot deployment.</p>
+                        <p data-i18n-html="bio.p2">My recent work spans xArm6 + LEAP Hand manipulation, VLA fine-tuning, diffusion-policy style robot control, humanoid perception, dataset tooling, and deployment pipelines that run beyond offline benchmarks.</p>
+                    </section>
+
+                    <!-- Highlight Box -->
+                    <div class="highlight-box">
+                        <p data-i18n-html="highlight"><i class="fa-solid fa-bullhorn"></i> Current focus: real-robot manipulation systems with traceable data flow, policy serving, sensor feedback, and recovery logic.</p>
+                    </div>
+
+                    <!-- Education -->
+                    <section class="info-section" id="education">
+                        <h2><i class="fa-solid fa-graduation-cap"></i><span data-i18n="education.title">Education</span></h2>
+                        <div class="info-list">
+                            <article class="info-item">
+                                <div class="info-head">
+                                    <h3 data-i18n="education.cuhk.school">The Chinese University of Hong Kong</h3>
+                                    <span>2025.09 - 2026.07</span>
+                                </div>
+                                <p data-i18n-html="education.cuhk.program">Department of Computer Science and Engineering · M.Sc. in Computer Science · GPA <strong>3.7 / 4.0</strong></p>
+                                <p data-i18n-html="education.cuhk.honor"><strong>Honor:</strong> M.Sc. in Computer Science Programme Excellent Student Scholarship, The Chinese University of Hong Kong</p>
+                            </article>
+                            <article class="info-item">
+                                <div class="info-head">
+                                    <h3 data-i18n="education.sysu.school">Sun Yat-sen University</h3>
+                                    <span>2021.09 - 2025.06</span>
+                                </div>
+                                <p data-i18n-html="education.sysu.program">School of Intelligent Systems Engineering · B.Eng. in Intelligent Science and Technology · GPA <strong>3.7 / 4.0</strong></p>
+                                <p data-i18n-html="education.sysu.honor"><strong>Major honors:</strong> SYSU Outstanding Undergraduate Third-Class Scholarship, Guangdong Soong Ching Ling Scholarship, Jieyang Outstanding Student Cadre</p>
+                            </article>
+                        </div>
+                    </section>
+
+                    <!-- Experience -->
+                    <section class="info-section" id="experience">
+                        <h2><i class="fa-solid fa-briefcase"></i><span data-i18n="experience.title">Experience</span></h2>
+                        <div class="info-list">
+                            <article class="info-item">
+                                <div class="info-head">
+                                    <h3 data-i18n="experience.roboscience.org">Beijing Jike Future Technology Co., Ltd. (RoboScience)</h3>
+                                    <span>2025.12 - 2026.06</span>
+                                </div>
+                                <p data-i18n-html="experience.roboscience.role">Algorithm Intern · Social-robot interaction and real-robot manipulation systems</p>
+                                <ul class="info-bullets">
+                                    <li data-i18n-html="experience.roboscience.b1"><strong>Affective Robot Interaction:</strong> engineered a multimodal social-robot interaction stack with Qwen2.5-VL/OpenCV perception, Text-to-Action CVAE, image-conditioned Diffusion Policy, and 10D WebSocket + Dynamixel execution over 194 reaction episodes.</li>
+                                    <li data-i18n-html="experience.roboscience.b2"><strong>VoxIntent:</strong> engineered the voice-to-intent subsystem of a Jetson AGX Orin manipulation robot (3-tier VAD, 4-engine streaming ASR, dual-path NLU, 6-state dialog manager, VLM instruction grounding, TTS echo guard), lifting field-reported far-field VAD hit rate from 0% to 92% with 150-300 ms ASR partials.</li>
+                                    <li data-i18n-html="experience.roboscience.b3"><strong>Embodied Coin Standing and Placement:</strong> architected an xArm6 + LEAP Hand closed-loop manipulation workflow with D435 / fingertip cameras, frozen RADIO summaries, a 16-step / 6-step ACT-style policy, checkpoint hot-switching, HSV tilt + hand-joint gating, grasp verification, rule-based half-arc transfer, and automatic episode reset.</li>
+                                </ul>
+                            </article>
+                            <article class="info-item">
+                                <div class="info-head">
+                                    <h3 data-i18n="experience.huawei.org">Huawei Technologies Co., Ltd. &amp; SYSU VLN Lab</h3>
+                                    <span>2024.02 - 2024.06</span>
+                                </div>
+                                <p data-i18n-html="experience.huawei.role">VLM Navigation Intern · NavLLaVA visual-language navigation decision model</p>
+                                <ul class="info-bullets">
+                                    <li data-i18n-html="experience.huawei.b1">Curated and normalized <strong>120K</strong> boundary images, then designed scene-description / instruction / model-imagination prompts for multi-scenario navigation decisions.</li>
+                                    <li data-i18n-html="experience.huawei.b2">Applied LoRA fine-tuning with only <strong>0.5%</strong> trainable parameters and rank <code>r=16</code>, reducing memory use by <strong>42%</strong> and improving navigation success by <strong>6.8 pp</strong>.</li>
+                                    <li data-i18n-html="experience.huawei.b3">Improved decision-output format consistency to <strong>87%</strong>; reported <strong>52.1%</strong> success for LLaVA-7B in multi-scenario navigation evaluation.</li>
+                                </ul>
+                            </article>
+                        </div>
+                    </section>
+                    
+                    <!-- Skill Graph -->
+                    <!--
+                    <section class="skills-section" id="skills">
+                        <h2><i class="fa-solid fa-diagram-project"></i> Skill Graph</h2>
+                        <div class="skill-list" aria-label="Skill graph">
+                            <div class="skill-row">
+                                <span>Real-robot deployment</span>
+                                <div class="skill-track"><span style="width: 94%"></span></div>
+                            </div>
+                            <div class="skill-row">
+                                <span>Robot learning systems</span>
+                                <div class="skill-track"><span style="width: 90%"></span></div>
+                            </div>
+                            <div class="skill-row">
+                                <span>VLA and policy training</span>
+                                <div class="skill-track"><span style="width: 88%"></span></div>
+                            </div>
+                            <div class="skill-row">
+                                <span>Perception and calibration</span>
+                                <div class="skill-track"><span style="width: 86%"></span></div>
+                            </div>
+                            <div class="skill-row">
+                                <span>Data collection and replay</span>
+                                <div class="skill-track"><span style="width: 86%"></span></div>
+                            </div>
+                            <div class="skill-row">
+                                <span>Simulation and evaluation</span>
+                                <div class="skill-track"><span style="width: 74%"></span></div>
+                            </div>
+                        </div>
+                    </section>
+                    -->
+
+                    <section class="tag-section">
+                        <h2><i class="fa-solid fa-layer-group"></i> Tech Stack</h2>
+                        <div class="tag-cloud">
+                            <span>xArm SDK</span>
+                            <span>LEAP Hand</span>
+                            <span>RealSense</span>
+                            <span>AprilTag</span>
+                            <span>OpenCV</span>
+                            <span>PyTorch</span>
+                            <span>Hydra</span>
+                            <span>OmegaConf</span>
+                            <span>ZMQ</span>
+                            <span>Viser</span>
+                            <span>zarr</span>
+                            <span>LoRA</span>
+                            <span>Transformers</span>
+                        </div>
+                    </section>
+
+                    <section class="tag-section">
+                        <h2><i class="fa-solid fa-compass"></i> Research Interests</h2>
+                        <div class="tag-cloud tag-cloud-large">
+                            <span>Embodied AI</span>
+                            <span>Robot Learning</span>
+                            <span>VLA</span>
+                            <span>Diffusion Policy</span>
+                            <span>Perception</span>
+                            <span>Simulation</span>
+                            <span>Deployment</span>
+                        </div>
+                    </section>
+
+                    <!-- Selected Projects -->
+                    <section class="publications-section" id="publications">
+                        <h2 data-i18n-html="projects.title"><i class="fa-solid fa-thumbtack"></i> Pinned Projects</h2>
+
+                        <div class="pub-entry">
+                            <div class="pub-thumbnail">
+                                <img src="Pic/voxintent/vad_asr_architecture.png" alt="VoxIntent voice-to-intent architecture" class="pub-thumbnail-contain" />
+                            </div>
+                            <div class="pub-info">
+                                <h3 class="pub-title" data-i18n="proj.voxintent.title">VoxIntent: Voice-to-Intent Pipeline for Manipulation Robot</h3>
+                                <p class="pub-authors"><strong>Yueyi Chen</strong></p>
+                                <p class="pub-venue" data-i18n-html="proj.voxintent.venue"><em>Algorithm Intern Project</em> &middot; Jetson AGX Orin, 2026</p>
+                                <p class="pub-desc" data-i18n-html="proj.voxintent.desc">Owned the voice-to-intent subsystem of a Jetson AGX Orin manipulation robot: a field-calibrated 3-tier VAD, a cloud-first 4-engine streaming ASR router (cloud_qwen3 default), dual-path NLU (6 action regex + qwen3.5-flash JSON), a 6-state dialog manager with 3-score ambient rejection, VLM instruction grounding with a source-pixel xyxy bbox contract, and a TTS echo guard (no AEC). Field-reported far-field VAD hit rate rose <strong>0% -> 92%</strong> with <strong>150-300 ms</strong> ASR partials; downstream SAM3 masks, 3D grasp verification, IK, and motor control are collaborator-owned. Metrics are single-device field reports, not formal benchmarks.</p>
+                                <div class="pub-links">
+                                    <a href="voxintent.html" class="pub-link">Details</a>
+                                    <a href="voxintent.html#results" class="pub-link">Report</a>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="pub-entry">
+                            <div class="pub-thumbnail">
+                                <img src="Pic/aloha_lekiwi/dreamzero_lekiwi_arch.png" alt="DreamZero-LeKiwi joint video-action VLA architecture" class="pub-thumbnail-contain" />
+                            </div>
+                            <div class="pub-info">
+                                <h3 class="pub-title" data-i18n="proj.aloha.title">DreamZero-LeKiwi: Joint Video-Action VLA Fine-Tuning on ALOHA/LeKiwi</h3>
+                                <p class="pub-authors"><strong>Yueyi Chen</strong></p>
+                                <p class="pub-venue" data-i18n-html="proj.aloha.venue"><em>Robot Learning Project</em>, 2026</p>
+                                <p class="pub-desc" data-i18n-html="proj.aloha.desc">Built a reproduction-oriented VLA pipeline for an ALOHA/LeKiwi tabletop manipulation setup, covering LeRobot data collection design, GEAR-style metadata conversion, DreamZero embodiment registration, LoRA fine-tuning protocol, and WebSocket-based action-chunk inference. The project emphasizes practical robot-learning details often missed in paper-level reproductions: 3-view camera-order validation, state/action schema audit, gripper normalization, receding-horizon execution, safety clamping, and rollout-video based evaluation.</p>
+                                <div class="pub-links">
+                                    <a href="aloha_lekiwi.html" class="pub-link">Details</a>
+                                    <a href="aloha_lekiwi.html#demo" class="pub-link">Videos</a>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="pub-entry featured-project">
+                            <div class="pub-thumbnail">
+                                <img src="Pic/coin_stand/coin_architechture.png" alt="Embodied Coin Standing and Placement ACT-style architecture sketch" class="pub-thumbnail-contain" />
+                            </div>
+                            <div class="pub-info">
+                                <h3 class="pub-title" data-i18n="proj.coin.title">Embodied Coin Standing and Placement</h3>
+                                <p class="pub-authors"><strong>Yueyi Chen</strong></p>
+                                <p class="pub-venue" data-i18n-html="proj.coin.venue"><em>Embodied AI / Real-Robot Deployment Project</em>, 2026</p>
+                                <p class="pub-desc" data-i18n-html="proj.coin.desc">Architected a closed-loop embodied coin manipulation system on xArm6 + LEAP Hand, with D435 / fingertip cameras feeding frozen 2304D RADIO summaries and an ACT-style 4-layer encoder / 4-layer decoder policy. Two preloaded checkpoints handle stand and place phases with a 16-step horizon and 6-step action chunk. HSV tilt plus LEAP joint thresholds gate the stand→place switch, and ROI-based grasp verification blocks the arm arc until the coin is actually in-hand. A configured half-arc transfer and reverse return loop reset the episode automatically.</p>
+                                <div class="pub-links">
+                                    <a href="coin_stand.html" class="pub-link">Details</a>
+                                    <a href="coin_stand.html#modules" class="pub-link">Modules</a>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="pub-entry">
+                            <div class="pub-thumbnail">
+                                <img src="Pic/affective/affective-model_architechture.svg" alt="Affective Robot Interaction multimodal architecture" class="pub-thumbnail-contain" />
+                            </div>
+                            <div class="pub-info">
+                                <h3 class="pub-title" data-i18n="proj.affective.title">Affective Robot Interaction: A Multimodal System for Companion Robots</h3>
+                                <p class="pub-authors"><strong>Yueyi Chen</strong></p>
+                                <p class="pub-venue" data-i18n-html="proj.affective.venue"><em>Algorithm Intern Project</em>, 2026</p>
+                                <p class="pub-desc" data-i18n-html="proj.affective.desc">Engineered Affective Robot Interaction as a social-robot multimodal interaction stack that routes camera and VDMocap inputs through Qwen2.5-VL / OpenCV perception, Text-to-Action CVAE, image-conditioned Diffusion Policy, and a 10D WebSocket + Dynamixel execution layer. The validated report path uses 194 episodes across waving / reaching / sitting with a shared Normalized Actions <code>(T,10)</code> contract. The CVAE branch encodes BERT-base-chinese CLS to 128D, fuses a 128D category embedding, samples a 64D latent, and decodes with a 2-layer / 4-head Transformer Decoder. The DP branch conditions a 6-layer self+cross-attention action transformer on DINOv2-B/14 or cached Qwen-VL 256D tokens, using DDIM 1000-step v-prediction with self-conditioning 0.9 and min-SNR gamma 5. Runtime streams trajectories at 10 FPS with an execution lock and <code>skipped_busy</code> guard, while retargeting maps VDMocap 23-node pose into <code>[0,4095]</code> encoders through T-pose calibration. Reported scope: 535.95 best CVAE val loss, 100% category sanity accuracy, 2.5-5.5s documented latency, and ~9x Qwen-cache training speedup; no controlled CVAE-vs-DP task-success benchmark is claimed.</p>
+                                <div class="pub-links">
+                                    <a href="affective_interaction.html" class="pub-link" data-i18n="proj.affective.link.details">Details</a>
+                                    <a href="affective_interaction.html#architecture" class="pub-link" data-i18n="proj.affective.link.model">Model</a>
+                                    <a href="affective_retargeting.html" class="pub-link" data-i18n="proj.affective.link.retarget">Retargeting</a>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="pub-entry">
+                            <div class="pub-thumbnail">
+                                <img src="Pic/pi05/pi_0.5_model_architechture_important.png" alt="pi0.5 LIBERO benchmark results" class="pub-thumbnail-contain" />
+                            </div>
+                            <div class="pub-info">
+                                <h3 class="pub-title" data-i18n="proj.pi05.title">&pi;0.5 VLA Fine-Tuning on LIBERO Benchmark</h3>
+                                <p class="pub-authors"><strong>Yueyi Chen</strong></p>
+                                <p class="pub-venue" data-i18n-html="proj.pi05.venue"><em>Algorithm Intern Project</em>, 2026</p>
+                                <p class="pub-desc" data-i18n-html="proj.pi05.desc">Fine-tuned Physical Intelligence&rsquo;s &pi;0.5 Vision-Language-Action model on the LIBERO benchmark using LoRA on a single RTX 4090. Designed a freeze-filter strategy matrix spanning 2.6M, 18M, and 305M trainable parameters; fixed action-expert LoRA leakage, norm_stats reuse, and checkpoint-aware evaluation logging. Achieved <strong>94.2%</strong> mean success rate across 2000 episodes (+2.0 pp over official, +18.2 pp over OpenVLA-7B), with Long-10 reaching <strong>88.8%</strong>.</p>
+                                <div class="pub-links">
+                                    <a href="pi05.html" class="pub-link">Details</a>
+                                    <a href="Pic/pi05/pi05_libero_finetune_report.pdf" target="_blank" rel="noopener" class="pub-link">Report</a>
+                                    <a href="https://github.com/jjjjqqqz101/aloha-pi05-lerobot/tree/main" target="_blank" rel="noopener" class="pub-link">Code</a>
+                                </div>
+                            </div>
+                        </div>
+
+
+
+                        <div class="pub-entry">
+                            <div class="pub-thumbnail">
+                                <img src="Pic/ram/ram-model_architechture.svg" alt="Retrieval-Augmented Manipulation architecture" class="pub-thumbnail-contain" />
+                            </div>
+                            <div class="pub-info">
+                                <h3 class="pub-title" data-i18n="proj.ram.title">Retrieval-Augmented Manipulation</h3>
+                                <p class="pub-authors"><strong>Yueyi Chen</strong></p>
+                                <p class="pub-venue" data-i18n-html="proj.ram.venue"><em>Personal Project · Idea &amp; Design</em>, 2026 &middot; on Chen et al., <i>Science Robotics</i></p>
+                                <p class="pub-desc" data-i18n-html="proj.ram.desc">Designed a <strong>retrieval-first</strong> manipulation system: instead of learning pixel-to-torque end to end, discover the object, retrieve a 3D category template, and inherit its grasp points, hinges, and support planes — so a single RGB frame of an unseen instance is enough to act. The design draws the hard boundary at the <strong>object representation</strong>, then decouples the runtime into four inspectable stages, <code>step1_grounding.py</code> through <code>step4_conducting.py</code> (<code>ram_k=5</code>, <code>img_size=224</code>, <code>n_pts=1024</code>, <code>map_size=100</code>). The learned bet is RAMNet — a frozen DINOv2-B/14 backbone (features <code>[7,9,11]</code> &rarr; <code>2304-D</code>) with lightweight view/shape/map adapters and a <code>2304&rarr;512&rarr;256&rarr;3</code> deformation decoder. I designed the training scheme to match: BOP-style BlenderProc data, 128-view category templates, and a <code>PoseNCE</code> / <code>NOCSLoss</code> / <code>MatchLoss</code> objective that fits templates to pixels rather than memorizing instances. Reported results (zero-shot real-world execution across 14 tasks / 31 objects, CO3D generalization) are attributed to the paper; the repo ships the full code path but no benchmark logs. Built on published work by a senior colleague, presented with permission.</p>
+                                <div class="pub-links">
+                                    <a href="ram.html" class="pub-link" data-i18n="proj.ram.link.details">Details</a>
+                                    <a href="https://github.com/RetrievalManip/Retrieval-augmented-Manipulation" target="_blank" rel="noopener" class="pub-link" data-i18n="proj.ram.link.code">Code</a>
+                                    <a href="https://doi.org/10.1126/scirobotics.aea2092" target="_blank" rel="noopener" class="pub-link" data-i18n="proj.ram.link.paper">Paper</a>
+                                </div>
+                            </div>
+                        </div>
+
+
+
+                    </section>
+
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <p data-i18n-html="footer">&copy; <span id="year">2026</span> Yueyi Chen. Powered by <a href="https://pages.github.com/" target="_blank" rel="noopener">GitHub Pages</a>.</p>
+        </div>
+    </footer>
+
+    <script src="script.js"></script>
+</body>
+</html>
