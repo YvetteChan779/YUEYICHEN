@@ -246,6 +246,40 @@
         @media (max-width: 480px) {
             .metrics-strip { grid-template-columns: 1fr; }
         }
+        /* Before -> after mini bars (far-field VAD) */
+        .vad-bars {
+            margin: 0 0 24px;
+            padding: 18px 20px;
+            background: var(--bg-alt);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+        }
+        .vad-bars .ba-row {
+            display: grid;
+            grid-template-columns: 96px 1fr 52px;
+            align-items: center;
+            gap: 12px;
+            font-size: 13px;
+        }
+        .vad-bars .ba-row + .ba-row { margin-top: 12px; }
+        .vad-bars .ba-label {
+            font-family: var(--font-mono);
+            color: var(--text-secondary);
+            text-align: right;
+            white-space: nowrap;
+        }
+        .vad-bars .ba-track {
+            height: 16px;
+            background: color-mix(in srgb, var(--text-secondary) 12%, transparent);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        .vad-bars .ba-fill { height: 100%; border-radius: 4px; }
+        .vad-bars .ba-row.before .ba-fill { background: color-mix(in srgb, var(--text-secondary) 45%, transparent); }
+        .vad-bars .ba-row.after .ba-fill { background: linear-gradient(90deg, var(--accent), #5fbf8f); }
+        .vad-bars .ba-val { font-family: var(--font-mono); font-weight: 600; color: var(--text); }
+        .vad-bars .ba-row.after .ba-val { color: var(--accent); }
+        .vad-bars .ba-cap { font-size: 12px; color: var(--text-secondary); margin-top: 12px; line-height: 1.6; }
     </style>
 </head>
 <body>
@@ -493,6 +527,19 @@
         <i class="fa-solid fa-chart-line"></i>
         <span data-i18n-html="s3.result">Far-field Silero hit rate: <strong>0% &rarr; 92%</strong> &bull; VAD discrimination: noise &lt; 0.01, speech &gt; 0.99 &bull; Noise floor converges in &sim;15 s</span>
     </div>
+    <figure class="vad-bars">
+        <div class="ba-row before">
+            <span class="ba-label">Before</span>
+            <span class="ba-track"><span class="ba-fill" style="width:2%"></span></span>
+            <span class="ba-val">0%</span>
+        </div>
+        <div class="ba-row after">
+            <span class="ba-label">After</span>
+            <span class="ba-track"><span class="ba-fill" style="width:92%"></span></span>
+            <span class="ba-val">92%</span>
+        </div>
+        <figcaption class="ba-cap" data-i18n="s3.bar.cap">Far-field VAD hit rate before vs after enabling stateful Silero inference across 64 ms blocks (field-reported, single Jetson AGX Orin).</figcaption>
+    </figure>
 </section>
 
 <!-- ============ S4: STREAMING ASR ============ -->

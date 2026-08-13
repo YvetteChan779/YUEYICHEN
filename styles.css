@@ -848,3 +848,182 @@ img {
         font-size: 20px;
     }
 }
+
+/* ==========================================================
+   Project Cards — figure-on-top, three keyword rows
+   ========================================================== */
+.pub-entry.proj-card {
+    display: block;
+    padding: 0;
+    margin-bottom: 28px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+    background: var(--bg);
+    transition: border-color 0.3s, box-shadow 0.25s, transform 0.2s;
+}
+
+.pub-entry.proj-card:last-child {
+    border-bottom: 1px solid var(--border);
+}
+
+.pub-entry.proj-card:hover {
+    border-color: var(--accent);
+    box-shadow: 0 6px 22px rgba(0, 0, 0, 0.12);
+    transform: translateY(-2px);
+}
+
+/* Architecture figure banner (clickable → detail page) */
+.proj-figure {
+    display: block;
+    background: #fff;
+    border-bottom: 1px solid var(--border);
+    overflow: hidden;
+}
+
+.proj-figure img {
+    width: 100%;
+    height: 210px;
+    object-fit: contain;
+    padding: 14px 18px;
+    display: block;
+    transition: transform 0.35s ease;
+}
+
+.proj-figure:hover img {
+    transform: scale(1.025);
+}
+
+.proj-body {
+    padding: 20px 22px 22px;
+}
+
+.proj-body .pub-title {
+    margin-bottom: 4px;
+}
+
+.proj-body .pub-venue {
+    margin-bottom: 12px;
+}
+
+/* One-line positioning sentence */
+.proj-oneline {
+    font-size: 14px;
+    line-height: 1.65;
+    color: var(--text-secondary);
+    margin-bottom: 16px;
+}
+
+/* Three keyword rows: value / challenge / metrics */
+.proj-rows {
+    display: grid;
+    gap: 10px;
+    margin-bottom: 16px;
+}
+
+.proj-row {
+    display: grid;
+    grid-template-columns: 72px 1fr;
+    gap: 12px;
+    align-items: start;
+}
+
+.proj-row-label {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--accent);
+    padding-top: 5px;
+    line-height: 1.4;
+}
+
+.proj-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 7px;
+    min-width: 0;
+}
+
+/* Chip — reuses tag-cloud visual language */
+.proj-chip {
+    display: inline-flex;
+    align-items: center;
+    min-height: 26px;
+    padding: 3px 10px;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    background: var(--bg-alt);
+    color: var(--text-secondary);
+    font-family: var(--font-mono);
+    font-size: 12px;
+    line-height: 1.4;
+}
+
+/* Metric chip — accent-weighted number */
+.proj-chip.metric {
+    color: var(--accent);
+    border-color: var(--accent);
+    font-weight: 600;
+}
+
+/* Paper-attribution chip — de-emphasized */
+.proj-chip.paper {
+    font-style: italic;
+    opacity: 0.85;
+}
+
+/* Mini comparison bar (pi0.5, VoxIntent only) */
+.proj-bar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    margin-top: 4px;
+}
+
+.proj-bar-track {
+    flex: 1;
+    height: 8px;
+    min-width: 90px;
+    border-radius: 999px;
+    background: var(--bg-alt);
+    border: 1px solid var(--border);
+    overflow: hidden;
+}
+
+.proj-bar-fill {
+    display: block;
+    height: 100%;
+    border-radius: inherit;
+    background: linear-gradient(90deg, var(--accent), #5fbf8f);
+}
+
+.proj-bar-val {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--accent);
+    white-space: nowrap;
+}
+
+@media (max-width: 768px) {
+    .proj-figure img {
+        height: 160px;
+        padding: 10px 12px;
+    }
+
+    .proj-body {
+        padding: 16px 16px 18px;
+    }
+
+    .proj-row {
+        grid-template-columns: 1fr;
+        gap: 5px;
+    }
+
+    .proj-row-label {
+        padding-top: 0;
+    }
+}

@@ -268,11 +268,60 @@
             padding: 1px 5px;
             border-radius: 3px;
         }
+        /* Theme-aware per-suite bar chart */
+        .suite-chart {
+            margin: 22px 0 8px;
+            padding: 20px 22px;
+            background: var(--bg-alt);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+        }
+        .suite-chart .bar-row {
+            display: grid;
+            grid-template-columns: 118px 1fr 60px;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 12px;
+            font-size: 13px;
+        }
+        .suite-chart .bar-row:last-child { margin-bottom: 0; }
+        .suite-chart .bar-label {
+            color: var(--text-secondary);
+            font-family: var(--font-mono);
+            text-align: right;
+            white-space: nowrap;
+        }
+        .suite-chart .bar-track {
+            position: relative;
+            height: 18px;
+            background: color-mix(in srgb, var(--text-secondary) 12%, transparent);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        .suite-chart .bar-fill {
+            height: 100%;
+            border-radius: 4px;
+            background: linear-gradient(90deg, var(--accent), #5fbf8f);
+        }
+        .suite-chart .bar-row.baseline .bar-fill {
+            background: color-mix(in srgb, var(--text-secondary) 42%, transparent);
+        }
+        .suite-chart .bar-row.mean .bar-fill {
+            background: linear-gradient(90deg, var(--accent-hover), var(--accent));
+        }
+        .suite-chart .bar-val {
+            font-family: var(--font-mono);
+            font-weight: 600;
+            color: var(--text);
+        }
+        .suite-chart .bar-row.mean .bar-val { color: var(--accent); }
+        .suite-chart .bar-row.baseline .bar-val { color: var(--text-secondary); font-weight: 400; }
         @media (max-width: 768px) {
             .hero h1 { font-size: 24px; }
             .metrics-strip { grid-template-columns: repeat(2, 1fr); }
             .two-figure-grid,
             .highlight-grid { grid-template-columns: 1fr; }
+            .suite-chart .bar-row { grid-template-columns: 92px 1fr 48px; gap: 8px; font-size: 12px; }
         }
         @media (max-width: 480px) {
             .metrics-strip { grid-template-columns: 1fr; }
@@ -393,6 +442,44 @@
                         </tbody>
                     </table>
                 </div>
+                <figure class="suite-chart">
+                    <div class="bar-row">
+                        <span class="bar-label">Spatial</span>
+                        <span class="bar-track"><span class="bar-fill" style="width:96.6%"></span></span>
+                        <span class="bar-val">96.6</span>
+                    </div>
+                    <div class="bar-row">
+                        <span class="bar-label">Object</span>
+                        <span class="bar-track"><span class="bar-fill" style="width:98.8%"></span></span>
+                        <span class="bar-val">98.8</span>
+                    </div>
+                    <div class="bar-row">
+                        <span class="bar-label">Goal</span>
+                        <span class="bar-track"><span class="bar-fill" style="width:92.6%"></span></span>
+                        <span class="bar-val">92.6</span>
+                    </div>
+                    <div class="bar-row">
+                        <span class="bar-label">Long-10</span>
+                        <span class="bar-track"><span class="bar-fill" style="width:88.8%"></span></span>
+                        <span class="bar-val">88.8</span>
+                    </div>
+                    <div class="bar-row mean">
+                        <span class="bar-label">Ours (mean)</span>
+                        <span class="bar-track"><span class="bar-fill" style="width:94.2%"></span></span>
+                        <span class="bar-val">94.2</span>
+                    </div>
+                    <div class="bar-row baseline">
+                        <span class="bar-label">Official &pi;0.5</span>
+                        <span class="bar-track"><span class="bar-fill" style="width:92.2%"></span></span>
+                        <span class="bar-val">92.2</span>
+                    </div>
+                    <div class="bar-row baseline">
+                        <span class="bar-label">OpenVLA-7B</span>
+                        <span class="bar-track"><span class="bar-fill" style="width:76.0%"></span></span>
+                        <span class="bar-val">76.0</span>
+                    </div>
+                    <figcaption class="fig-cap" data-i18n="s2.cap3" style="font-size:13px;color:var(--text-secondary);margin-top:14px;line-height:1.6;">Per-suite success (%) for the 55k Full-LoRA checkpoint; the last two rows are the official &pi;0.5 (92.2) and OpenVLA-7B (76.0) mean baselines.</figcaption>
+                </figure>
                 <div class="two-figure-grid">
                     <figure class="mini-figure">
                         <img src="Pic/pi05/fig5_method_comparison.png" alt="LIBERO method comparison" />

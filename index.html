@@ -203,15 +203,48 @@
                     <section class="publications-section" id="publications">
                         <h2 data-i18n-html="projects.title"><i class="fa-solid fa-thumbtack"></i> Pinned Projects</h2>
 
-                        <div class="pub-entry">
-                            <div class="pub-thumbnail">
-                                <img src="Pic/voxintent/vad_asr_architecture.png" alt="VoxIntent voice-to-intent architecture" class="pub-thumbnail-contain" />
-                            </div>
-                            <div class="pub-info">
+                        <!-- VoxIntent -->
+                        <div class="pub-entry proj-card">
+                            <a class="proj-figure" href="voxintent.html">
+                                <img src="Pic/voxintent/vad_asr_architecture.png" alt="VoxIntent voice-to-intent architecture" />
+                            </a>
+                            <div class="proj-body">
                                 <h3 class="pub-title" data-i18n="proj.voxintent.title">VoxIntent: Voice-to-Intent Pipeline for Manipulation Robot</h3>
-                                <p class="pub-authors"><strong>Yueyi Chen</strong></p>
                                 <p class="pub-venue" data-i18n-html="proj.voxintent.venue"><em>Algorithm Intern Project</em> &middot; Jetson AGX Orin, 2026</p>
-                                <p class="pub-desc" data-i18n-html="proj.voxintent.desc">Owned the voice-to-intent subsystem of a Jetson AGX Orin manipulation robot: a field-calibrated 3-tier VAD, a cloud-first 4-engine streaming ASR router (cloud_qwen3 default), dual-path NLU (6 action regex + qwen3.5-flash JSON), a 6-state dialog manager with 3-score ambient rejection, VLM instruction grounding with a source-pixel xyxy bbox contract, and a TTS echo guard (no AEC). Field-reported far-field VAD hit rate rose <strong>0% -> 92%</strong> with <strong>150-300 ms</strong> ASR partials; downstream SAM3 masks, 3D grasp verification, IK, and motor control are collaborator-owned. Metrics are single-device field reports, not formal benchmarks.</p>
+                                <p class="proj-oneline" data-i18n-html="proj.voxintent.desc">Owned the voice-to-intent front-end of a Jetson AGX Orin manipulation robot — turning noisy far-field ALSA audio into structured execution intents (downstream SAM3 / grasp / IK / motors are collaborator-owned).</p>
+                                <div class="proj-rows">
+                                    <div class="proj-row">
+                                        <span class="proj-row-label" data-i18n="card.value">Value</span>
+                                        <div class="proj-chips">
+                                            <span class="proj-chip">Voice&rarr;Intent pipeline</span>
+                                            <span class="proj-chip">Structured exec intent</span>
+                                            <span class="proj-chip">On-device Jetson AGX Orin</span>
+                                        </div>
+                                    </div>
+                                    <div class="proj-row">
+                                        <span class="proj-row-label" data-i18n="card.challenge">Edge</span>
+                                        <div class="proj-chips">
+                                            <span class="proj-chip">Stateful Silero VAD</span>
+                                            <span class="proj-chip">Cloud endpointing transfer</span>
+                                            <span class="proj-chip">Rapid-stitch buffering</span>
+                                            <span class="proj-chip">5-layer semantic defense</span>
+                                            <span class="proj-chip">TTS echo guard (no AEC)</span>
+                                        </div>
+                                    </div>
+                                    <div class="proj-row">
+                                        <span class="proj-row-label" data-i18n="card.metrics">Metrics</span>
+                                        <div class="proj-chips">
+                                            <span class="proj-chip metric">0&rarr;92% far-field VAD</span>
+                                            <span class="proj-chip metric">150&ndash;300ms ASR partial</span>
+                                            <span class="proj-chip">4 ASR engines</span>
+                                            <span class="proj-chip">290+ zh&rarr;en dict</span>
+                                            <div class="proj-bar" title="Far-field VAD hit rate: field-reported 0% → 92%">
+                                                <div class="proj-bar-track"><span class="proj-bar-fill" style="width: 92%"></span></div>
+                                                <span class="proj-bar-val">0 &rarr; 92%</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
                                 <div class="pub-links">
                                     <a href="voxintent.html" class="pub-link">Details</a>
                                     <a href="voxintent.html#results" class="pub-link">Report</a>
@@ -219,15 +252,43 @@
                             </div>
                         </div>
 
-                        <div class="pub-entry">
-                            <div class="pub-thumbnail">
-                                <img src="Pic/aloha_lekiwi/dreamzero_lekiwi_arch.png" alt="DreamZero-LeKiwi joint video-action VLA architecture" class="pub-thumbnail-contain" />
-                            </div>
-                            <div class="pub-info">
+                        <!-- DreamZero-LeKiwi -->
+                        <div class="pub-entry proj-card">
+                            <a class="proj-figure" href="aloha_lekiwi.html">
+                                <img src="Pic/aloha_lekiwi/dreamzero_lekiwi_arch.png" alt="DreamZero-LeKiwi joint video-action VLA architecture" />
+                            </a>
+                            <div class="proj-body">
                                 <h3 class="pub-title" data-i18n="proj.aloha.title">DreamZero-LeKiwi: Joint Video-Action VLA Fine-Tuning on ALOHA/LeKiwi</h3>
-                                <p class="pub-authors"><strong>Yueyi Chen</strong></p>
                                 <p class="pub-venue" data-i18n-html="proj.aloha.venue"><em>Robot Learning Project</em>, 2026</p>
-                                <p class="pub-desc" data-i18n-html="proj.aloha.desc">Built a reproduction-oriented VLA pipeline for an ALOHA/LeKiwi tabletop manipulation setup, covering LeRobot data collection design, GEAR-style metadata conversion, DreamZero embodiment registration, LoRA fine-tuning protocol, and WebSocket-based action-chunk inference. The project emphasizes practical robot-learning details often missed in paper-level reproductions: 3-view camera-order validation, state/action schema audit, gripper normalization, receding-horizon execution, safety clamping, and rollout-video based evaluation.</p>
+                                <p class="proj-oneline" data-i18n-html="proj.aloha.desc">A DreamZero-style joint video-action VLA pipeline on an ALOHA/LeKiwi tabletop setup, built on the thesis that most real-robot VLA failures are data-control interface bugs, not model capacity.</p>
+                                <div class="proj-rows">
+                                    <div class="proj-row">
+                                        <span class="proj-row-label" data-i18n="card.value">Value</span>
+                                        <div class="proj-chips">
+                                            <span class="proj-chip">Reproducible VLA pipeline</span>
+                                            <span class="proj-chip">Schema-correct data/control</span>
+                                            <span class="proj-chip">LeRobot&rarr;GEAR&rarr;DreamZero</span>
+                                        </div>
+                                    </div>
+                                    <div class="proj-row">
+                                        <span class="proj-row-label" data-i18n="card.challenge">Edge</span>
+                                        <div class="proj-chips">
+                                            <span class="proj-chip">Camera-order validation</span>
+                                            <span class="proj-chip">Receding horizon</span>
+                                            <span class="proj-chip">Robot adapter (unnorm+clamp)</span>
+                                            <span class="proj-chip">Gripper convention</span>
+                                        </div>
+                                    </div>
+                                    <div class="proj-row">
+                                        <span class="proj-row-label" data-i18n="card.metrics">Metrics</span>
+                                        <div class="proj-chips">
+                                            <span class="proj-chip">3-view sync</span>
+                                            <span class="proj-chip">24-step chunk</span>
+                                            <span class="proj-chip">LoRA SFT</span>
+                                            <span class="proj-chip">WebSocket infer</span>
+                                        </div>
+                                    </div>
+                                </div>
                                 <div class="pub-links">
                                     <a href="aloha_lekiwi.html" class="pub-link">Details</a>
                                     <a href="aloha_lekiwi.html#demo" class="pub-link">Videos</a>
@@ -235,15 +296,43 @@
                             </div>
                         </div>
 
-                        <div class="pub-entry featured-project">
-                            <div class="pub-thumbnail">
-                                <img src="Pic/coin_stand/coin_architechture.png" alt="Embodied Coin Standing and Placement ACT-style architecture sketch" class="pub-thumbnail-contain" />
-                            </div>
-                            <div class="pub-info">
+                        <!-- Embodied Coin Standing and Placement -->
+                        <div class="pub-entry proj-card">
+                            <a class="proj-figure" href="coin_stand.html">
+                                <img src="Pic/coin_stand/coin_architechture.png" alt="Embodied Coin Standing and Placement ACT-style architecture sketch" />
+                            </a>
+                            <div class="proj-body">
                                 <h3 class="pub-title" data-i18n="proj.coin.title">Embodied Coin Standing and Placement</h3>
-                                <p class="pub-authors"><strong>Yueyi Chen</strong></p>
                                 <p class="pub-venue" data-i18n-html="proj.coin.venue"><em>Embodied AI / Real-Robot Deployment Project</em>, 2026</p>
-                                <p class="pub-desc" data-i18n-html="proj.coin.desc">Architected a closed-loop embodied coin manipulation system on xArm6 + LEAP Hand, with D435 / fingertip cameras feeding frozen 2304D RADIO summaries and an ACT-style 4-layer encoder / 4-layer decoder policy. Two preloaded checkpoints handle stand and place phases with a 16-step horizon and 6-step action chunk. HSV tilt plus LEAP joint thresholds gate the stand→place switch, and ROI-based grasp verification blocks the arm arc until the coin is actually in-hand. A configured half-arc transfer and reverse return loop reset the episode automatically.</p>
+                                <p class="proj-oneline" data-i18n-html="proj.coin.desc">A closed-loop xArm6 + LEAP Hand system that stands a coin, verifies the grasp by vision and hand state, hot-switches from a stand to a place policy, transfers along a rule-based arc, and auto-resets for the next episode.</p>
+                                <div class="proj-rows">
+                                    <div class="proj-row">
+                                        <span class="proj-row-label" data-i18n="card.value">Value</span>
+                                        <div class="proj-chips">
+                                            <span class="proj-chip">Closed-loop manipulation</span>
+                                            <span class="proj-chip">Sensor-gated phase switch</span>
+                                            <span class="proj-chip">Auto episode recovery</span>
+                                        </div>
+                                    </div>
+                                    <div class="proj-row">
+                                        <span class="proj-row-label" data-i18n="card.challenge">Edge</span>
+                                        <div class="proj-chips">
+                                            <span class="proj-chip">Policy hot-switch (stand&rarr;place)</span>
+                                            <span class="proj-chip">ROI grasp verification</span>
+                                            <span class="proj-chip">HSV tilt + LEAP joint gate</span>
+                                            <span class="proj-chip">Rule-based half-arc</span>
+                                        </div>
+                                    </div>
+                                    <div class="proj-row">
+                                        <span class="proj-row-label" data-i18n="card.metrics">Metrics</span>
+                                        <div class="proj-chips">
+                                            <span class="proj-chip">xArm6 + LEAP Hand</span>
+                                            <span class="proj-chip">5 views (4 RGB + D435)</span>
+                                            <span class="proj-chip">16 / 6 horizon / chunk</span>
+                                            <span class="proj-chip">2 checkpoint bundles</span>
+                                        </div>
+                                    </div>
+                                </div>
                                 <div class="pub-links">
                                     <a href="coin_stand.html" class="pub-link">Details</a>
                                     <a href="coin_stand.html#modules" class="pub-link">Modules</a>
@@ -251,15 +340,43 @@
                             </div>
                         </div>
 
-                        <div class="pub-entry">
-                            <div class="pub-thumbnail">
-                                <img src="Pic/affective/affective-model_architechture.svg" alt="Affective Robot Interaction multimodal architecture" class="pub-thumbnail-contain" />
-                            </div>
-                            <div class="pub-info">
+                        <!-- Affective Robot Interaction -->
+                        <div class="pub-entry proj-card">
+                            <a class="proj-figure" href="affective_interaction.html">
+                                <img src="Pic/affective/affective-model_architechture.svg" alt="Affective Robot Interaction multimodal architecture" />
+                            </a>
+                            <div class="proj-body">
                                 <h3 class="pub-title" data-i18n="proj.affective.title">Affective Robot Interaction: A Multimodal System for Companion Robots</h3>
-                                <p class="pub-authors"><strong>Yueyi Chen</strong></p>
                                 <p class="pub-venue" data-i18n-html="proj.affective.venue"><em>Algorithm Intern Project</em>, 2026</p>
-                                <p class="pub-desc" data-i18n-html="proj.affective.desc">Engineered Affective Robot Interaction as a social-robot multimodal interaction stack that routes camera and VDMocap inputs through Qwen2.5-VL / OpenCV perception, Text-to-Action CVAE, image-conditioned Diffusion Policy, and a 10D WebSocket + Dynamixel execution layer. The validated report path uses 194 episodes across waving / reaching / sitting with a shared Normalized Actions <code>(T,10)</code> contract. The CVAE branch encodes BERT-base-chinese CLS to 128D, fuses a 128D category embedding, samples a 64D latent, and decodes with a 2-layer / 4-head Transformer Decoder. The DP branch conditions a 6-layer self+cross-attention action transformer on DINOv2-B/14 or cached Qwen-VL 256D tokens, using DDIM 1000-step v-prediction with self-conditioning 0.9 and min-SNR gamma 5. Runtime streams trajectories at 10 FPS with an execution lock and <code>skipped_busy</code> guard, while retargeting maps VDMocap 23-node pose into <code>[0,4095]</code> encoders through T-pose calibration. Reported scope: 535.95 best CVAE val loss, 100% category sanity accuracy, 2.5-5.5s documented latency, and ~9x Qwen-cache training speedup; no controlled CVAE-vs-DP task-success benchmark is claimed.</p>
+                                <p class="proj-oneline" data-i18n-html="proj.affective.desc">A social-robot multimodal interaction stack routing camera / VDMocap input through Qwen2.5-VL perception into two generative trajectory routes (Text-to-Action CVAE and image-conditioned Diffusion Policy), then a calibrated 10D Dynamixel execution layer.</p>
+                                <div class="proj-rows">
+                                    <div class="proj-row">
+                                        <span class="proj-row-label" data-i18n="card.value">Value</span>
+                                        <div class="proj-chips">
+                                            <span class="proj-chip">Multimodal interaction stack</span>
+                                            <span class="proj-chip">CVAE + DP dual-route</span>
+                                            <span class="proj-chip">10D calibrated execution</span>
+                                        </div>
+                                    </div>
+                                    <div class="proj-row">
+                                        <span class="proj-row-label" data-i18n="card.challenge">Edge</span>
+                                        <div class="proj-chips">
+                                            <span class="proj-chip">~9&times; Qwen-cache speedup</span>
+                                            <span class="proj-chip">CVAE vs DP routes</span>
+                                            <span class="proj-chip">Non-blocking exec lock</span>
+                                            <span class="proj-chip">Perception fallback</span>
+                                        </div>
+                                    </div>
+                                    <div class="proj-row">
+                                        <span class="proj-row-label" data-i18n="card.metrics">Metrics</span>
+                                        <div class="proj-chips">
+                                            <span class="proj-chip">194 episodes</span>
+                                            <span class="proj-chip">10D (T,10) contract</span>
+                                            <span class="proj-chip">2.5&ndash;5.5s latency</span>
+                                            <span class="proj-chip metric">~9&times; Qwen cache</span>
+                                        </div>
+                                    </div>
+                                </div>
                                 <div class="pub-links">
                                     <a href="affective_interaction.html" class="pub-link" data-i18n="proj.affective.link.details">Details</a>
                                     <a href="affective_interaction.html#architecture" class="pub-link" data-i18n="proj.affective.link.model">Model</a>
@@ -268,15 +385,47 @@
                             </div>
                         </div>
 
-                        <div class="pub-entry">
-                            <div class="pub-thumbnail">
-                                <img src="Pic/pi05/pi_0.5_model_architechture_important.png" alt="pi0.5 LIBERO benchmark results" class="pub-thumbnail-contain" />
-                            </div>
-                            <div class="pub-info">
+                        <!-- pi0.5 / LIBERO -->
+                        <div class="pub-entry proj-card">
+                            <a class="proj-figure" href="pi05.html">
+                                <img src="Pic/pi05/pi_0.5_model_architechture_important.png" alt="pi0.5 model architecture" />
+                            </a>
+                            <div class="proj-body">
                                 <h3 class="pub-title" data-i18n="proj.pi05.title">&pi;0.5 VLA Fine-Tuning on LIBERO Benchmark</h3>
-                                <p class="pub-authors"><strong>Yueyi Chen</strong></p>
                                 <p class="pub-venue" data-i18n-html="proj.pi05.venue"><em>Algorithm Intern Project</em>, 2026</p>
-                                <p class="pub-desc" data-i18n-html="proj.pi05.desc">Fine-tuned Physical Intelligence&rsquo;s &pi;0.5 Vision-Language-Action model on the LIBERO benchmark using LoRA on a single RTX 4090. Designed a freeze-filter strategy matrix spanning 2.6M, 18M, and 305M trainable parameters; fixed action-expert LoRA leakage, norm_stats reuse, and checkpoint-aware evaluation logging. Achieved <strong>94.2%</strong> mean success rate across 2000 episodes (+2.0 pp over official, +18.2 pp over OpenVLA-7B), with Long-10 reaching <strong>88.8%</strong>.</p>
+                                <p class="proj-oneline" data-i18n-html="proj.pi05.desc">Migrated Physical Intelligence&rsquo;s &pi;0.5 VLA to the LIBERO benchmark under a 24 GB single-GPU LoRA budget, packaged as a reproducible benchmark pipeline rather than a one-off run.</p>
+                                <div class="proj-rows">
+                                    <div class="proj-row">
+                                        <span class="proj-row-label" data-i18n="card.value">Value</span>
+                                        <div class="proj-chips">
+                                            <span class="proj-chip">Reproducible benchmark pipeline</span>
+                                            <span class="proj-chip">24GB single-GPU LoRA</span>
+                                            <span class="proj-chip">Checkpoint-aware archiving</span>
+                                        </div>
+                                    </div>
+                                    <div class="proj-row">
+                                        <span class="proj-row-label" data-i18n="card.challenge">Edge</span>
+                                        <div class="proj-chips">
+                                            <span class="proj-chip">Action-expert LoRA leakage fix</span>
+                                            <span class="proj-chip">Freeze-filter 2.6M/18M/305M</span>
+                                            <span class="proj-chip">norm_stats reuse</span>
+                                            <span class="proj-chip">OOM &rarr; LoRA redesign</span>
+                                        </div>
+                                    </div>
+                                    <div class="proj-row">
+                                        <span class="proj-row-label" data-i18n="card.metrics">Metrics</span>
+                                        <div class="proj-chips">
+                                            <span class="proj-chip metric">94.2% mean success</span>
+                                            <span class="proj-chip metric">+2.0pp vs official</span>
+                                            <span class="proj-chip metric">+18.2pp vs OpenVLA-7B</span>
+                                            <span class="proj-chip">2000 episodes</span>
+                                            <div class="proj-bar" title="Mean success rate across 2000 LIBERO episodes: 94.2%">
+                                                <div class="proj-bar-track"><span class="proj-bar-fill" style="width: 94.2%"></span></div>
+                                                <span class="proj-bar-val">94.2%</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
                                 <div class="pub-links">
                                     <a href="pi05.html" class="pub-link">Details</a>
                                     <a href="Pic/pi05/pi05_libero_finetune_report.pdf" target="_blank" rel="noopener" class="pub-link">Report</a>
@@ -285,17 +434,44 @@
                             </div>
                         </div>
 
-
-
-                        <div class="pub-entry">
-                            <div class="pub-thumbnail">
-                                <img src="Pic/ram/ram-model_architechture.svg" alt="Retrieval-Augmented Manipulation architecture" class="pub-thumbnail-contain" />
-                            </div>
-                            <div class="pub-info">
+                        <!-- Retrieval-Augmented Manipulation -->
+                        <div class="pub-entry proj-card">
+                            <a class="proj-figure" href="ram.html">
+                                <img src="Pic/ram/ram-model_architechture.svg" alt="Retrieval-Augmented Manipulation architecture" />
+                            </a>
+                            <div class="proj-body">
                                 <h3 class="pub-title" data-i18n="proj.ram.title">Retrieval-Augmented Manipulation</h3>
-                                <p class="pub-authors"><strong>Yueyi Chen</strong></p>
                                 <p class="pub-venue" data-i18n-html="proj.ram.venue"><em>Personal Project · Idea &amp; Design</em>, 2026 &middot; on Chen et al., <i>Science Robotics</i></p>
-                                <p class="pub-desc" data-i18n-html="proj.ram.desc">Designed a <strong>retrieval-first</strong> manipulation system: instead of learning pixel-to-torque end to end, discover the object, retrieve a 3D category template, and inherit its grasp points, hinges, and support planes — so a single RGB frame of an unseen instance is enough to act. The design draws the hard boundary at the <strong>object representation</strong>, then decouples the runtime into four inspectable stages, <code>step1_grounding.py</code> through <code>step4_conducting.py</code> (<code>ram_k=5</code>, <code>img_size=224</code>, <code>n_pts=1024</code>, <code>map_size=100</code>). The learned bet is RAMNet — a frozen DINOv2-B/14 backbone (features <code>[7,9,11]</code> &rarr; <code>2304-D</code>) with lightweight view/shape/map adapters and a <code>2304&rarr;512&rarr;256&rarr;3</code> deformation decoder. I designed the training scheme to match: BOP-style BlenderProc data, 128-view category templates, and a <code>PoseNCE</code> / <code>NOCSLoss</code> / <code>MatchLoss</code> objective that fits templates to pixels rather than memorizing instances. Reported results (zero-shot real-world execution across 14 tasks / 31 objects, CO3D generalization) are attributed to the paper; the repo ships the full code path but no benchmark logs. Built on published work by a senior colleague, presented with permission.</p>
+                                <p class="proj-oneline" data-i18n-html="proj.ram.desc">A retrieval-first manipulation design: discover the object, retrieve a 3D category template, inherit its grasp points and support planes — so a single RGB frame of an unseen instance is enough to act. I own the system design and training scheme; quantitative results are attributed to the paper.</p>
+                                <div class="proj-rows">
+                                    <div class="proj-row">
+                                        <span class="proj-row-label" data-i18n="card.value">Value</span>
+                                        <div class="proj-chips">
+                                            <span class="proj-chip">Retrieval-first design</span>
+                                            <span class="proj-chip">Single-image zero-shot</span>
+                                            <span class="proj-chip">New object = lookup, not retrain</span>
+                                        </div>
+                                    </div>
+                                    <div class="proj-row">
+                                        <span class="proj-row-label" data-i18n="card.challenge">Edge</span>
+                                        <div class="proj-chips">
+                                            <span class="proj-chip">Retrieval-first vs end-to-end</span>
+                                            <span class="proj-chip">Frozen DINOv2-B/14</span>
+                                            <span class="proj-chip">Object-centric 3D frame</span>
+                                            <span class="proj-chip">Structured geometry fitting</span>
+                                        </div>
+                                    </div>
+                                    <div class="proj-row">
+                                        <span class="proj-row-label" data-i18n="card.metrics">Metrics</span>
+                                        <div class="proj-chips">
+                                            <span class="proj-chip">RAM-K = 5</span>
+                                            <span class="proj-chip">128 template views</span>
+                                            <span class="proj-chip">4 decoupled stages</span>
+                                            <span class="proj-chip">2304-D DINOv2</span>
+                                            <span class="proj-chip paper">14 tasks / 31 obj (per paper)</span>
+                                        </div>
+                                    </div>
+                                </div>
                                 <div class="pub-links">
                                     <a href="ram.html" class="pub-link" data-i18n="proj.ram.link.details">Details</a>
                                     <a href="https://github.com/RetrievalManip/Retrieval-augmented-Manipulation" target="_blank" rel="noopener" class="pub-link" data-i18n="proj.ram.link.code">Code</a>
@@ -303,7 +479,6 @@
                                 </div>
                             </div>
                         </div>
-
 
 
                     </section>
