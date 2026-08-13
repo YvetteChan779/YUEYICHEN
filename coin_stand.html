@@ -282,7 +282,7 @@
                     <a href="#overview"><i class="fa-solid fa-circle-info"></i> Overview</a>
                     <a href="#architecture"><i class="fa-solid fa-diagram-project"></i> Architecture</a>
                     <a href="#pipeline"><i class="fa-solid fa-repeat"></i> Pipeline</a>
-                    <a href="#modules"><i class="fa-solid fa-code"></i> Modules</a>
+                    <a href="https://github.com/YvetteChan779/coin-standing-placement" target="_blank" rel="noopener"><i class="fa-brands fa-github"></i> Code</a>
                 </div>
             </header>
 
@@ -384,66 +384,6 @@
                         <h3>Deployment</h3>
                         <p><code>TrainWorkspace.run_eval()</code> loads checkpoints for <code>ConSensRW/main.py</code>, which sends policy actions to hardware.</p>
                     </div>
-                </div>
-            </section>
-
-            <section class="section-block" id="modules">
-                <h2><i class="fa-solid fa-code"></i> Module Map</h2>
-                <div class="table-wrapper">
-                    <table class="results-table">
-                        <thead>
-                            <tr>
-                                <th>File / module</th>
-                                <th>Responsibility</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr>
-                                <td><code>ConSensRW/main.py</code></td>
-                                <td>Runtime entry for record, tele_test, and policy modes; owns robot handles, camera managers, policy activation, phase switching, and recovery hooks.</td>
-                            </tr>
-                            <tr>
-                                <td><code>ConSensRW/configs/coin_standing.yaml</code></td>
-                                <td>Task configuration for initial poses, active LEAP joints, coin detection thresholds, checkpoint paths, half-arc waypoints, grasp checks, and auto return.</td>
-                            </tr>
-                            <tr>
-                                <td><code>ConSensPolicy/consens/models/vision/radio.py</code></td>
-                                <td>Frozen RADIO v2.5-b wrapper; exposes 2304D summaries for the deployed policy path.</td>
-                            </tr>
-                            <tr>
-                                <td><code>ConSensPolicy/consens/configs/consens.yaml</code></td>
-                                <td>Policy contract: horizon 16, 6 action steps, 4-layer encoder / 4-layer decoder, 512 hidden size, 16 attention heads, batch size 256.</td>
-                            </tr>
-                            <tr>
-                                <td><code>ConSensPolicy/consens/configs/setting/coin_consens.yaml</code></td>
-                                <td>Coin task data contract: 5 views, 8D proprioception, 11D action, and replay keys <code>obs/all_qpos</code>, <code>obs/rgb_images_radio</code>, <code>obs/rs_rgb_images_radio</code>, <code>actions/original_actions</code>.</td>
-                            </tr>
-                            <tr>
-                                <td><code>ConSensRW/teleop_server.py</code></td>
-                                <td>ZMQ server for leader xArm and LEAP hand state queries used by teleoperation workflows.</td>
-                            </tr>
-                            <tr>
-                                <td><code>ConSensRW/pickle2zarr.py</code></td>
-                                <td>Streaming converter from per-episode pickle logs to zarr, preserving current RGB, joint, tag, and action fields.</td>
-                            </tr>
-                            <tr>
-                                <td><code>ConSensRW/record_arc_traj.py</code></td>
-                                <td>Read-only xArm trajectory sampler for recording the half-arc move used by the place phase.</td>
-                            </tr>
-                            <tr>
-                                <td><code>ConSensRW/replay_pickle_joints_robot.py</code></td>
-                                <td>Conservative real-robot replay tool for pickle recordings, with xArm hold by default and LEAP joint playback.</td>
-                            </tr>
-                            <tr>
-                                <td><code>ConSensPolicy/consens/policies/consens</code></td>
-                                <td>Policy implementation using frozen RADIO summaries, ACT-style encoder/decoder blocks, and action heads over 5 views, 16-step horizon, and 6-step chunks.</td>
-                            </tr>
-                            <tr>
-                                <td><code>ConSensPolicy/consens/datasets</code></td>
-                                <td>Dataset loading, replay buffer utilities, zarr access, sampling, normalizers, and RADIO summary preprocessing over the coin task replay keys.</td>
-                            </tr>
-                        </tbody>
-                    </table>
                 </div>
             </section>
 

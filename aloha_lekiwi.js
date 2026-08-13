@@ -28,6 +28,7 @@
             'hero.arch': 'Architecture',
             'hero.design': 'Experiment Design',
             'hero.demo': 'Rollout Videos',
+            'hero.code': 'Code',
             'm.views': 'Synchronized observation',
             'm.data': 'State/action dataset',
             'm.sft': 'DreamZero fine-tuning',
@@ -80,15 +81,6 @@
             's4.v1': 'Episode 000: synchronized multi-view inference rollout.',
             's4.v2': 'Episode 003: longer rollout used for phase and stability inspection.',
             's4.v3': 'Episode 009: compact rollout for fast page review.',
-            's5.title': 'Interview-Ready Technical Points',
-            's5.h1.title': 'VLA Reproduction',
-            's5.h1.desc': 'The main challenge is not just training, but aligning vision, language, state, action, and robot execution conventions.',
-            's5.h2.title': 'Latency vs Closed Loop',
-            's5.h2.desc': 'Action chunking reduces server pressure, while receding-horizon execution limits open-loop drift.',
-            's5.h3.title': 'Control Interface',
-            's5.h3.desc': 'The VLA policy outputs commands, but safety clamp, interpolation, and low-level servo control stay outside the model.',
-            's5.h4.title': 'Failure Diagnosis',
-            's5.h4.desc': 'If loss looks normal but rollout fails, I first check camera order, gripper sign, action scale, and time alignment.',
             'footer': footerEn
         },
         zh: {
@@ -99,6 +91,7 @@
             'hero.arch': '架构图',
             'hero.design': '实验设计',
             'hero.demo': '推理视频',
+            'hero.code': '代码',
             'm.views': '同步多视角观测',
             'm.data': '状态/动作数据集',
             'm.sft': 'DreamZero 微调',
@@ -151,15 +144,6 @@
             's4.v1': 'Episode 000：同步多视角推理 rollout。',
             's4.v2': 'Episode 003：较长 rollout，用于阶段行为与稳定性检查。',
             's4.v3': 'Episode 009：较短 rollout，适合快速预览页面。',
-            's5.title': '面试可讲技术点',
-            's5.h1.title': 'VLA 复现',
-            's5.h1.desc': '难点不只是训练，而是对齐视觉、语言、状态、动作和机器人执行约定。',
-            's5.h2.title': '延迟与闭环',
-            's5.h2.desc': '动作块降低 server 压力，receding-horizon 执行限制开环漂移。',
-            's5.h3.title': '控制接口',
-            's5.h3.desc': 'VLA policy 输出命令，但安全限幅、插值和底层伺服控制仍在模型外部。',
-            's5.h4.title': '失败诊断',
-            's5.h4.desc': '如果 loss 正常但 rollout 失败，我会先查相机顺序、夹爪符号、动作尺度和时间对齐。',
             'footer': footerZh
         }
     };

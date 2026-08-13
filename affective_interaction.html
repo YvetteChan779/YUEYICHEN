@@ -83,6 +83,7 @@
                 <a href="index.html#publications"><i class="fa-solid fa-arrow-left"></i><span data-i18n="hero.back">Back to projects</span></a>
                 <a href="#architecture"><i class="fa-solid fa-diagram-project"></i><span data-i18n="hero.arch">Model architecture</span></a>
                 <a href="affective_retargeting.html"><i class="fa-solid fa-route"></i><span data-i18n="hero.retarget">Retargeting layer</span></a>
+                <a href="https://github.com/YvetteChan779/affective-robot-interaction" target="_blank" rel="noopener"><i class="fa-brands fa-github"></i><span data-i18n="hero.code">Code</span></a>
                 <button type="button" id="langHero"><i class="fa-solid fa-language"></i><span data-i18n="hero.lang">Switch language</span></button>
             </div>
         </section>
@@ -205,39 +206,6 @@
             </div>
         </section>
 
-        <section class="section-block" id="interview">
-            <h2><i class="fa-solid fa-comments"></i><span data-i18n="interview.title">Interview-Ready Technical Points</span></h2>
-            <div class="table-wrapper">
-                <table class="results-table">
-                    <thead>
-                        <tr><th data-i18n="interview.topic">Topic</th><th data-i18n="interview.answer">Defensible Answer</th><th data-i18n="interview.boundary">Boundary</th></tr>
-                    </thead>
-                    <tbody>
-                        <tr><td data-i18n="interview.t1">System identity</td><td data-i18n-html="interview.a1">Affective Robot Interaction is a social-robot interaction stack, not a VLA: Qwen/OpenCV handles perception, CVAE/DP generate trajectories, and WebSocket/Dynamixel executes <code>angles[10]</code>.</td><td data-i18n="interview.b1">No Flow Matching claim.</td></tr>
-                        <tr><td data-i18n="interview.t2">CVAE route</td><td data-i18n-html="interview.a2">The report CVAE uses BERT-base-chinese CLS, a 64D latent, a 2-layer / 4-head Transformer Decoder, and MSE + KL + CE loss over 194 three-class episodes.</td><td data-i18n="interview.b2">8-class main code path is separate.</td></tr>
-                        <tr><td data-i18n="interview.t3">DP route</td><td data-i18n-html="interview.a3">The DP route conditions a 6-layer action transformer on DINOv2 or cached Qwen <code>cond_seq (T,256)</code>, trained with DDIM 1000-step v-prediction, self-cond 0.9, and min-SNR gamma 5.</td><td data-i18n="interview.b3">No real-robot DP success benchmark found.</td></tr>
-                        <tr><td data-i18n="interview.t4">Robot safety contract</td><td data-i18n-html="interview.a4">Runtime serializes playback with a non-blocking execution lock, clamps every count to <code>[0,4095]</code>, and drops overlapping requests into <code>skipped_busy</code>.</td><td data-i18n="interview.b4">Execution isolation, not formal safety proof.</td></tr>
-                    </tbody>
-                </table>
-            </div>
-        </section>
-
-        <section class="section-block" id="evidence">
-            <h2><i class="fa-solid fa-folder-open"></i><span data-i18n="evidence.title">Evidence Index</span></h2>
-            <p class="evidence-note" data-i18n="evidence.note">Key local files used to redraw the architecture and write this page.</p>
-            <div class="table-wrapper">
-                <table class="results-table">
-                    <thead><tr><th data-i18n="evidence.claim">Claim</th><th data-i18n="evidence.source">Source</th></tr></thead>
-                    <tbody>
-                        <tr><td data-i18n="evidence.c1">Full Affective Robot Interaction boundary, 194 episodes, latency, and CVAE/DP split</td><td><code>docs/项目云文档.md:8-30,228-332</code>; <code>情感陪伴场景的多模态交互系统.pdf</code></td></tr>
-                        <tr><td data-i18n="evidence.c2">CVAE report architecture and training config</td><td><code>docs/scripts/01_train_cvae.py:29-54</code>; <code>docs/assets/tables/t5_training_summary.csv</code></td></tr>
-                        <tr><td data-i18n="evidence.c3">DP architecture, v-prediction, self-conditioning, and Qwen cache</td><td><code>image_conditioned_dp_dynamic.py:188-459</code>; <code>diffusion_wrapper.py:307-391</code>; <code>dataset_qwen_episode.py:23-257</code></td></tr>
-                        <tr><td data-i18n="evidence.c4">Perception fallback and emotion mapping</td><td><code>qwen_multimodal/detect_face_complete.py:18-54,352-520</code></td></tr>
-                        <tr><td data-i18n="evidence.c5">Retargeting and WebSocket execution contracts</td><td><code>retargeting/校准流程说明.md:9-104,191-213</code>; <code>websocket_text_to_action.py:138-157,339-421</code></td></tr>
-                    </tbody>
-                </table>
-            </div>
-        </section>
     </main>
 
     <script>
@@ -264,6 +232,7 @@
                 'hero.back': 'Back to projects',
                 'hero.arch': 'Model architecture',
                 'hero.retarget': 'Retargeting layer',
+                'hero.code': 'Code',
                 'hero.lang': 'Switch language',
                 'metric.episodes': '3-class robot-reaction episodes for CVAE validation',
                 'metric.action': 'shared encoder/action trajectory contract',
@@ -335,32 +304,7 @@
                 'diag.qwen.title': 'Qwen Compute Path',
                 'diag.qwen.p': 'Live Qwen-VL features made DP training too slow. The solution extracts per-frame hidden states once, projects them to 256D, stores <code>.npy</code> condition tokens, and lets the DP model use the same forward interface with <code>image_sequence=None</code>.',
                 'diag.lock.title': 'Execution Isolation',
-                'diag.lock.p': 'Robot playback is serialized with a non-blocking execution lock. New messages that arrive during motion execution are dropped into <code>skipped_busy</code>, which prevents overlapping 10D trajectories from racing the same Dynamixel chain.',
-                'interview.title': 'Interview-Ready Technical Points',
-                'interview.topic': 'Topic',
-                'interview.answer': 'Defensible Answer',
-                'interview.boundary': 'Boundary',
-                'interview.t1': 'System identity',
-                'interview.a1': 'Affective Robot Interaction is a social-robot interaction stack, not a VLA: Qwen/OpenCV handles perception, CVAE/DP generate trajectories, and WebSocket/Dynamixel executes <code>angles[10]</code>.',
-                'interview.b1': 'No Flow Matching claim.',
-                'interview.t2': 'CVAE route',
-                'interview.a2': 'The report CVAE uses BERT-base-chinese CLS, a 64D latent, a 2-layer / 4-head Transformer Decoder, and MSE + KL + CE loss over 194 three-class episodes.',
-                'interview.b2': '8-class main code path is separate.',
-                'interview.t3': 'DP route',
-                'interview.a3': 'The DP route conditions a 6-layer action transformer on DINOv2 or cached Qwen <code>cond_seq (T,256)</code>, trained with DDIM 1000-step v-prediction, self-cond 0.9, and min-SNR gamma 5.',
-                'interview.b3': 'No real-robot DP success benchmark found.',
-                'interview.t4': 'Robot safety contract',
-                'interview.a4': 'Runtime serializes playback with a non-blocking execution lock, clamps every count to <code>[0,4095]</code>, and drops overlapping requests into <code>skipped_busy</code>.',
-                'interview.b4': 'Execution isolation, not formal safety proof.',
-                'evidence.title': 'Evidence Index',
-                'evidence.note': 'Key local files used to redraw the architecture and write this page.',
-                'evidence.claim': 'Claim',
-                'evidence.source': 'Source',
-                'evidence.c1': 'Full Affective Robot Interaction boundary, 194 episodes, latency, and CVAE/DP split',
-                'evidence.c2': 'CVAE report architecture and training config',
-                'evidence.c3': 'DP architecture, v-prediction, self-conditioning, and Qwen cache',
-                'evidence.c4': 'Perception fallback and emotion mapping',
-                'evidence.c5': 'Retargeting and WebSocket execution contracts'
+                'diag.lock.p': 'Robot playback is serialized with a non-blocking execution lock. New messages that arrive during motion execution are dropped into <code>skipped_busy</code>, which prevents overlapping 10D trajectories from racing the same Dynamixel chain.'
             },
             zh: {
                 'nav.projects': '项目',
@@ -372,6 +316,7 @@
                 'hero.back': '返回项目',
                 'hero.arch': '模型架构',
                 'hero.retarget': 'Retargeting 层',
+                'hero.code': '代码',
                 'hero.lang': '切换语言',
                 'metric.episodes': '用于 CVAE 验证的 3 类机器人反应 episode',
                 'metric.action': '共享的编码器 / 动作轨迹合约',
@@ -443,32 +388,7 @@
                 'diag.qwen.title': 'Qwen 计算路线',
                 'diag.qwen.p': '实时 Qwen-VL 特征让 DP 训练过慢。解决方案是预先抽取逐帧 hidden states，投影到 256D，保存为 <code>.npy</code> 条件 token，并让 DP 模型在 <code>image_sequence=None</code> 下复用同一 forward 接口。',
                 'diag.lock.title': '执行隔离',
-                'diag.lock.p': '机器人播放通过非阻塞 execution lock 串行化。动作执行期间到来的新消息会计入 <code>skipped_busy</code>，避免多条 10D 轨迹同时竞争同一条 Dynamixel 链路。',
-                'interview.title': '面试可追问技术点',
-                'interview.topic': '主题',
-                'interview.answer': '可防守回答',
-                'interview.boundary': '边界',
-                'interview.t1': '系统身份',
-                'interview.a1': '情感陪伴场景的多模态交互系统是社交机器人交互栈，不是 VLA：Qwen/OpenCV 负责感知，CVAE/DP 生成轨迹，WebSocket/Dynamixel 执行 <code>angles[10]</code>。',
-                'interview.b1': '不声称 Flow Matching。',
-                'interview.t2': 'CVAE 路线',
-                'interview.a2': '报告版 CVAE 使用 BERT-base-chinese CLS、64D latent、2 层 / 4 头 Transformer Decoder，并在 194 个三类 episode 上用 MSE + KL + CE 训练。',
-                'interview.b2': '8 类主代码路径要单独说明。',
-                'interview.t3': 'DP 路线',
-                'interview.a3': 'DP 路线用 DINOv2 或缓存 Qwen <code>cond_seq (T,256)</code> 条件化 6 层 action transformer，训练配置为 DDIM 1000-step、v-prediction、self-cond 0.9、min-SNR gamma 5。',
-                'interview.b3': '没有发现 DP 真机成功率基准。',
-                'interview.t4': '机器人安全合约',
-                'interview.a4': '运行时通过非阻塞 execution lock 串行播放，每个 count 限幅到 <code>[0,4095]</code>，重叠请求计入 <code>skipped_busy</code>。',
-                'interview.b4': '这是执行隔离，不是形式化安全证明。',
-                'evidence.title': '证据索引',
-                'evidence.note': '用于重画架构和撰写本页的关键本地文件。',
-                'evidence.claim': 'Claim',
-                'evidence.source': '来源',
-                'evidence.c1': '情感陪伴场景的多模态交互系统全系统边界、194 episodes、延迟与 CVAE/DP 双路线',
-                'evidence.c2': 'CVAE 报告架构与训练配置',
-                'evidence.c3': 'DP 架构、v-prediction、self-conditioning 与 Qwen cache',
-                'evidence.c4': '感知兜底与情绪映射',
-                'evidence.c5': 'Retargeting 与 WebSocket 执行合约'
+                'diag.lock.p': '机器人播放通过非阻塞 execution lock 串行化。动作执行期间到来的新消息会计入 <code>skipped_busy</code>，避免多条 10D 轨迹同时竞争同一条 Dynamixel 链路。'
             }
         };
 

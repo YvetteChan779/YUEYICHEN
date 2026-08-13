@@ -72,6 +72,7 @@
             <div class="hero-actions">
                 <a href="index.html#publications"><i class="fa-solid fa-arrow-left"></i><span data-i18n="hero.back">Back to projects</span></a>
                 <a href="#architecture"><i class="fa-solid fa-diagram-project"></i><span data-i18n="hero.arch">Architecture</span></a>
+                <a href="https://github.com/YvetteChan779/affective-robot-interaction" target="_blank" rel="noopener"><i class="fa-brands fa-github"></i><span data-i18n="hero.code">Code</span></a>
                 <button type="button" id="langHero"><i class="fa-solid fa-language"></i><span data-i18n="hero.lang">Switch language</span></button>
             </div>
         </section>
@@ -164,14 +165,6 @@
             <div class="scope-callout" data-i18n-html="results.limit"><i class="fa-solid fa-triangle-exclamation"></i>The defensible claim is interface engineering plus prototype regression accuracy. There is no task-level success rate, no large-scale cross-user evaluation, and no evidence that this branch replaces the geometry retargeting route.</div>
         </section>
 
-        <section class="section-block" id="interview">
-            <h2><i class="fa-solid fa-comments"></i><span data-i18n="interview.title">Interview-Ready Technical Points</span></h2>
-            <ul class="compact-list">
-                <li data-i18n-html="interview.p1">Explain why global mocap quaternions cannot be sent directly to robot joints: T-pose offsets, mirror symmetry, encoder center, and left/right motor direction must be handled before actuation.</li>
-                <li data-i18n-html="interview.p2">Defend the model as a regression prototype: 60D feature contract, 1.00M parameters, StandardScaler on both domains, and 47-sample final-frame MAE with visible outliers.</li>
-                <li data-i18n-html="interview.p3">Separate policy, retargeting, and controller rates: generated Affective Robot Interaction trajectories use a documented 10 FPS execution path, while the live Teleop Transformer controller has a configurable 30 Hz loop.</li>
-            </ul>
-        </section>
     </main>
 
     <script>
@@ -193,7 +186,7 @@
                 'hero.kicker': 'Algorithm Intern Project · Affective Robot Interaction',
                 'hero.title': 'Affective Robot Interaction Retargeting: Mocap-to-10DOF Robot Motion Interface',
                 'hero.tagline': 'A field-calibrated retargeting interface that converts VDMocap 23-node body pose into 10 raw Dynamixel encoder commands. The stack combines a documented FK / <code>scipy.optimize.least_squares</code> calibration path, low-latency quaternion/position runtime mapping, and a 1.00M-parameter Teleop Transformer prototype for 60D IMU-to-encoder regression.',
-                'hero.back': 'Back to projects', 'hero.arch': 'Architecture', 'hero.lang': 'Switch language',
+                'hero.back': 'Back to projects', 'hero.arch': 'Architecture', 'hero.code': 'Code', 'hero.lang': 'Switch language',
                 'metric.nodes': 'VDMocap body nodes parsed from the SDK struct',
                 'metric.output': 'raw encoder contract for left/right 5-DOF arms',
                 'metric.params': 'Teleop Transformer parameters',
@@ -218,18 +211,14 @@
                 'deploy.p1': 'Realtime inference uses the same 60D extraction from a live <code>MocapData</code> struct, inverse-transforms the predicted encoder counts, clamps every value to <code>[0,4095]</code>, then sends <code>{angles, session_id, frame, total_frames}</code> over <code>/teleop</code>. The learning controller defaults to 30 Hz, while the broader Affective Robot Interaction execution document reports a 10 FPS Dynamixel trajectory path for generated action sequences.',
                 'results.title': 'Results And Limits', 'results.metric': 'Metric', 'results.value': 'Value', 'results.scope': 'Scope',
                 'results.r1': 'paired final-frame mocap/encoder evaluation', 'results.r2': 'computed by batch test summary', 'results.r3': 'largest outlier in the sample set', 'results.r4': 'best/worst joint mean absolute error',
-                'results.limit': '<i class="fa-solid fa-triangle-exclamation"></i>The defensible claim is interface engineering plus prototype regression accuracy. There is no task-level success rate, no large-scale cross-user evaluation, and no evidence that this branch replaces the geometry retargeting route.',
-                'interview.title': 'Interview-Ready Technical Points',
-                'interview.p1': 'Explain why global mocap quaternions cannot be sent directly to robot joints: T-pose offsets, mirror symmetry, encoder center, and left/right motor direction must be handled before actuation.',
-                'interview.p2': 'Defend the model as a regression prototype: 60D feature contract, 1.00M parameters, StandardScaler on both domains, and 47-sample final-frame MAE with visible outliers.',
-                'interview.p3': 'Separate policy, retargeting, and controller rates: generated Affective Robot Interaction trajectories use a documented 10 FPS execution path, while the live Teleop Transformer controller has a configurable 30 Hz loop.'
+                'results.limit': '<i class="fa-solid fa-triangle-exclamation"></i>The defensible claim is interface engineering plus prototype regression accuracy. There is no task-level success rate, no large-scale cross-user evaluation, and no evidence that this branch replaces the geometry retargeting route.'
             },
             zh: {
                 'nav.projects': '项目', 'nav.arch': '架构', 'nav.results': '结果',
                 'hero.kicker': '算法实习项目 · Affective Robot Interaction',
                 'hero.title': 'Affective Robot Interaction Retargeting：动捕到 10-DOF 机器人运动接口',
                 'hero.tagline': '一个经过现场标定的 retargeting 接口，把 VDMocap 23 节点人体姿态转换为 10 维 Dynamixel 原始编码器命令。系统包含文档化的 FK / <code>scipy.optimize.least_squares</code> 标定路线、低延迟 quaternion/position 运行时映射，以及一个 1.00M 参数 Teleop Transformer 原型，用于 60D IMU 到编码器的回归。',
-                'hero.back': '返回项目', 'hero.arch': '架构图', 'hero.lang': '切换语言',
+                'hero.back': '返回项目', 'hero.arch': '架构图', 'hero.code': '代码', 'hero.lang': '切换语言',
                 'metric.nodes': '从 SDK 结构体解析的 VDMocap 身体节点',
                 'metric.output': '左右 5-DOF 机械臂的 raw encoder 合约',
                 'metric.params': 'Teleop Transformer 参数量',
@@ -254,11 +243,7 @@
                 'deploy.p1': '实时推理从 live <code>MocapData</code> 结构体提取同样的 60D 特征，反标准化预测编码器，将每个值限制到 <code>[0,4095]</code>，再通过 <code>/teleop</code> 发送 <code>{angles, session_id, frame, total_frames}</code>。学习式控制器默认 30 Hz；更大的 Affective Robot Interaction 执行文档中，生成轨迹的 Dynamixel 下发路径记录为 10 FPS。',
                 'results.title': '结果与限制', 'results.metric': '指标', 'results.value': '数值', 'results.scope': '范围',
                 'results.r1': 'paired final-frame mocap/encoder 评估', 'results.r2': '由 batch test summary 计算', 'results.r3': '样本集合里的最大离群误差', 'results.r4': '最好/最差关节的平均绝对误差',
-                'results.limit': '<i class="fa-solid fa-triangle-exclamation"></i>可防守的 claim 是接口工程与原型回归精度。当前没有任务级成功率、没有大规模跨用户评估，也没有证据证明学习式分支可以替代几何 retargeting 路线。',
-                'interview.title': '面试可追问技术点',
-                'interview.p1': '解释为什么不能把全局动捕四元数直接发给机器人关节：T-pose offset、左右镜像、编码器中心值和左右电机方向都必须先处理。',
-                'interview.p2': '把模型防守为回归原型：60D 特征合约、1.00M 参数、输入输出双 StandardScaler，以及 47 个 final-frame 样本 MAE 和明显 outlier。',
-                'interview.p3': '区分 policy、retargeting 和 controller 频率：Affective Robot Interaction 生成轨迹文档化下发为 10 FPS，live Teleop Transformer 控制器是可配置 30 Hz loop。'
+                'results.limit': '<i class="fa-solid fa-triangle-exclamation"></i>可防守的 claim 是接口工程与原型回归精度。当前没有任务级成功率、没有大规模跨用户评估，也没有证据证明学习式分支可以替代几何 retargeting 路线。'
             }
         };
         const langBtn = document.getElementById('langToggle');

@@ -33,6 +33,7 @@
             'hero.asr': 'ASR',
             'hero.nlu': 'NLU',
             'hero.results': 'Results',
+            'hero.code': 'Code',
             /* Metrics */
             'm.vad': 'Far-field VAD hit rate',
             'm.asr': 'ASR partial latency',
@@ -177,6 +178,7 @@
             'hero.asr': 'ASR',
             'hero.nlu': 'NLU',
             'hero.results': '\u7ed3\u679c',
+            'hero.code': '\u4ee3\u7801',
             /* Metrics */
             'm.vad': '\u8fdc\u573a VAD \u547d\u4e2d\u7387',
             'm.asr': 'ASR partial \u5ef6\u8fdf',

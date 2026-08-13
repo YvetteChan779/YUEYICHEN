@@ -76,15 +76,6 @@
             's5.h3.desc': 'The base checkpoint lacked LIBERO normalization statistics; reusing official LIBERO assets made zero-shot and fine-tuned evaluation comparable.',
             's5.h4.title': 'Overwritten Videos',
             's5.h4.desc': 'Flat video directories caused rollout collisions; checkpoint and timestamp based paths fixed multi-suite evaluation tracking.',
-            's6.title': 'Interview-Ready Technical Points',
-            's6.h1.title': 'VLA Adaptation',
-            's6.h1.desc': 'Explain how visual-language representations, action expert parameters, and continuous Flow Matching action prediction interact.',
-            's6.h2.title': 'Ablation Logic',
-            's6.h2.desc': 'The 2.6M -> 18M -> 305M matrix turns memory constraints into a controlled experimental variable.',
-            's6.h3.title': 'Checkpoint Selection',
-            's6.h3.desc': 'Use suite-level scaling curves to justify 55k steps rather than selecting only by final loss.',
-            's6.h4.title': 'Reproducible Evaluation',
-            's6.h4.desc': 'A benchmark claim is credible only when checkpoint, suite, trial count, logs, and videos can be traced together.',
             'footer': footerEn
         },
         zh: {
@@ -143,15 +134,6 @@
             's5.h3.desc': 'base checkpoint 没有 LIBERO 归一化统计量；复用官方 LIBERO assets 后，zero-shot 与微调模型才能进入同一评测协议。',
             's5.h4.title': '视频互相覆盖',
             's5.h4.desc': '原平铺视频目录会导致 rollout 文件冲突；按 checkpoint 与时间戳分层后，多 suite 评测可以稳定追踪。',
-            's6.title': '面试可讲技术点',
-            's6.h1.title': 'VLA 迁移',
-            's6.h1.desc': '解释视觉语言表征、action expert 参数和连续 Flow Matching 动作预测如何协同。',
-            's6.h2.title': '消融逻辑',
-            's6.h2.desc': '2.6M -> 18M -> 305M 的策略矩阵把显存限制转化为可控实验变量。',
-            's6.h3.title': 'Checkpoint 选择',
-            's6.h3.desc': '用 suite-level scaling 曲线解释为什么选择 55k step，而不是只看最终 loss。',
-            's6.h4.title': '可复现评测',
-            's6.h4.desc': '一个 benchmark claim 是否可信，取决于 checkpoint、suite、trial 数、日志和视频能否一起追溯。',
             'footer': footerZh
         }
     };
