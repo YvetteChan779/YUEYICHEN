@@ -349,67 +349,6 @@
     </ul>
 </section>
 
-<!-- ============ S0.5: TARGET ROLE & JD FIT ============ -->
-<!--
-<section class="section-block" id="jd-fit">
-    <h2><i class="fa-solid fa-briefcase"></i> <span data-i18n="jd.title">Target Role &amp; JD Fit</span></h2>
-    <p data-i18n-html="jd.intro">This project is written against a specific target role in embodied-AI / robot voice interaction. The mapping below ties each job-description competency to concrete, code-traceable evidence in this pipeline. It is a fit argument, not a claim of novel research.</p>
-
-    <div class="scope-callout">
-        <i class="fa-solid fa-paste"></i>
-        <span data-i18n-html="jd.paste"><strong>Job Description (paste here):</strong> the target posting is a WeChat article that is access-gated, so its text is not embedded automatically. Paste the JD text into <code>jd.jdtext</code> in <code>voxintent.js</code> to render it here verbatim. Source: <a href="https://mp.weixin.qq.com/s/fCcVl2ljaI3WZN-dVNCEOQ" target="_blank" rel="noopener">target posting</a>.</span>
-    </div>
-
-    <div class="table-wrapper">
-        <table class="results-table">
-            <thead>
-                <tr>
-                    <th data-i18n="jd.th.req">Typical JD Requirement</th>
-                    <th data-i18n="jd.th.e0eng">VoxIntent Evidence</th>
-                    <th data-i18n="jd.th.where">Where on this page</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr>
-                    <td data-i18n="jd.r1.req">Speech recognition / ASR integration for robots</td>
-                    <td data-i18n-html="jd.r1.ev">Cloud-first 4-engine streaming ASR router (qwen3-asr-flash-realtime / paraformer-realtime-v2 / Qwen3-ASR TRT / FunASR), 150&ndash;300 ms partials, cloud endpointing ownership, rapid-stitch.</td>
-                    <td data-i18n-html="jd.r1.where"><a href="#asr">Streaming ASR</a></td>
-                </tr>
-                <tr>
-                    <td data-i18n="jd.r2.req">Robust front-end audio in noisy / far-field conditions</td>
-                    <td data-i18n-html="jd.r2.ev">3-tier VAD (adaptive P10 floor + software AGC + stateful Silero v4 h/c [2,1,64]), envelope AGC v5, field calibration; far-field hit 0%&rarr;92%.</td>
-                    <td data-i18n-html="jd.r2.where"><a href="#vad">Voice Frontend</a></td>
-                </tr>
-                <tr>
-                    <td data-i18n="jd.r3.req">NLU / intent understanding &amp; LLM integration</td>
-                    <td data-i18n-html="jd.r3.ev">Dual-path NLU (6 action regex + qwen3.5-flash JSON, reasoning disabled), 6-state dialog manager with 3-score ambient rejection, 5-layer semantic defense.</td>
-                    <td data-i18n-html="jd.r3.where"><a href="#nlu">NLU &amp; Dialog</a></td>
-                </tr>
-                <tr>
-                    <td data-i18n="jd.r4.req">Multimodal grounding (vision + language)</td>
-                    <td data-i18n-html="jd.r4.ev">VLM instruction grounding with source-pixel xyxy bbox contract, letterbox alignment, color/category guards; box+text grounding 4/44&rarr;&ge;90%.</td>
-                    <td data-i18n-html="jd.r4.where"><a href="#vlm">VLM Grounding</a></td>
-                </tr>
-                <tr>
-                    <td data-i18n="jd.r5.req">On-device / edge deployment &amp; latency engineering</td>
-                    <td data-i18n-html="jd.r5.ev">Jetson AGX Orin deployment, HTTP connection pool + SSE early JSON, TTS echo guard (no AEC), circuit breaker; latency budgets stated per stage.</td>
-                    <td data-i18n-html="jd.r5.where"><a href="#tts">TTS Feedback</a> &middot; <a href="#results">Results</a></td>
-                </tr>
-                <tr>
-                    <td data-i18n="jd.r6.req">Full-pipeline / ROS2 system integration</td>
-                    <td data-i18n-html="jd.r6.ev">ROS2 topic/service integration from ALSA capture to intent dispatch; explicit scope boundary vs collaborator-owned navigation, IK, and motor control.</td>
-                    <td data-i18n-html="jd.r6.where"><a href="#architecture">Pipeline Architecture</a></td>
-                </tr>
-            </tbody>
-        </table>
-    </div>
-
-    <div class="scope-callout">
-        <i class="fa-solid fa-circle-info"></i>
-        <span data-i18n-html="jd.caveat"><strong>Honesty boundary:</strong> all metrics are field-reported on a single Jetson AGX Orin, not formal benchmarks. No ASR WER, NLU accuracy, or end-to-end task-success table is claimed. ASR/NLU/VLM/TTS models are off-the-shelf; the contribution is integration, calibration, and failure-cascade engineering.</span>
-    </div>
-</section>
--->
 
 <!-- ============ S1: PIPELINE ARCHITECTURE ============ -->
 <section class="section-block" id="architecture">

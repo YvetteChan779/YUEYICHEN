@@ -514,24 +514,6 @@
                 <div class="result-block" data-i18n-html="results.limit"><i class="fa-solid fa-triangle-exclamation"></i>Honest scope: a full run needs external assets that are not vendored — Grounded-SAM-2, VGGT, DINOv2-B/14, the Fairino SDK, and the RAM template payloads. The repo exposes the complete code path but no benchmark logbook, so any quantitative claim on this page traces to the publication, not to a local rollout.</div>
             </section>
 
-            <section class="section-block" id="highlights">
-                <h2><i class="fa-solid fa-lightbulb"></i><span data-i18n="highlights.title">Design Decisions I Can Defend</span></h2>
-                <div class="highlight-grid">
-                    <div class="hl-card">
-                        <h3 data-i18n="highlights.card1.title">Why retrieve, not learn end-to-end</h3>
-                        <p data-i18n-html="highlights.card1.body">Filtering categories with <code>RamVLM</code>, then boxing with GroundingDINO and masking with SAM2, means a new object is a <em>lookup</em>, not a new training run. The cost is a category template must exist; the payoff is single-image, zero-shot action.</p>
-                    </div>
-                    <div class="hl-card">
-                        <h3 data-i18n="highlights.card2.title">Why freeze DINOv2 and learn geometry</h3>
-                        <p data-i18n-html="highlights.card2.body">RAMNet fuses frozen DINOv2 tokens with position embeddings, <code>choose</code> indices, and template priors to predict view, NOCS, grasps, and planes. Freezing the backbone is the choice that keeps a strong visual prior and limits training to the geometry heads.</p>
-                    </div>
-                    <div class="hl-card">
-                        <h3 data-i18n="highlights.card3.title">Why keep motion deterministic</h3>
-                        <p data-i18n-html="highlights.card3.body"><code>ConstraintParser</code> turns VLM subgoals into gripper poses; <code>PathPlanner</code> and <code>TrajectoryGenerator</code> turn those into Fairino motion. Putting the intelligence in the object representation, not the controller, keeps execution auditable and safe to clamp.</p>
-                    </div>
-                </div>
-            </section>
-
             <footer class="footer" data-i18n-html="footer">
                 &copy; <span id="year">2026</span> Yueyi Chen. Powered by <a href="https://pages.github.com/" target="_blank" rel="noopener">GitHub Pages</a>.
             </footer>
